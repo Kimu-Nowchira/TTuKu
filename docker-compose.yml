@@ -12,6 +12,7 @@ services:
     ports:
       - 8496:8496
       - 2929:2929
+      - 3345:3345
   web:
     build: .
     volumes:
