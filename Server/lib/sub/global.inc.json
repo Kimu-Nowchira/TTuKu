@@ -22,8 +22,6 @@
 		"isPFX": false,
 		"isCA": false
 	},
-	"DB_HOST": "127.0.0.1",
-	"HTTPS_PROXIED": false,
 	"USER_BLOCK_OPTIONS": {
 		"USE_MODULE": false,
 		"USE_X_FORWARDED_FOR": false,

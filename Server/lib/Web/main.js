@@ -154,12 +154,12 @@ DB.ready = function(){
 Const.MAIN_PORTS.forEach(function(v, i){
 	var KEY = process.env['WS_KEY'];
 	var protocol;
-	if(Const.IS_SECURED || Const.HTTPS_PROXIED) {
+	if(Const.IS_SECURED) {
 		protocol = 'wss';
 	} else {
 		protocol = 'ws';
 	}
-	gameServers[i] = new GameClient(KEY, GLOBAL.WS_URL ? GLOBAL.WS_URL.replace('{protocol}', protocol).replace('{port}', v).replace('{key}', KEY) : `${protocol}://${GLOBAL.GAME_SERVER_HOST}:${v}/${KEY}`);
+	gameServers[i] = new GameClient(KEY, `${protocol}://${GLOBAL.GAME_SERVER_HOST}:${v}/${KEY}`);
 });
 function GameClient(id, url){
 	var my = this;
@@ -234,7 +234,7 @@ Server.get("/", function(req, res){
 			'_id': id,
 			'PORT': Const.MAIN_PORTS[server],
 			'HOST': req.hostname,
-			'PROTOCOL': Const.IS_SECURED || Const.HTTPS_PROXIED ? 'wss' : 'ws',
+			'PROTOCOL': Const.IS_SECURED ? 'wss' : 'ws',
 			'TEST': req.query.test,
 			'MOREMI_PART': Const.MOREMI_PART,
 			'AVAIL_EQUIP': Const.AVAIL_EQUIP,
@@ -251,8 +251,7 @@ Server.get("/", function(req, res){
 			'ogImage': "http://kkutu.kr/img/kkutu/logo.png",
 			'ogURL': "http://kkutu.kr/",
 			'ogTitle': "글자로 놀자! 끄투 온라인",
-			'ogDescription': "끝말잇기가 이렇게 박진감 넘치는 게임이었다니!",
-			'_ws': GLOBAL.WS_URL.replace('{protocol}', Const.IS_SECURED || Const.HTTPS_PROXIED ? 'wss' : 'ws').replace('{port}', Const.MAIN_PORTS[server]).replace('{key}', id)
+			'ogDescription': "끝말잇기가 이렇게 박진감 넘치는 게임이었다니!"
 		});
 	}
 });
