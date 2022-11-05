@@ -31,6 +31,7 @@ exports.TESTER = GLOBAL.ADMIN.concat([
 	"Input tester id here"
 ]);
 exports.IS_SECURED = GLOBAL.IS_SECURED;
+exports.HTTPS_PROXIED = GLOBAL.HTTPS_PROXIED;
 exports.SSL_OPTIONS = GLOBAL.SSL_OPTIONS;
 exports.OPTIONS = {
 	'man': { name: "Manner" },
