@@ -45,18 +45,18 @@ let step = [
   () => removeCmd("which"),
 ]
 
-function summon(cmd) {
+function summon(cmd: string) {
   console.log(cmd)
 
   let args = cmd.split(" ")
   let proc = Spawn(args[0], args.slice(1), { shell: true })
 
-  proc.stdout.on("data", (msg) => {
+  proc.stdout.on("data", (msg: string) => {
     console.log(msg.toString())
   })
   proc.on("close", doStep)
 }
-function removeCmd(cmd) {
+function removeCmd(cmd: string) {
   let f1 = `./${cmd}`,
     f2 = `./${cmd}.cmd`
 
