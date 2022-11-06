@@ -62,14 +62,14 @@ const asValue = (val: any) => {
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = function (str: string, _a?: any, _b?: any, _c?: any, _d?: any) {
-  let i = 1
-  const args = arguments
+const Escape = function (str: string) {
+  var i = 1
+  var args = arguments
 
-  return str.replace(/%([%sILQkKV])/g, (_, type) => {
+  return str.replace(/%([%sILQkKV])/g, function (_, type) {
     if ("%" == type) return "%"
 
-    const arg = args[i++]
+    var arg = args[i++]
     switch (type) {
       case "s":
         return escape.string(arg)
