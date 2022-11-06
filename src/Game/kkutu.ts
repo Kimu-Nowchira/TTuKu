@@ -31,6 +31,7 @@ import {
   SPAM_LIMIT,
   OPTIONS,
 } from "../const"
+import { logger } from "../sub/jjlog"
 
 type RoomData = Record<number, any>
 type DICData = Record<string, any>
@@ -563,7 +564,7 @@ exports.Client = function (socket, profile, sid) {
       .on(function (__res) {
         DB.redis.getGlobal(my.id).then(function (_res) {
           DB.redis.putGlobal(my.id, my.data.score).then(function (res) {
-            logger.log(
+            logger.info(
               `FLUSHED [${my.id}] PTS=${my.data.score} MNY=${my.money}`
             )
             R.go({ id: my.id, prev: _res })
