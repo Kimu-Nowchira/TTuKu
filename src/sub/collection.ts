@@ -70,7 +70,7 @@ const Escape = function (str: string, ...a: any[]) {
   return str.replace(/%([%sILQkKV])/g, (_, type) => {
     if ("%" == type) return "%"
 
-    var arg = args[i++] || ""
+    var arg = args[i++] || _
     switch (type) {
       case "s":
         return escape.string(arg)
