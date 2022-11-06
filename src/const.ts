@@ -441,4 +441,5 @@ export const KOR_FLAG = {
   MUNHWA: 32, // 문화어
 }
 export const WP_REWARD = () => 10 + Math.floor(Math.random() * 91)
-export const getRule = (mode) => RULE[GAME_TYPE[mode]]
+export const getRule = (mode: number) =>
+  RULE[GAME_TYPE[mode] as keyof typeof RULE]
