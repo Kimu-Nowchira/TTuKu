@@ -22,6 +22,7 @@ const DB = require("../Web/db")
 
 /* 상품 group 명세: NIK	이름 스킨; 이름의 색상을 변경합니다. */
 logger.info("KKuTu Goods Manager")
+
 DB.ready = () => {
   const data = {
     type: process.argv[2],
