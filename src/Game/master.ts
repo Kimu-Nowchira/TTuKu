@@ -18,6 +18,7 @@
 
 import { appendFile } from "fs"
 import { GAME_TYPE, IS_SECURED, KKUTU_MAX, TEST_PORT, TESTER } from "../const"
+import { logger } from "../sub/jjlog"
 
 let Cluster = require("cluster")
 let WebSocket = require("ws")
@@ -26,7 +27,6 @@ let HTTPS_Server
 
 let KKuTu = require("./kkutu")
 const GLOBAL = require("../sub/global.json")
-let JLog = require("../sub/jjlog")
 let Secure = require("../sub/secure")
 let Recaptcha = require("../sub/recaptcha")
 
@@ -70,7 +70,7 @@ process.on("uncaughtException", function (err) {
   }\n`
 
   appendFile("/jjolol/KKUTU_ERROR.log", text, function (res) {
-    JLog.error(`ERROR OCCURRED ON THE MASTER!`)
+    logger.error(`ERROR OCCURRED ON THE MASTER!`)
     console.log(text)
   })
 })
@@ -130,11 +130,11 @@ function processAdmin(id: string, value: string) {
         DIC[id].send("yell", { value: "This feature is not supported..." })
       /*Heapdump.writeSnapshot("/home/kkutu_memdump_" + Date.now() + ".heapsnapshot", function(err){
 				if(err){
-					JLog.error("Error when dumping!");
-					return JLog.error(err.toString());
+					logger.error("Error when dumping!");
+					return logger.error(err.toString());
 				}
 				if(DIC[id]) DIC[id].send('yell', { value: "DUMP OK" });
-				JLog.success("Dumping success.");
+				logger.info("Dumping success.");
 			});*/
       return null
     /* Enhanced User Block System [S] */
@@ -156,7 +156,7 @@ function processAdmin(id: string, value: string) {
             .on()
         } else return null
 
-        JLog.info(
+        logger.info(
           `[Block] 사용자 #${args[0].trim()}(이)가 이용제한 처리되었습니다.`
         )
 
@@ -186,7 +186,7 @@ function processAdmin(id: string, value: string) {
             .on()
         } else return null
 
-        JLog.info(
+        logger.info(
           `[Block] IP 주소 ${args[0].trim()}(이)가 이용제한 처리되었습니다.`
         )
       } catch (e) {
@@ -199,7 +199,7 @@ function processAdmin(id: string, value: string) {
           .update(["_id", value])
           .set(["black", null], ["blockedUntil", 0])
           .on()
-        JLog.info(
+        logger.info(
           `[Block] 사용자 #${value}(이)가 이용제한 해제 처리되었습니다.`
         )
       } catch (e) {
@@ -212,7 +212,7 @@ function processAdmin(id: string, value: string) {
           .update(["_id", value])
           .set(["reasonBlocked", null], ["ipBlockedUntil", 0])
           .on()
-        JLog.info(
+        logger.info(
           `[Block] IP 주소 ${value}(이)가 이용제한 해제 처리되었습니다.`
         )
       } catch (e) {
@@ -233,7 +233,7 @@ function processAdminErrorCallback(error, id) {
   DIC[id].send("notice", {
     value: `명령을 처리하는 도중 오류가 발생하였습니다: ${error}`,
   })
-  JLog.warn(`[Block] 명령을 처리하는 도중 오류가 발생하였습니다: ${error}`)
+  logger.warn(`[Block] 명령을 처리하는 도중 오류가 발생하였습니다: ${error}`)
 }
 /* Enhanced User Block System [E] */
 function checkTailUser(id, place, msg) {
@@ -335,14 +335,14 @@ Cluster.on("message", function (worker, msg) {
       if (ROOM[msg.id] && DIC[msg.target]) {
         ROOM[msg.id].come(DIC[msg.target])
       } else {
-        JLog.warn(`Wrong room-come id=${msg.id}&target=${msg.target}`)
+        logger.warn(`Wrong room-come id=${msg.id}&target=${msg.target}`)
       }
       break
     case "room-spectate":
       if (ROOM[msg.id] && DIC[msg.target]) {
         ROOM[msg.id].spectate(DIC[msg.target], msg.pw)
       } else {
-        JLog.warn(`Wrong room-spectate id=${msg.id}&target=${msg.target}`)
+        logger.warn(`Wrong room-spectate id=${msg.id}&target=${msg.target}`)
       }
       break
     case "room-go":
@@ -350,14 +350,14 @@ Cluster.on("message", function (worker, msg) {
         ROOM[msg.id].go(DIC[msg.target])
       } else {
         // 나가기 말고 연결 자체가 끊겼을 때 생기는 듯 하다.
-        JLog.warn(`Wrong room-go id=${msg.id}&target=${msg.target}`)
+        logger.warn(`Wrong room-go id=${msg.id}&target=${msg.target}`)
         if (ROOM[msg.id] && ROOM[msg.id].players) {
           // 이 때 수동으로 지워준다.
           let x = ROOM[msg.id].players.indexOf(msg.target)
 
           if (x != -1) {
             ROOM[msg.id].players.splice(x, 1)
-            JLog.warn(`^ OK`)
+            logger.warn(`^ OK`)
           }
         }
         if (msg.removed) delete ROOM[msg.id]
@@ -393,14 +393,15 @@ Cluster.on("message", function (worker, msg) {
       delete ROOM[msg.room.id]
       break
     default:
-      JLog.warn(`Unhandled IPC message type: ${msg.type}`)
+      logger.warn(`Unhandled IPC message type: ${msg.type}`)
   }
 })
+
 export const init = (_SID: string, CHAN) => {
   SID = _SID
   MainDB = require("../Web/db")
   MainDB.ready = function () {
-    JLog.success("Master DB is ready.")
+    logger.info("Master DB is ready.")
 
     MainDB.users.update(["server", SID]).set(["server", ""]).on()
     if (IS_SECURED) {
@@ -420,15 +421,15 @@ export const init = (_SID: string, CHAN) => {
       let $c
 
       socket.on("error", function (err) {
-        JLog.warn("Error on #" + key + " on ws: " + err.toString())
+        logger.warn("Error on #" + key + " on ws: " + err.toString())
       })
       // 웹 서버
       if (info.headers.host.startsWith(GLOBAL.GAME_SERVER_HOST + ":")) {
         if (WDIC[key]) WDIC[key].socket.close()
         WDIC[key] = new KKuTu.WebServer(socket)
-        JLog.info(`New web server #${key}`)
+        logger.info(`New web server #${key}`)
         WDIC[key].socket.on("close", function () {
-          JLog.alert(`Exit web server #${key}`)
+          logger.alert(`Exit web server #${key}`)
           WDIC[key].socket.removeAllListeners()
           delete WDIC[key]
         })
@@ -486,7 +487,7 @@ export const init = (_SID: string, CHAN) => {
                       .update(["_id", $c.remoteAddress])
                       .set(["ipBlockedUntil", 0], ["reasonBlocked", null])
                       .on()
-                    JLog.info(
+                    logger.info(
                       `IP 주소 ${$c.remoteAddress}의 이용제한이 해제되었습니다.`
                     )
                   } else {
@@ -524,7 +525,7 @@ export const init = (_SID: string, CHAN) => {
                 .update(["_id", $c.id])
                 .set(["blockedUntil", 0], ["black", null])
                 .on()
-              JLog.info(`사용자 #${$c.id}의 이용제한이 해제되었습니다.`)
+              logger.info(`사용자 #${$c.id}의 이용제한이 해제되었습니다.`)
               isBlockRelease = true
             }
             /* Enhanced User Block System [E] */
@@ -569,13 +570,13 @@ export const init = (_SID: string, CHAN) => {
 
               $c._error = ref.result
               $c.socket.close()
-              // JLog.info("Black user #" + $c.id);
+              // logger.info("Black user #" + $c.id);
             }
           })
         })
     })
     Server.on("error", function (err) {
-      JLog.warn("Error on ws: " + err.toString())
+      logger.warn("Error on ws: " + err.toString())
     })
     KKuTu.init(MainDB, DIC, ROOM, GUEST_PERMISSION, CHAN)
   }
@@ -598,7 +599,7 @@ function joinNewUser($c) {
   narrateFriends($c.id, $c.friends, "on")
   KKuTu.publish("conn", { user: $c.getData() })
 
-  JLog.info("New user #" + $c.id)
+  logger.info("New user #" + $c.id)
 }
 
 KKuTu.onClientMessage = function ($c, msg) {
@@ -619,7 +620,7 @@ KKuTu.onClientMessage = function ($c, msg) {
 
             processClientRequest($c, msg)
           } else {
-            JLog.warn(`Recaptcha failed from IP ${$c.remoteAddress}`)
+            logger.warn(`Recaptcha failed from IP ${$c.remoteAddress}`)
 
             $c.sendError(447)
             $c.socket.close()
@@ -792,5 +793,5 @@ KKuTu.onClientClosed = function ($c, code) {
   if ($c.friends) narrateFriends($c.id, $c.friends, "off")
   KKuTu.publish("disconn", { id: $c.id })
 
-  JLog.alert("Exit #" + $c.id)
+  logger.info("Exit #" + $c.id)
 }
