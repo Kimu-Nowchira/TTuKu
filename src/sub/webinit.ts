@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { logger } from "./jjlog"
-import { Express } from "express"
+import { Express, Response } from "express"
 import { config } from "../config"
 
 type LangFile = Record<string, Record<string, string>>
@@ -51,8 +51,8 @@ const getLanguage = (
   return R
 }
 
-export const page = (req, res, file, data) => {
-  if (data == undefined) data = {}
+export const page = (req: any, res: Response, file: string, data: any) => {
+  if (!data) data = {}
   if (req.session.createdAt) {
     if (Date.now() - req.session.createdAt > 3600000) {
       delete req.session.profile

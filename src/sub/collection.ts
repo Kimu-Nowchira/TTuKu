@@ -104,10 +104,8 @@ function query(_q: IArguments) {
 }
 
 function oQuery(_q) {
-  var i,
-    res = []
-
-  for (i in _q) if (_q[i]) res.push([i, _q[i]])
+  const res = []
+  for (const i in _q) if (_q[i]) res.push([i, _q[i]])
 
   return res
 }

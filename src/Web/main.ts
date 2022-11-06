@@ -293,7 +293,7 @@ Server.get("/", (req, res) => {
   })
 })
 
-Server.get("/servers", (req, res) => {
+Server.get("/servers", (_req, res) => {
   const list: Array<undefined | string> = []
 
   gameServers.forEach(function (v, i) {
