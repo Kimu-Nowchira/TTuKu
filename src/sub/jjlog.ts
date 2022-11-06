@@ -19,6 +19,9 @@ import { Logger } from "tslog"
 
 export const logger = new Logger()
 
+process.on("unhandledRejection", (e) => logger.fatal("Unhandled rejection:", e))
+process.on("uncaughtException", (e) => logger.fatal("Uncaught exception:", e))
+
 export const log = (text: string) => logger.info(text)
 export const info = (text: string) => logger.info(text)
 export const success = (text: string) => logger.info(text)
