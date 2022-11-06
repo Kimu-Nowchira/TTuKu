@@ -21,6 +21,7 @@ import { Pool } from "pg"
 import { logger } from "../sub/jjlog"
 import { Tail } from "../sub/lizard"
 import { config } from "../config"
+import { PostgresTable, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
 const Collection = require("../sub/collection")
@@ -68,8 +69,6 @@ Pub.ready = () => {
         )
         return
       }
-      const redisAgent = noRedis ? null : new Collection.Agent("Redis", Redis)
-      const mainAgent = new Collection.Agent("Postgres", pgMain)
 
       const DB = exports
 
@@ -77,23 +76,22 @@ Pub.ready = () => {
       DB.kkutu_cw = {}
       DB.kkutu_manner = {}
 
-      DB.redis = noRedis ? FAKE_REDIS : new redisAgent.Table("KKuTu_Score")
+      DB.redis = noRedis ? FAKE_REDIS : new RedisTable(pgMain, "KKuTu_Score")
       for (const i in LANG) {
-        DB.kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
-        DB.kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
-        DB.kkutu_manner[LANG[i]] = new mainAgent.Table(
+        DB.kkutu[LANG[i]] = new PostgresTable(pgMain, "kkutu_" + LANG[i])
+        DB.kkutu_cw[LANG[i]] = new PostgresTable(pgMain, "kkutu_cw_" + LANG[i])
+        DB.kkutu_manner[LANG[i]] = new PostgresTable(
+          pgMain,
           "kkutu_manner_" + LANG[i]
         )
       }
-      DB.kkutu_injeong = new mainAgent.Table("kkutu_injeong")
-      DB.kkutu_shop = new mainAgent.Table("kkutu_shop")
-      DB.kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
+      DB.kkutu_injeong = new PostgresTable(pgMain, "kkutu_injeong")
+      DB.kkutu_shop = new PostgresTable(pgMain, "kkutu_shop")
+      DB.kkutu_shop_desc = new PostgresTable(pgMain, "kkutu_shop_desc")
 
-      DB.session = new mainAgent.Table("session")
-      DB.users = new mainAgent.Table("users")
-      /* Enhanced User Block System [S] */
-      DB.ip_block = new mainAgent.Table("ip_block")
-      /* Enhanced User Block System [E] */
+      DB.session = new PostgresTable(pgMain, "session")
+      DB.users = new PostgresTable(pgMain, "users")
+      DB.ip_block = new PostgresTable(pgMain, "ip_block")
 
       if (exports.ready) exports.ready(Redis, Pg)
       else logger.warn("DB.onReady was not defined yet.")
