@@ -36,8 +36,7 @@ type RoomData = Record<number, any>
 type DICData = Record<string, any>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
-var JLog = require("../sub/jjlog")
-// 망할 셧다운제 var Ajae = require("../sub/ajae");
+
 var DB
 var SHOP
 let DIC: DICData = {}
@@ -201,23 +200,41 @@ export class Robot {
   }
 }
 
-exports.Data = function (data) {
-  var i, j
+class Data {
+  score: number
+  playTime: number
+  connectDate: number
+  record: Record<string, any>
 
-  if (!data) data = {}
+  constructor(data?: {
+    score: number
+    playTime: number
+    connectDate: number
+    record: Record<string, number[]>
+  }) {
+    if (!data)
+      data = {
+        score: 0,
+        playTime: 0,
+        connectDate: 0,
+        record: {},
+      }
 
-  this.score = data.score || 0
-  this.playTime = data.playTime || 0
-  this.connectDate = data.connectDate || 0
-  this.record = {}
-  for (i in GAME_TYPE) {
-    this.record[(j = GAME_TYPE[i])] = data.record
-      ? data.record[GAME_TYPE[i]] || [0, 0, 0, 0]
-      : [0, 0, 0, 0]
-    if (!this.record[j][3]) this.record[j][3] = 0
+    this.score = data.score || 0
+    this.playTime = data.playTime || 0
+    this.connectDate = data.connectDate || 0
+    this.record = {}
+    for (const i in GAME_TYPE) {
+      const j = GAME_TYPE[i]
+      this.record[j] = data.record
+        ? data.record[GAME_TYPE[i]] || [0, 0, 0, 0]
+        : [0, 0, 0, 0]
+      if (!this.record[j][3]) this.record[j][3] = 0
+    }
   }
   // 전, 승, 점수
 }
+
 exports.WebServer = function (socket) {
   var my = this
 
@@ -253,6 +270,7 @@ exports.WebServer = function (socket) {
   }
   socket.on("message", my.onWebServerMessage)
 }
+
 exports.Client = function (socket, profile, sid) {
   var my = this
   var gp, okg
@@ -334,7 +352,7 @@ exports.Client = function (socket, profile, sid) {
     if (!my) return
     if (!msg) return
 
-    JLog.log(`Chan @${channel} Msg #${my.id}: ${msg}`)
+    logger.info(`Chan @${channel} Msg #${my.id}: ${msg}`)
     try {
       data = JSON.parse(msg)
     } catch (e) {
@@ -467,7 +485,7 @@ exports.Client = function (socket, profile, sid) {
 
     if (my.guest) {
       my.equip = {}
-      my.data = new exports.Data()
+      my.data = new Data()
       my.money = 0
       my.friends = {}
 
@@ -505,7 +523,7 @@ exports.Client = function (socket, profile, sid) {
         my.exordial = $user.exordial || ""
         my.equip = $user.equip || {}
         my.box = $user.box || {}
-        my.data = new exports.Data($user.kkutu)
+        my.data = new Data($user.kkutu)
         my.money = Number($user.money)
         my.friends = $user.friends || {}
         if (first) my.flush()
@@ -545,7 +563,9 @@ exports.Client = function (socket, profile, sid) {
       .on(function (__res) {
         DB.redis.getGlobal(my.id).then(function (_res) {
           DB.redis.putGlobal(my.id, my.data.score).then(function (res) {
-            JLog.log(`FLUSHED [${my.id}] PTS=${my.data.score} MNY=${my.money}`)
+            logger.log(
+              `FLUSHED [${my.id}] PTS=${my.data.score} MNY=${my.money}`
+            )
             R.go({ id: my.id, prev: _res })
           })
         })
@@ -567,7 +587,7 @@ exports.Client = function (socket, profile, sid) {
 
     if (my.place) {
       my.send("roomStuck")
-      JLog.warn(
+      logger.warn(
         `Enter the room ${room.id} in the place ${my.place} by ${my.id}!`
       )
       return
@@ -1521,10 +1541,10 @@ exports.Room = function (room, channel) {
   my.checkRoute = function (func) {
     var c
 
-    if (!my.rule) return JLog.warn("Unknown mode: " + my.mode), false
+    if (!my.rule) return logger.warn("Unknown mode: " + my.mode), false
     if (!(c = Rule[my.rule.rule]))
-      return JLog.warn("Unknown rule: " + my.rule.rule), false
-    if (!c[func]) return JLog.warn("Unknown function: " + func), false
+      return logger.warn("Unknown rule: " + my.rule.rule), false
+    if (!c[func]) return logger.warn("Unknown function: " + func), false
     return c[func]
   }
   my.set(room)

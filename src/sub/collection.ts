@@ -85,6 +85,9 @@ const Escape = (str: string, ...a: string[]) => {
         return asKey(arg)
       case "V":
         return asValue(arg)
+      default:
+        logger.warn("Unknown escape type: " + type)
+        return ""
     }
   })
 }
