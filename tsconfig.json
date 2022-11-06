@@ -102,7 +102,7 @@
     "typeRoots": ["./node_modules/@types"],
     "types": ["node"],
     "allowJs": true,
-    "checkJs": true
+    "checkJs": false
   },
   "include": ["src/**/*"]
 }
