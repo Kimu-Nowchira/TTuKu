@@ -77,6 +77,7 @@ process.on("uncaughtException", function (err) {
 function processAdmin(id: string, value: string) {
   let cmd: string = ""
   let temp
+  let i: boolean
 
   value = value.replace(/^(#\w+\s+)?(.+)/, (v, p1, p2) => {
     if (p1) cmd = p1.slice(1).trim()
