@@ -111,7 +111,7 @@ function oQuery(_q) {
   return res
 }
 
-function uQuery(q, id) {
+function uQuery(q, id: string) {
   var i,
     res = [],
     noId = true
@@ -338,6 +338,7 @@ class Pointer {
     switch (this.mode) {
       case "findOne":
         this.findLimit = 1
+      // fall-through
       case "find":
         sql = Escape("SELECT %s FROM %I", sqlSelect(this.second), this.col)
         if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
@@ -441,107 +442,125 @@ class Pointer {
   }
 }
 
-exports.Agent = function (type: string, origin) {
-  var my = this
+class RedisTable {
+  constructor(private origin: any, private key: string) {}
 
-  this.RedisTable = function (key) {
-    var my = this
+  putGlobal(id: string, score: number) {
+    var R = new Tail()
 
-    my.putGlobal = function (id: string, score: number) {
-      var R = new Tail()
+    this.origin.zadd([this.key, score, id], (err: Error, res) => {
+      R.go(id)
+    })
+    return R
+  }
 
-      origin.zadd([key, score, id], (err: Error, res) => {
-        R.go(id)
-      })
-      return R
-    }
-    my.getGlobal = function (id: string) {
-      var R = new Tail()
+  getGlobal(id: string) {
+    var R = new Tail()
 
-      origin.zrevrank([key, id], function (err: Error, res) {
-        R.go(res)
-      })
-      return R
-    }
-    my.getPage = function (pg, lpp) {
-      var R = new Tail()
+    this.origin.zrevrank([this.key, id], function (err: Error, res) {
+      R.go(res)
+    })
+    return R
+  }
+  getPage(pg, lpp) {
+    var R = new Tail()
 
-      origin.zrevrange(
-        [key, pg * lpp, (pg + 1) * lpp - 1, "WITHSCORES"],
-        function (err, res) {
-          var A = []
-          var rank = pg * lpp
-          var i,
-            len = res.length
+    this.origin.zrevrange(
+      [this.key, pg * lpp, (pg + 1) * lpp - 1, "WITHSCORES"],
+      function (err, res) {
+        var A = []
+        var rank = pg * lpp
+        var i,
+          len = res.length
 
-          for (i = 0; i < len; i += 2) {
-            A.push({ id: res[i], rank: rank++, score: res[i + 1] })
+        for (i = 0; i < len; i += 2) {
+          A.push({ id: res[i], rank: rank++, score: res[i + 1] })
+        }
+        R.go({ page: pg, data: A })
+      }
+    )
+    return R
+  }
+  getSurround(id: string, rv: number) {
+    const R = new Tail()
+
+    rv = rv || 8
+    this.origin.zrevrank([this.key, id], (err: Error, res) => {
+      const range = [Math.max(0, res - Math.round(rv / 2 + 1)), 0]
+
+      range[1] = range[0] + rv - 1
+      this.origin.zrevrange(
+        [this.key, range[0], range[1], "WITHSCORES"],
+        (err: Error, res) => {
+          if (!res) return R.go({ target: id, data: [] })
+
+          const A = []
+          const len: number = res.length
+
+          for (let i = 0; i < len; i += 2) {
+            A.push({ id: res[i], rank: range[0]++, score: res[i + 1] })
           }
-          R.go({ page: pg, data: A })
+          R.go({ target: id, data: A })
         }
       )
-      return R
-    }
-    my.getSurround = function (id: string, rv: number) {
-      const R = new Tail()
-
-      rv = rv || 8
-      origin.zrevrank([key, id], function (err, res) {
-        const range = [Math.max(0, res - Math.round(rv / 2 + 1)), 0]
-
-        range[1] = range[0] + rv - 1
-        origin.zrevrange(
-          [key, range[0], range[1], "WITHSCORES"],
-          (err: Error, res) => {
-            if (!res) return R.go({ target: id, data: [] })
-
-            const A = []
-            const len: number = res.length
-
-            for (let i = 0; i < len; i += 2) {
-              A.push({ id: res[i], rank: range[0]++, score: res[i + 1] })
-            }
-            R.go({ target: id, data: A })
-          }
-        )
-      })
-      return R
-    }
+    })
+    return R
   }
-  this.PostgresTable = function (col: string) {
-    var my = this
-
-    // pointer
-
-    my.source = col
-    my.findOne = function () {
-      return new Pointer(origin, col, "findOne", query(arguments))
-    }
-    my.find = function () {
-      return new Pointer(origin, col, "find", query(arguments))
-    }
-    my.insert = function () {
-      return new Pointer(origin, col, "insert", query(arguments))
-    }
-    my.update = function () {
-      return new Pointer(origin, col, "update", query(arguments))
-    }
-    my.upsert = function () {
-      return new Pointer(origin, col, "upsert", query(arguments))
-    }
-    my.remove = function () {
-      return new Pointer(origin, col, "remove", query(arguments))
-    }
-    my.createColumn = function (name, type) {
-      return new Pointer(origin, col, "createColumn", [name, type])
-    }
-    my.direct = function (q, f) {
-      logger.warn("Direct query: " + q)
-      origin.query(q, f)
-    }
-  }
-  this.Table = this[`${type}Table`]
 }
+
+class PostgresTable {
+  source: string = ""
+
+  constructor(private origin: any, private col: string) {
+    this.source = col
+  }
+
+  // pointer
+  findOne() {
+    return new Pointer(this.origin, this.col, "findOne", query(arguments))
+  }
+  find() {
+    return new Pointer(this.origin, this.col, "find", query(arguments))
+  }
+  insert() {
+    return new Pointer(this.origin, this.col, "insert", query(arguments))
+  }
+  update() {
+    return new Pointer(this.origin, this.col, "update", query(arguments))
+  }
+  upsert() {
+    return new Pointer(this.origin, this.col, "upsert", query(arguments))
+  }
+  remove() {
+    return new Pointer(this.origin, this.col, "remove", query(arguments))
+  }
+  createColumn(name: string, type: string) {
+    return new Pointer(this.origin, this.col, "createColumn", [name, type])
+  }
+  direct(q, f) {
+    logger.warn("Direct query: " + q)
+    this.origin.query(q, f)
+  }
+}
+
+export class Agent {
+  table: typeof RedisTable | typeof PostgresTable = RedisTable
+
+  constructor(type: "Redis" | "Postgres", private origin: any) {
+    switch (type) {
+      case "Redis":
+        this.table = RedisTable
+        break
+      case "Postgres":
+        this.table = PostgresTable
+    }
+  }
+
+  Table(colOrKey: string) {
+    return new this.table(this.origin, colOrKey)
+  }
+}
+
 /*exports.Mongo = function(col){
 	var my = this;
 	var pointer = function(mode, q, flag){
