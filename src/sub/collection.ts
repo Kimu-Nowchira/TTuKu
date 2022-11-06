@@ -19,7 +19,6 @@
 import escape from "pg-escape"
 import { logger } from "./jjlog"
 import { Tail } from "./lizard"
-import { PoolClient } from "pg"
 
 const DEBUG = true
 
@@ -320,7 +319,7 @@ class Pointer {
         return
       }
       if (res) {
-        if (this.mode == "findOne") {
+        if (this.mode === "findOne") {
           if (res.rows) res = res.rows[0]
         } else if (res.rows) res = res.rows
       }
@@ -397,6 +396,7 @@ class Pointer {
     }
     if (!sql) return logger.warn("SQL is undefined. This call will be ignored.")
     // logger.log("Query: " + sql.slice(0, 100));
+    logger.info(sql)
     this.origin.query(sql, preCB)
     /*if(_my.findLimit){
 
