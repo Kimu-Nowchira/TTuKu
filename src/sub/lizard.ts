@@ -20,7 +20,7 @@ export const all = (tails: any[]) => {
   const R = new exports.Tail([])
   let left: number = tails.length
 
-  const onEnded = (data, __i: number) => {
+  const onEnded = (data: Object, __i: number) => {
     R.returns[__i] = data
     if (--left == 0) R.go(R.returns)
   }
@@ -35,22 +35,22 @@ export const all = (tails: any[]) => {
   return R
 }
 
-exports.Tail = function (res) {
-  let callback
-  let value = undefined
-  let _i: number
+export class Tail {
+  callback: Function | undefined
+  _i: number = 0
+  value: Object | undefined
 
-  this.returns = res
+  constructor(public returns: any[]) {}
 
-  this.go = (data) => {
-    if (callback) callback(data, _i)
-    else value = data
+  go(data: Object) {
+    if (this.callback) this.callback(data, this._i)
+    else this.value = data
   }
 
-  this.then = (cb, __i: number) => {
-    _i = __i
+  then(cb: Function, __i: number) {
+    this._i = __i
 
-    if (value === undefined) callback = cb
-    else cb(value, __i)
+    if (this.value === undefined) this.callback = cb
+    else cb(this.value, __i)
   }
 }
