@@ -17,11 +17,13 @@
  */
 
 import { readFileSync } from "fs"
+import { ServerOptions } from "https"
 import { SSL_OPTIONS } from "../const"
 
-export default () => ({
-  pfx: SSL_OPTIONS.isPFX ? readFileSync(SSL_OPTIONS.PFX) : null,
-  key: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.PRIVKEY),
-  cert: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.CERT),
-  ca: SSL_OPTIONS.isCA ? readFileSync(SSL_OPTIONS.CA) : null,
-})
+export default () =>
+  ({
+    pfx: SSL_OPTIONS.isPFX ? readFileSync(SSL_OPTIONS.PFX) : null,
+    key: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.PRIVKEY),
+    cert: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.CERT),
+    ca: SSL_OPTIONS.isCA ? readFileSync(SSL_OPTIONS.CA) : null,
+  } as ServerOptions)
