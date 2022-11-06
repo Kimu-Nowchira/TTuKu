@@ -40,7 +40,7 @@ export class Tail {
   _i: number = 0
   value: Object | undefined
 
-  constructor(public returns: any[]) {}
+  constructor(public returns?: any[]) {}
 
   go(data: Object) {
     if (this.callback) this.callback(data, this._i)
