@@ -3424,7 +3424,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"redis@npm:*":
+"redis@npm:*, redis@npm:^4.4.0":
   version: 4.4.0
   resolution: "redis@npm:4.4.0"
   dependencies:
@@ -3438,7 +3438,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"redis@npm:^2.1.0, redis@npm:^2.8.0":
+"redis@npm:^2.8.0":
   version: 2.8.0
   resolution: "redis@npm:2.8.0"
   dependencies:
@@ -3983,7 +3983,7 @@ __metadata:
     pg-escape: ^0.2.0
     prettier: ^2.7.1
     pug: ^2.0.4
-    redis: ^2.1.0
+    redis: ^4.4.0
     request: ^2.88.2
     ts-node: ^10.9.1
     tslog: ^3.3.4
