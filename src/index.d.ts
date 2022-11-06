@@ -1,6 +1,6 @@
 declare global {
-  let test: boolean
-  let isPublic: boolean
+  var test: boolean
+  var isPublic: boolean
 }
 
 export {}
