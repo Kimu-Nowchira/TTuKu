@@ -429,7 +429,7 @@ export const init = (_SID: string, CHAN) => {
         WDIC[key] = new KKuTu.WebServer(socket)
         logger.info(`New web server #${key}`)
         WDIC[key].socket.on("close", function () {
-          logger.alert(`Exit web server #${key}`)
+          logger.info(`Exit web server #${key}`)
           WDIC[key].socket.removeAllListeners()
           delete WDIC[key]
         })
