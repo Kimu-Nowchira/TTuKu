@@ -74,13 +74,15 @@ process.on("uncaughtException", function (err) {
     console.log(text)
   })
 })
-function processAdmin(id, value) {
-  let cmd, temp, i, j
+function processAdmin(id: string, value: string) {
+  let cmd: string = ""
+  let temp
 
-  value = value.replace(/^(#\w+\s+)?(.+)/, function (v, p1, p2) {
+  value = value.replace(/^(#\w+\s+)?(.+)/, (v, p1, p2) => {
     if (p1) cmd = p1.slice(1).trim()
     return p2
   })
+
   switch (cmd) {
     case "yell":
       KKuTu.publish("yell", { value: value })
@@ -393,7 +395,7 @@ Cluster.on("message", function (worker, msg) {
       JLog.warn(`Unhandled IPC message type: ${msg.type}`)
   }
 })
-exports.init = function (_SID, CHAN) {
+export const init = (_SID: string, CHAN) => {
   SID = _SID
   MainDB = require("../Web/db")
   MainDB.ready = function () {
@@ -590,7 +592,7 @@ function joinNewUser($c) {
     friends: $c.friends,
     admin: $c.admin,
     test: global.test,
-    caj: $c._checkAjae ? true : false,
+    caj: !!$c._checkAjae,
   })
   narrateFriends($c.id, $c.friends, "on")
   KKuTu.publish("conn", { user: $c.getData() })
