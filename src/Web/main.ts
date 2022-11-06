@@ -22,6 +22,7 @@
  */
 
 import WS from "ws"
+import { IS_SECURED } from "../const"
 
 var Express = require("express")
 var Exession = require("express-session")
@@ -115,52 +116,6 @@ DDDoS.rules[0].logFunction = DDDoS.rules[1].logFunction = function(ip, path){
 Server.use(DDDoS.express());*/
 
 WebInit.init(Server, true)
-DB.ready = function () {
-  setInterval(function () {
-    var q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }]
-
-    DB.session.remove(q).on()
-  }, 600000)
-  setInterval(function () {
-    gameServers.forEach((v) => {
-      if (v.socket) v.socket.send(`{"type":"seek"}`)
-      else v.seek = undefined
-    })
-  }, 4000)
-  JLog.success("DB is ready.")
-
-  DB.kkutu_shop_desc.find().on(function ($docs) {
-    var i, j
-
-    for (i in Language) flush(i)
-    function flush(lang) {
-      var db
-
-      Language[lang].SHOP = db = {}
-      for (j in $docs) {
-        db[$docs[j]._id] = [$docs[j][`name_${lang}`], $docs[j][`desc_${lang}`]]
-      }
-    }
-  })
-  Server.listen(80)
-  if (Const.IS_SECURED) {
-    const options = Secure()
-    https.createServer(options, Server).listen(443)
-  }
-}
-Const.MAIN_PORTS.forEach((v: number, i: number) => {
-  const KEY = process.env["WS_KEY"] || ""
-  var protocol
-  if (Const.IS_SECURED) {
-    protocol = "wss"
-  } else {
-    protocol = "ws"
-  }
-  gameServers[i] = new GameClient(
-    KEY,
-    `${protocol}://${GLOBAL.GAME_SERVER_HOST}:${v}/${KEY}`
-  )
-})
 
 class GameClient {
   socket: WS
@@ -215,6 +170,50 @@ class GameClient {
     this.socket.send(JSON.stringify(data))
   }
 }
+
+DB.ready = function () {
+  setInterval(function () {
+    var q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }]
+
+    DB.session.remove(q).on()
+  }, 600000)
+  setInterval(function () {
+    gameServers.forEach((v) => {
+      if (v.socket) v.socket.send(`{"type":"seek"}`)
+      else v.seek = undefined
+    })
+  }, 4000)
+  JLog.success("DB is ready.")
+
+  DB.kkutu_shop_desc.find().on(function ($docs) {
+    var i, j
+
+    for (i in Language) flush(i)
+    function flush(lang) {
+      var db
+
+      Language[lang].SHOP = db = {}
+      for (j in $docs) {
+        db[$docs[j]._id] = [$docs[j][`name_${lang}`], $docs[j][`desc_${lang}`]]
+      }
+    }
+  })
+  Server.listen(80)
+  if (Const.IS_SECURED) {
+    const options = Secure()
+    https.createServer(options, Server).listen(443)
+  }
+}
+
+Const.MAIN_PORTS.forEach((v: number, i: number) => {
+  const KEY = process.env["WS_KEY"] || ""
+  const protocol = IS_SECURED ? "wss" : "ws"
+
+  gameServers[i] = new GameClient(
+    KEY,
+    `${protocol}://${GLOBAL.GAME_SERVER_HOST}:${v}/${KEY}`
+  )
+})
 
 ROUTES.forEach(function (v) {
   require(`./routes/${v}`).run(Server, WebInit.page)
