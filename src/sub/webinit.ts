@@ -17,10 +17,10 @@
  */
 import { logger } from "./jjlog"
 import { Express } from "express"
+import { config } from "../config"
 
 type LangFile = Record<string, Record<string, string>>
 
-const GLOBAL = require("./global.json")
 const Language = {
   ko_KR: require("../Web/lang/ko_KR.json") as LangFile,
   en_US: require("../Web/lang/en_US.json") as LangFile,
@@ -35,11 +35,11 @@ const updateLanguage = () => {
   }
 }
 
-function getLanguage(
+const getLanguage = (
   locale: keyof typeof Language,
   page: string,
   shop: boolean
-) {
+) => {
   const L = Language[locale] || {}
   const R: Record<string, string> = {}
 
@@ -70,8 +70,8 @@ export const page = (req, res, file, data) => {
   // URL ...?locale=en_US will show the page in English
 
   // if(exports.STATIC) data.static = exports.STATIC[data.lang];
-  data.season = GLOBAL.SEASON
-  data.season_pre = GLOBAL.SEASON_PRE
+  data.season = config.SEASON
+  data.season_pre = config.SEASON_PRE
 
   data.locale = getLanguage(
     data.lang,
@@ -104,7 +104,7 @@ export const page = (req, res, file, data) => {
     )}`
   )
 
-  res.render(data.page, data, function (err: Error, html: string) {
+  res.render(data.page, data, (err: Error, html: string) => {
     if (err) res.send(err.toString())
     else res.send(html)
   })

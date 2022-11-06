@@ -15,11 +15,10 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-
-const GLOBAL = require("./sub/global.json")
+import { config } from "./config"
 
 export const KKUTU_MAX = 400
-export const MAIN_PORTS = GLOBAL.MAIN_PORTS
+export const MAIN_PORTS = config.MAIN_PORTS
 export const TEST_PORT = 4040
 export const SPAM_CLEAR_DELAY = 1600
 export const SPAM_ADD_DELAY = 750
@@ -27,9 +26,9 @@ export const SPAM_LIMIT = 7
 export const BLOCKED_LENGTH = 10000
 export const KICK_BY_SPAM = 9
 export const MAX_OBSERVER = 4
-export const TESTER = GLOBAL.ADMIN.concat(["Input tester id here"])
-export const IS_SECURED = GLOBAL.IS_SECURED
-export const SSL_OPTIONS = GLOBAL.SSL_OPTIONS
+export const TESTER = config.ADMIN.concat(["Input tester id here"])
+export const IS_SECURED = config.IS_SECURED
+export const SSL_OPTIONS = config.SSL_OPTIONS
 export const OPTIONS = {
   man: { name: "Manner" },
   ext: { name: "Injeong" },
@@ -77,6 +76,7 @@ export const AVAIL_EQUIP = [
   "Mshoes",
   "Mback",
 ]
+
 export const GROUPS = {
   spec: ["PIX", "PIY", "PIZ", "CNS"],
   skin: ["NIK"],
@@ -88,6 +88,7 @@ export const GROUPS = {
   hs: ["Mhand", "Mshoes"],
   back: ["Mback", "Mfront"],
 }
+
 export const RULE = {
   /*
 	유형: { lang: 언어,

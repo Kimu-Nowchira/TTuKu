@@ -15,14 +15,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 import { createClient } from "redis"
 import { Pool } from "pg"
 import { logger } from "../sub/jjlog"
 import { Tail } from "../sub/lizard"
+import { config } from "../config"
 
 const LANG = ["ko", "en"]
-
-const GLOBAL = require("../sub/global.json")
 const Collection = require("../sub/collection")
 
 const Pub = require("../sub/checkpub")
@@ -44,11 +44,11 @@ Pub.ready = () => {
   // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
   const Redis = createClient({ host: "redis", port: 6379 }) // 구형 레디스 기준
   const Pg = new Pool({
-    user: GLOBAL.PG_USER,
-    password: GLOBAL.PG_PASSWORD,
-    port: GLOBAL.PG_PORT,
-    database: GLOBAL.PG_DATABASE,
-    host: GLOBAL.PG_HOST,
+    user: config.PG_USER,
+    password: config.PG_PASSWORD,
+    port: config.PG_PORT,
+    database: config.PG_DATABASE,
+    host: config.PG_HOST,
   })
 
   Redis.on("connect", () => connectPg())
