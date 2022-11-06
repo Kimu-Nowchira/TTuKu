@@ -22,31 +22,46 @@
  */
 
 import WS from "ws"
-import { IS_SECURED } from "../const"
+import Express from "express"
+import Exession from "express-session"
+import * as https from "https"
+import passport from "passport"
 
-var Express = require("express")
-var Exession = require("express-session")
-var Redission = require("connect-redis")(Exession)
-var Redis = require("redis")
-var Parser = require("body-parser")
-var DDDoS = require("dddos")
-var Server = Express()
+import {
+  EN_INJEONG,
+  EN_THEME,
+  GAME_TYPE,
+  IJP_EXCEPT,
+  IS_SECURED,
+  KO_INJEONG,
+  KO_THEME,
+  MAIN_PORTS,
+  RULE,
+  OPTIONS,
+  GROUPS,
+  CATEGORIES,
+  AVAIL_EQUIP,
+  MOREMI_PART,
+} from "../const"
+import { LangFile } from "../sub/webinit"
+import { urlencoded } from "body-parser"
+import { logger } from "../sub/jjlog"
+
+// import DDDoS from "dddos"
+// var Redission = require("connect-redis")(Exession)
+// var Redis = require("redis")
+
 var DB = require("./db")
-//볕뉘 수정 구문삭제 (28)
-var JLog = require("../sub/jjlog")
 var WebInit = require("../sub/webinit")
 var GLOBAL = require("../sub/global.json")
 var Secure = require("../sub/secure")
-//볕뉘 수정
-var passport = require("passport")
-//볕뉘 수정 끝
 var Const = require("../const")
-var https = require("https")
-var fs = require("fs")
+
+const Server = Express()
 
 const Language = {
-  ko_KR: require("./lang/ko_KR.json"),
-  en_US: require("./lang/en_US.json"),
+  ko_KR: require("./lang/ko_KR.json") as LangFile,
+  en_US: require("./lang/en_US.json") as LangFile,
 }
 const ROUTES = ["major", "consume", "admin", "login"]
 const page = WebInit.page
@@ -56,11 +71,11 @@ WebInit.MOBILE_AVAILABLE = ["portal", "main", "kkutu"]
 
 require("../sub/checkpub")
 
-JLog.info("<< KKuTu Web >>")
+logger.info("<< KKuTu Web >>")
 Server.set("views", __dirname + "/views")
 Server.set("view engine", "pug")
 Server.use(Express.static(__dirname + "/public"))
-Server.use(Parser.urlencoded({ extended: true }))
+Server.use(urlencoded({ extended: true }))
 Server.use(
   Exession({
     /* use only for redis-installed
@@ -74,17 +89,17 @@ Server.use(
     saveUninitialized: true,
   })
 )
-//볕뉘 수정
+
 Server.use(passport.initialize())
 Server.use(passport.session())
 Server.use((req, res, next) => {
-  if (req.session.passport) {
-    delete req.session.passport
-  }
+  // @ts-ignore
+  if (req.session.passport) delete req.session.passport
   next()
 })
+
 Server.use((req, res, next) => {
-  if (Const.IS_SECURED) {
+  if (IS_SECURED) {
     if (req.protocol == "http") {
       let url = "https://" + req.get("host") + req.path
       res.status(302).redirect(url)
@@ -95,7 +110,7 @@ Server.use((req, res, next) => {
     next()
   }
 })
-//볕뉘 수정 끝
+
 /* use this if you want
 
 DDDoS = new DDDoS({
@@ -111,7 +126,7 @@ DDDoS = new DDDoS({
 	}]
 });
 DDDoS.rules[0].logFunction = DDDoS.rules[1].logFunction = function(ip, path){
-	JLog.warn(`DoS from IP ${ip} on ${path}`);
+	logger.warn(`DoS from IP ${ip} on ${path}`);
 };
 Server.use(DDDoS.express());*/
 
@@ -128,15 +143,15 @@ class GameClient {
     })
 
     this.socket.on("open", () => {
-      JLog.info(`Game server #${this.id} connected`)
+      logger.info(`Game server #${this.id} connected`)
     })
 
     this.socket.on("error", (err) => {
-      JLog.warn(`Game server #${this.id} has an error: ${err.toString()}`)
+      logger.warn(`Game server #${this.id} has an error: ${err.toString()}`)
     })
 
     this.socket.on("close", (code) => {
-      JLog.error(`Game server #${this.id} closed: ${code}`)
+      logger.error(`Game server #${this.id} closed: ${code}`)
       this.socket.removeAllListeners()
       // delete this.socket
     })
@@ -163,7 +178,7 @@ class GameClient {
     })
   }
 
-  send(type: string, data) {
+  send(type: string, data: any) {
     if (!data) data = {}
     data.type = type
 
@@ -173,7 +188,7 @@ class GameClient {
 
 DB.ready = function () {
   setInterval(function () {
-    var q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }]
+    const q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }]
 
     DB.session.remove(q).on()
   }, 600000)
@@ -183,29 +198,30 @@ DB.ready = function () {
       else v.seek = undefined
     })
   }, 4000)
-  JLog.success("DB is ready.")
+  logger.info("DB is ready.")
 
-  DB.kkutu_shop_desc.find().on(function ($docs) {
-    var i, j
-
-    for (i in Language) flush(i)
-    function flush(lang) {
-      var db
+  DB.kkutu_shop_desc.find().on(($docs) => {
+    const flush = (lang: keyof typeof Language) => {
+      let db
 
       Language[lang].SHOP = db = {}
-      for (j in $docs) {
+      for (const j in $docs) {
         db[$docs[j]._id] = [$docs[j][`name_${lang}`], $docs[j][`desc_${lang}`]]
       }
     }
+
+    for (const i in Language) flush(i as keyof typeof Language)
   })
+
   Server.listen(80)
-  if (Const.IS_SECURED) {
+
+  if (IS_SECURED) {
     const options = Secure()
     https.createServer(options, Server).listen(443)
   }
 }
 
-Const.MAIN_PORTS.forEach((v: number, i: number) => {
+MAIN_PORTS.forEach((v: number, i: number) => {
   const KEY = process.env["WS_KEY"] || ""
   const protocol = IS_SECURED ? "wss" : "ws"
 
@@ -219,11 +235,46 @@ ROUTES.forEach(function (v) {
   require(`./routes/${v}`).run(Server, WebInit.page)
 })
 
-Server.get("/", function (req, res) {
-  var server = req.query.server
+Server.get("/", (req, res) => {
+  const server = parseInt(req.query.server?.toString() || "")
+  if (!server) logger.error("Server is not defined")
 
-  //볕뉘 수정 구문삭제(220~229, 240)
-  DB.session.findOne(["_id", req.session.id]).on(function ($ses) {
+  const onFinish = ($doc) => {
+    let id = req.session.id
+
+    if ($doc) {
+      req.session.profile = $doc.profile
+      id = $doc.profile.sid
+    } else {
+      delete req.session.profile
+    }
+    page(req, res, MAIN_PORTS[server] ? "kkutu" : "portal", {
+      _page: "kkutu",
+      _id: id,
+      PORT: MAIN_PORTS[server],
+      HOST: req.hostname,
+      PROTOCOL: IS_SECURED ? "wss" : "ws",
+      TEST: req.query.test,
+      MOREMI_PART,
+      AVAIL_EQUIP,
+      CATEGORIES,
+      GROUPS,
+      MODE: GAME_TYPE,
+      RULE,
+      OPTIONS,
+      KO_INJEONG,
+      EN_INJEONG,
+      KO_THEME,
+      EN_THEME,
+      IJP_EXCEPT,
+      ogImage: "http://kkutu.kr/img/kkutu/logo.png",
+      ogURL: "http://kkutu.kr/",
+      ogTitle: "글자로 놀자! 끄투 온라인",
+      ogDescription: "끝말잇기가 이렇게 박진감 넘치는 게임이었다니!",
+    })
+  }
+
+  DB.session.findOne(["_id", req.session.id]).on(($ses) => {
     // var sid = (($ses || {}).profile || {}).sid || "NULL";
     if (global.isPublic) {
       onFinish($ses)
@@ -233,44 +284,10 @@ Server.get("/", function (req, res) {
       onFinish($ses)
     }
   })
-  function onFinish($doc) {
-    var id = req.session.id
-
-    if ($doc) {
-      req.session.profile = $doc.profile
-      id = $doc.profile.sid
-    } else {
-      delete req.session.profile
-    }
-    page(req, res, Const.MAIN_PORTS[server] ? "kkutu" : "portal", {
-      _page: "kkutu",
-      _id: id,
-      PORT: Const.MAIN_PORTS[server],
-      HOST: req.hostname,
-      PROTOCOL: Const.IS_SECURED ? "wss" : "ws",
-      TEST: req.query.test,
-      MOREMI_PART: Const.MOREMI_PART,
-      AVAIL_EQUIP: Const.AVAIL_EQUIP,
-      CATEGORIES: Const.CATEGORIES,
-      GROUPS: Const.GROUPS,
-      MODE: Const.GAME_TYPE,
-      RULE: Const.RULE,
-      OPTIONS: Const.OPTIONS,
-      KO_INJEONG: Const.KO_INJEONG,
-      EN_INJEONG: Const.EN_INJEONG,
-      KO_THEME: Const.KO_THEME,
-      EN_THEME: Const.EN_THEME,
-      IJP_EXCEPT: Const.IJP_EXCEPT,
-      ogImage: "http://kkutu.kr/img/kkutu/logo.png",
-      ogURL: "http://kkutu.kr/",
-      ogTitle: "글자로 놀자! 끄투 온라인",
-      ogDescription: "끝말잇기가 이렇게 박진감 넘치는 게임이었다니!",
-    })
-  }
 })
 
-Server.get("/servers", function (req, res) {
-  var list = []
+Server.get("/servers", (req, res) => {
+  const list: Array<undefined | string> = []
 
   gameServers.forEach(function (v, i) {
     list[i] = v.seek
@@ -278,8 +295,6 @@ Server.get("/servers", function (req, res) {
   res.send({ list: list, max: Const.KKUTU_MAX })
 })
 
-//볕뉘 수정 구문 삭제(274~353)
-
-Server.get("/legal/:page", function (req, res) {
+Server.get("/legal/:page", (req, res) => {
   page(req, res, "legal/" + req.params.page)
 })
