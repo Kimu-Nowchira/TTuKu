@@ -414,7 +414,9 @@ export const init = (_SID: string, CHAN) => {
       Server = new WebSocket.Server({ server: HTTPS_Server })
     } else {
       Server = new WebSocket.Server({
-        port: global.test ? TEST_PORT + 416 : process.env["KKUTU_PORT"],
+        port: global.test
+          ? TEST_PORT + 416
+          : parseInt(process.env["KKUTU_PORT"] || ""),
         perMessageDeflate: false,
       })
     }
