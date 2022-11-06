@@ -13,3 +13,4 @@ Server/lib/sub/global.json
 .yarn/unplugged
 
 dist
+lib
