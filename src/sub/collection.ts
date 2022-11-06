@@ -62,7 +62,7 @@ const asValue = (val: any) => {
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = function (str: string) {
+const Escape = function (str: string, ...a) {
   var i = 1
   var args = arguments
 
@@ -74,6 +74,7 @@ const Escape = function (str: string) {
       case "s":
         return escape.string(arg)
       case "I":
+        logger.debug("I", arg)
         return escape.ident(arg)
       case "L":
         return escape.literal(arg)
