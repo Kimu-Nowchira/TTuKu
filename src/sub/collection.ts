@@ -260,7 +260,7 @@ function isDataAvailable(data, chk) {
   return true
 }
 
-exports.Agent = function (type, origin) {
+export const Agent = function (type, origin) {
   var my = this
 
   this.RedisTable = function (key) {
