@@ -18,7 +18,18 @@
 
 import cluster from "node:cluster"
 import { all, Tail } from "../sub/lizard"
-import { GAME_TYPE, RULE } from "../const"
+import {
+  BLOCKED_LENGTH,
+  GAME_TYPE,
+  getRule,
+  IJP_EXCEPT,
+  KICK_BY_SPAM,
+  MAX_OBSERVER,
+  RULE,
+  SPAM_ADD_DELAY,
+  SPAM_CLEAR_DELAY,
+  SPAM_LIMIT,
+} from "../const"
 
 type RoomData = Record<number, any>
 type DICData = Record<string, any>
@@ -123,56 +134,70 @@ export const publish = (type: string, data, _room) => {
   }
 }
 
-exports.Robot = function (target, place, level) {
-  var my = this
+export class Robot {
+  id: string
+  robot: boolean
+  game: Record<string, any>
+  data: Record<string, any>
+  equip: Record<string, any>
 
-  my.id = target + place + Math.floor(Math.random() * 1000000000)
-  my.robot = true
-  my.game = {}
-  my.data = {}
-  my.place = place
-  my.target = target
-  my.equip = { robot: true }
+  constructor(
+    public target: string,
+    public place: string,
+    public level: number
+  ) {
+    this.id = target + place + Math.floor(Math.random() * 1000000000)
+    this.robot = true
+    this.game = {}
+    this.data = {}
+    this.equip = { robot: true }
 
-  my.getData = function () {
+    this.setLevel(level)
+    this.setTeam(0)
+  }
+
+  getData() {
     return {
-      id: my.id,
+      id: this.id,
       robot: true,
-      game: my.game,
-      data: my.data,
-      place: my.place,
-      target: target,
-      equip: my.equip,
-      level: my.level,
+      game: this.game,
+      data: this.data,
+      place: this.place,
+      target: this.target,
+      equip: this.equip,
+      level: this.level,
       ready: true,
     }
   }
-  my.setLevel = function (level) {
-    my.level = level
-    my.data.score = Math.pow(10, level + 2)
-  }
-  my.setTeam = function (team) {
-    my.game.team = team
-  }
-  my.send = function () {}
-  my.obtain = function () {}
-  my.invokeWordPiece = function (text, coef) {}
-  my.publish = function (type, data, noBlock) {
-    var i
 
-    if (my.target == null) {
-      for (i in DIC) {
-        if (DIC[i].place == place) DIC[i].send(type, data)
+  setLevel(level: number) {
+    this.level = level
+    this.data.score = Math.pow(10, level + 2)
+  }
+
+  setTeam(team: number) {
+    this.game.team = team
+  }
+
+  send() {}
+
+  obtain() {}
+
+  invokeWordPiece(_text: any, _coef: any) {}
+
+  publish(type: string, data: any, _noBlock?: boolean) {
+    if (this.target == null) {
+      for (const i in DIC) {
+        if (DIC[i].place == this.place) DIC[i].send(type, data)
       }
-    } else if (DIC[my.target]) {
-      DIC[my.target].send(type, data)
+    } else if (DIC[this.target]) {
+      DIC[this.target].send(type, data)
     }
   }
-  my.chat = function (msg, code) {
-    my.publish("chat", { value: msg })
+
+  chat(msg: string, _code: any) {
+    this.publish("chat", { value: msg })
   }
-  my.setLevel(level)
-  my.setTeam(0)
 }
 
 exports.Data = function (data) {
@@ -198,8 +223,7 @@ exports.WebServer = function (socket) {
   my.socket = socket
 
   my.send = function (type, data) {
-    var i,
-      r = data || {}
+    var r = data || {}
 
     r.type = type
 
@@ -339,8 +363,8 @@ exports.Client = function (socket, profile, sid) {
 		}
 	};
 	*/
-  my.getData = function (gaming) {
-    var o = {
+  my.getData = function (gaming: boolean) {
+    return {
       id: my.id,
       guest: my.guest,
       game: {
@@ -351,17 +375,15 @@ exports.Client = function (socket, profile, sid) {
         score: my.game.score,
         item: my.game.item,
       },
+      profile: gaming ? null : my.profile,
+      place: gaming ? null : my.place,
+      data: gaming ? null : my.data,
+      money: gaming ? null : my.money,
+      equip: gaming ? null : my.equip,
+      exordial: gaming ? null : my.exordial,
     }
-    if (!gaming) {
-      o.profile = my.profile
-      o.place = my.place
-      o.data = my.data
-      o.money = my.money
-      o.equip = my.equip
-      o.exordial = my.exordial
-    }
-    return o
   }
+
   my.send = function (type, data) {
     var i,
       r = data || {}
@@ -374,9 +396,8 @@ exports.Client = function (socket, profile, sid) {
     my.send("error", { code: code, message: msg })
   }
   my.publish = function (type, data, noBlock) {
-    var i
-    var now = new Date(),
-      st = now - my._pub
+    const now = Date.now()
+    const st = now - my._pub
 
     if (st <= SPAM_ADD_DELAY) my.spam++
     else if (st >= SPAM_CLEAR_DELAY) my.spam = 0
@@ -399,7 +420,7 @@ exports.Client = function (socket, profile, sid) {
     data.profile = my.profile
     if (my.subPlace && type != "chat") my.send(type, data)
     else
-      for (i in DIC) {
+      for (const i in DIC) {
         if (DIC[i].place == my.place) DIC[i].send(type, data)
       }
     if (cluster.isWorker && type == "user")
@@ -407,21 +428,20 @@ exports.Client = function (socket, profile, sid) {
   }
   my.chat = function (msg, code) {
     if (my.noChat) return my.send("chat", { notice: true, code: 443 })
-    my.publish("chat", { value: msg, notice: code ? true : false, code: code })
+    my.publish("chat", { value: msg, notice: !!code, code: code })
   }
   my.checkExpire = function () {
-    var now = new Date()
-    var d = now.getDate()
-    var i,
-      expired = []
+    const d = new Date().getDate()
+    const now = new Date().getTime() * 0.001
+
+    var expired = []
     var gr
 
-    now = now.getTime() * 0.001
     if (d != my.data.connectDate) {
       my.data.connectDate = d
       my.data.playTime = 0
     }
-    for (i in my.box) {
+    for (const i in my.box) {
       if (!my.box[i]) {
         delete my.box[i]
         continue
@@ -430,7 +450,7 @@ exports.Client = function (socket, profile, sid) {
       if (my.box[i].expire < now) {
         gr = SHOP[i].group
 
-        if (gr.substr(0, 3) == "BDG") gr = "BDG"
+        if (gr.substring(0, 3) == "BDG") gr = "BDG"
         if (my.equip[gr] == i) delete my.equip[gr]
         delete my.box[i]
         expired.push(i)
@@ -915,7 +935,7 @@ exports.Room = function (room, channel) {
       id: my.id,
       channel: my.channel,
       title: my.title,
-      password: my.password ? true : false,
+      password: !!my.password,
       limit: my.limit,
       mode: my.mode,
       round: my.round,
@@ -931,7 +951,7 @@ exports.Room = function (room, channel) {
         title: my.game.title,
         mission: my.game.mission,
       },
-      practice: my.practice ? true : false,
+      practice: !!my.practice,
       opts: my.opts,
     }
   }
@@ -945,7 +965,7 @@ exports.Room = function (room, channel) {
     if (!my.rule.ai) {
       return caller.sendError(415)
     }
-    my.players.push(new exports.Robot(null, my.id, 2))
+    my.players.push(new Robot(null, my.id, 2))
     my.export()
   }
   my.setAI = function (target, level, team) {
@@ -1099,7 +1119,7 @@ exports.Room = function (room, channel) {
         my.opts[k] = room.opts[k] && my.rule.opts.includes(i)
       }
       if ((ijc = my.rule.opts.includes("ijp"))) {
-        ij = Const[`${my.rule.lang.toUpperCase()}_IJP`]
+        ij = require("../const")[`${my.rule.lang.toUpperCase()}_IJP`]
         my.opts.injpick = (room.opts.injpick || []).filter(function (item) {
           return ij.includes(item)
         })
@@ -1203,7 +1223,7 @@ exports.Room = function (room, channel) {
     my.game.seq = []
     my.game.robots = []
     if (my.practice) {
-      my.game.robots.push((o = new exports.Robot(my.master, my.id, pracLevel)))
+      my.game.robots.push((o = new Robot(my.master, my.id, pracLevel)))
       my.game.seq.push(o, my.master)
     } else {
       for (i in my.players) {
@@ -1268,8 +1288,14 @@ exports.Room = function (room, channel) {
     clearTimeout(my.game.qTimer)
   }
   my.roundEnd = function (data) {
-    var i, o, rw
-    var res = []
+    var o, rw
+    const res: {
+      id: string
+      score: number
+      dim: number
+      rank?: number
+      reward?: any
+    }[] = []
     var users = {}
     var rl
     var pv = -1
@@ -1279,7 +1305,7 @@ exports.Room = function (room, channel) {
     var now = new Date().getTime()
 
     my.interrupt()
-    for (i in my.players) {
+    for (const i in my.players) {
       o = DIC[my.players[i]]
       if (!o) continue
       if (o.cameWhenGaming) {
@@ -1292,14 +1318,14 @@ exports.Room = function (room, channel) {
         o.setForm("J")
       }
     }
-    for (i in my.game.seq) {
+    for (const i in my.game.seq) {
       o = DIC[my.game.seq[i]] || my.game.seq[i]
       if (!o) continue
       if (o.robot) {
         if (o.game.team) teams[o.game.team].push(o.game.score)
       } else if (o.team) teams[o.team].push(o.game.score)
     }
-    for (i = 1; i < 5; i++)
+    for (let i = 1; i < 5; i++)
       if ((o = teams[i].length))
         teams[i] = [
           o,
@@ -1307,7 +1333,7 @@ exports.Room = function (room, channel) {
             return p + item
           }, 0),
         ]
-    for (i in my.game.seq) {
+    for (const i in my.game.seq) {
       o = DIC[my.game.seq[i]]
       if (!o) continue
       sumScore += o.game.score
@@ -1322,7 +1348,7 @@ exports.Room = function (room, channel) {
     })
     rl = res.length
 
-    for (i in res) {
+    for (const i in res) {
       o = DIC[res[i].id]
       if (pv == res[i].score) {
         res[i].rank = res[Number(i) - 1].rank
@@ -1364,14 +1390,12 @@ exports.Room = function (room, channel) {
       var o = {}
 
       suv = []
-      for (i in uds) {
+      for (const i in uds) {
         o[uds[i].id] = { prev: uds[i].prev }
         suv.push(DB.redis.getSurround(uds[i].id))
       }
-      all(suv).then(function (ranks) {
-        var i, j
-
-        for (i in ranks) {
+      all(suv).then((ranks) => {
+        for (const i in ranks) {
           if (!o[ranks[i].target]) continue
 
           o[ranks[i].target].list = ranks[i].data
@@ -1393,8 +1417,19 @@ exports.Room = function (room, channel) {
     if (DIC[my.master]) DIC[my.master].publish(type, data, nob)
   }
   my.export = function (target, kickVote, spec) {
-    var obj = { room: my.getData() }
-    var i, o
+    var obj: {
+      room: any
+      target?: any
+      kickVote?: any
+      chain?: any
+      theme?: any
+      conso?: any
+      prisoners?: any
+      boards?: any
+      means?: any
+      spec?: any
+    } = { room: my.getData() }
+    var o
 
     if (!my.rule) return
     if (target) obj.target = target
@@ -1411,7 +1446,7 @@ exports.Room = function (room, channel) {
         obj.means = my.game.means
       }
       obj.spec = {}
-      for (i in my.game.seq) {
+      for (const i in my.game.seq) {
         if ((o = DIC[my.game.seq[i]])) obj.spec[o.id] = o.game.score
       }
     }
@@ -1531,14 +1566,14 @@ function shuffle(arr) {
     r = []
 
   for (i in arr) r.push(arr[i])
-  r.sort(function (a, b) {
+  r.sort(() => {
     return Math.random() - 0.5
   })
 
   return r
 }
 function getRewards(mode, score, bonus, rank, all, ss) {
-  var rw = { score: 0, money: 0 }
+  var rw = { score: 0, money: 0, together: false }
   var sr = score / ss
 
   // all은 1~8
