@@ -77,6 +77,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["passport-twitter", "npm:1.0.4"],\
             ["pg", "virtual:af7692c6980fb5cd086698d216bf8ffc7cadc503533b5978fbe52a4f472699f7229668a28ccb01372b1314f4c39d15a69ae04c284a0050162113cee8fe201668#npm:8.8.0"],\
             ["pg-escape", "npm:0.2.0"],\
+            ["prettier", "npm:2.7.1"],\
             ["pug", "npm:2.0.4"],\
             ["request", "npm:2.88.2"],\
             ["ts-node", "virtual:af7692c6980fb5cd086698d216bf8ffc7cadc503533b5978fbe52a4f472699f7229668a28ccb01372b1314f4c39d15a69ae04c284a0050162113cee8fe201668#npm:10.9.1"],\
@@ -3635,6 +3636,15 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
           "linkType": "HARD"\
         }]\
       ]],\
+      ["prettier", [\
+        ["npm:2.7.1", {\
+          "packageLocation": "./.yarn/cache/prettier-npm-2.7.1-d1f40f5e1a-55a4409182.zip/node_modules/prettier/",\
+          "packageDependencies": [\
+            ["prettier", "npm:2.7.1"]\
+          ],\
+          "linkType": "HARD"\
+        }]\
+      ]],\
       ["pretty-bytes", [\
         ["npm:1.0.4", {\
           "packageLocation": "./.yarn/cache/pretty-bytes-npm-1.0.4-fd418b1f4e-30c8d87bf8.zip/node_modules/pretty-bytes/",\
@@ -4549,6 +4559,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["passport-twitter", "npm:1.0.4"],\
             ["pg", "virtual:af7692c6980fb5cd086698d216bf8ffc7cadc503533b5978fbe52a4f472699f7229668a28ccb01372b1314f4c39d15a69ae04c284a0050162113cee8fe201668#npm:8.8.0"],\
             ["pg-escape", "npm:0.2.0"],\
+            ["prettier", "npm:2.7.1"],\
             ["pug", "npm:2.0.4"],\
             ["request", "npm:2.88.2"],\
             ["ts-node", "virtual:af7692c6980fb5cd086698d216bf8ffc7cadc503533b5978fbe52a4f472699f7229668a28ccb01372b1314f4c39d15a69ae04c284a0050162113cee8fe201668#npm:10.9.1"],\
