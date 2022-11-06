@@ -29,6 +29,7 @@ import {
   SPAM_ADD_DELAY,
   SPAM_CLEAR_DELAY,
   SPAM_LIMIT,
+  OPTIONS,
 } from "../const"
 
 type RoomData = Record<number, any>
@@ -1104,7 +1105,7 @@ exports.Room = function (room, channel) {
     }
   }
   my.set = function (room) {
-    var i, k, ijc, ij
+    var k, ijc, ij
 
     my.title = room.title
     my.password = room.password
@@ -1114,7 +1115,7 @@ exports.Room = function (room, channel) {
     my.round = Math.round(room.round)
     my.time = room.time * my.rule.time
     if (room.opts && my.opts) {
-      for (i in OPTIONS) {
+      for (const i in OPTIONS) {
         k = OPTIONS[i].name.toLowerCase()
         my.opts[k] = room.opts[k] && my.rule.opts.includes(i)
       }
@@ -1128,10 +1129,11 @@ exports.Room = function (room, channel) {
     if (!my.rule.ai) {
       while (my.removeAI(false, true));
     }
-    for (i in my.players) {
+    for (const i in my.players) {
       if (DIC[my.players[i]]) DIC[my.players[i]].ready = false
     }
   }
+
   my.preReady = function (teams) {
     var i,
       j,
