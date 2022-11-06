@@ -19,6 +19,7 @@
 import escape from "pg-escape"
 import { logger } from "./jjlog"
 import { Tail } from "./lizard"
+import { PoolClient } from "pg"
 
 const DEBUG = true
 
@@ -442,7 +443,7 @@ class Pointer {
   }
 }
 
-class RedisTable {
+export class RedisTable {
   constructor(private origin: any, private key: string) {}
 
   putGlobal(id: string, score: number) {
@@ -508,7 +509,7 @@ class RedisTable {
   }
 }
 
-class PostgresTable {
+export class PostgresTable {
   source: string = ""
 
   constructor(private origin: any, private col: string) {
@@ -543,23 +544,23 @@ class PostgresTable {
   }
 }
 
-export class Agent {
-  table: typeof RedisTable | typeof PostgresTable = RedisTable
-
-  constructor(type: "Redis" | "Postgres", private origin: any) {
-    switch (type) {
-      case "Redis":
-        this.table = RedisTable
-        break
-      case "Postgres":
-        this.table = PostgresTable
-    }
-  }
-
-  Table(colOrKey: string) {
-    return new this.table(this.origin, colOrKey)
-  }
-}
+// export class Agent {
+//   table: typeof RedisTable | typeof PostgresTable = RedisTable
+//
+//   constructor(type: "Redis" | "Postgres", private origin: PoolClient) {
+//     switch (type) {
+//       case "Redis":
+//         this.table = RedisTable
+//         break
+//       case "Postgres":
+//         this.table = PostgresTable
+//     }
+//   }
+//
+//   Table(colOrKey: string) {
+//     return new this.table(this.origin, colOrKey)
+//   }
+// }
 
 /*exports.Mongo = function(col){
 	var my = this;
