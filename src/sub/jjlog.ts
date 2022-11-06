@@ -19,32 +19,9 @@ import { Logger } from "tslog"
 
 export const logger = new Logger()
 
-// deprecated
-function callLog(text: string) {
-  const date = new Date()
-  const o = {
-    year: 1900 + date.getFullYear(),
-    month: date.getMonth() + 1,
-    date: date.getDate(),
-    hour: date.getHours(),
-    minute: date.getMinutes(),
-    second: date.getSeconds(),
-  }
-
-  for (const i in o) {
-    // @ts-ignore
-    if (o[i] < 10) o[i] = "0" + o[i]
-    // @ts-ignore
-    else o[i] = o[i].toString()
-  }
-  console.log(
-    `[${o.year}-${o.month}-${o.date} ${o.hour}:${o.minute}:${o.second}] ${text}`
-  )
-}
-
-export const log = (text: string) => callLog(text)
-export const info = (text: string) => callLog(text)
-export const success = (text: string) => callLog(text)
-export const alert = (text: string) => callLog(text)
-export const warn = (text: string) => callLog(text)
-export const error = (text: string) => callLog(text)
+export const log = (text: string) => logger.info(text)
+export const info = (text: string) => logger.info(text)
+export const success = (text: string) => logger.info(text)
+export const alert = (text: string) => logger.warn(text)
+export const warn = (text: string) => logger.warn(text)
+export const error = (text: string) => logger.error(text)
