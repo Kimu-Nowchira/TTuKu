@@ -19,6 +19,7 @@
 import escape from "pg-escape"
 import { logger } from "./jjlog"
 import { Tail } from "./lizard"
+import { PoolClient } from "pg"
 
 const DEBUG = true
 
@@ -62,11 +63,11 @@ const asValue = (val: any) => {
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = function (str: string, ...a) {
-  var i = 1
-  var args = [str, ...a]
+const Escape = function (str: string, ...a: any[]) {
+  let i = 1
+  const args = [str, ...a]
 
-  return str.replace(/%([%sILQkKV])/g, function (_, type) {
+  return str.replace(/%([%sILQkKV])/g, (_, type) => {
     if ("%" == type) return "%"
 
     var arg = args[i++] || ""
@@ -267,7 +268,7 @@ class Pointer {
   findLimit = 0
 
   constructor(
-    private origin: any,
+    private origin: PoolClient,
     private col: string,
     private mode: string,
     private q: any[]
@@ -511,7 +512,7 @@ export class RedisTable {
 export class PostgresTable {
   source: string = ""
 
-  constructor(private origin: any, private col: string) {
+  constructor(private origin: PoolClient, private col: string) {
     this.source = col
   }
 
