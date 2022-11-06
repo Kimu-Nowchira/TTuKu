@@ -10,3 +10,4 @@ Server/lib/sub/global.json
 .idea
 
 .yarn/cache
+.yarn/unplugged
