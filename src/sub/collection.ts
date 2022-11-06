@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import escape from "pg-escape"
+import escape, { arguments } from "pg-escape"
 import { logger } from "./jjlog"
 import { Tail } from "./lizard"
 
@@ -64,7 +64,7 @@ const asValue = (val: any) => {
 
 const Escape = (str: string, _a?: any, _b?: any, _c?: any, _d?: any) => {
   let i = 1
-  const args = arguments
+  const args = [str, _a, _b, _c, _d]
 
   return str.replace(/%([%sILQkKV])/g, function (_, type) {
     if ("%" == type) return "%"
