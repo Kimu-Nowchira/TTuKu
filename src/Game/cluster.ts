@@ -16,10 +16,10 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import cluster from "node:cluster"
 import { logger } from "../sub/jjlog"
 import { MAIN_PORTS } from "../const"
 
-const Cluster = require("cluster")
 const SID = Number(process.argv[2])
 let CPU = Number(process.argv[3]) //require("os").cpus().length;
 
@@ -38,20 +38,20 @@ if (isNaN(CPU)) {
   process.exit(1)
 }
 
-if (Cluster.isMaster) {
+if (cluster.isPrimary) {
   const channels: Record<number, any> = {}
   let chan: number
 
   for (let i = 0; i < CPU; i++) {
     chan = i + 1
-    channels[chan] = Cluster.fork({
+    channels[chan] = cluster.fork({
       SERVER_NO_FORK: true,
       KKUTU_PORT: MAIN_PORTS[SID] + 416 + i,
       CHANNEL: chan,
     })
   }
 
-  Cluster.on("exit", (w) => {
+  cluster.on("exit", (w) => {
     for (const i in channels) {
       if (channels[i] == w) {
         chan = Number(i)
@@ -60,7 +60,7 @@ if (Cluster.isMaster) {
     }
 
     logger.error(`Worker @${chan} ${w.process.pid} died`)
-    channels[chan] = Cluster.fork({
+    channels[chan] = cluster.fork({
       SERVER_NO_FORK: true,
       KKUTU_PORT: MAIN_PORTS[SID] + 416 + (chan - 1),
       CHANNEL: chan,
