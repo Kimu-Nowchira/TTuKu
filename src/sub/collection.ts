@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import escape, { arguments } from "pg-escape"
+import escape from "pg-escape"
 import { logger } from "./jjlog"
 import { Tail } from "./lizard"
 
