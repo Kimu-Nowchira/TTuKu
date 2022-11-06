@@ -18,16 +18,18 @@
 import { createClient } from "redis"
 import { Pool } from "pg"
 import { logger } from "../sub/jjlog"
+import * as checkPub from "../sub/checkpub"
+import { Tail } from "../sub/lizard"
 
 const LANG = ["ko", "en"]
 
 const GLOBAL = require("../sub/global.json")
 const Collection = require("../sub/collection")
+
 const Pub = require("../sub/checkpub")
-const Lizard = require("../sub/lizard")
 
 const FAKE_REDIS_FUNC = () => {
-  const R = new Lizard.Tail()
+  const R = new Tail()
 
   R.go({})
   return R
