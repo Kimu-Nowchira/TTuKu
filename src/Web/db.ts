@@ -24,8 +24,6 @@ import { config } from "../config"
 import { PostgresTable, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
-const Collection = require("../sub/collection")
-
 const Pub = require("../sub/checkpub")
 
 const FAKE_REDIS_FUNC = () => {

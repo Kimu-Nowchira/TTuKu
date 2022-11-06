@@ -194,7 +194,7 @@ function sqlWhere(q) {
 }
 function sqlSet(q, inc?: boolean) {
   if (!q) {
-    JLog.warn("[sqlSet] Invalid query.")
+    logger.warn("[sqlSet] Invalid query.")
     return null
   }
   var doN = inc
@@ -206,7 +206,7 @@ function sqlSet(q, inc?: boolean) {
         },
     doJ = inc
       ? function (k, p, ok, v) {
-          JLog.warn("[sqlSet] Cannot increase a value in JSON object.")
+          logger.warn("[sqlSet] Cannot increase a value in JSON object.")
           return null //Escape("%K=jsonb_set(%K,%V,CAST(CAST(%k AS bigint)+%V AS text),true)", k, k, p, ok, Number(v));
         }
       : function (k, p, ok, v) {
@@ -286,12 +286,14 @@ class Pointer {
     let uq
 
     const mode_ = this.mode
+    const q_ = this.q
+
     function preCB(err, res) {
       if (err) {
-        JLog.error("Error when querying: " + sql)
-        JLog.error("Context: " + err.toString())
+        logger.error("Error when querying: " + sql)
+        logger.error("Context: " + err.toString())
         if (onFail) {
-          JLog.log("onFail calling...")
+          logger.warn("onFail calling...")
           onFail(err)
         }
         return
@@ -322,13 +324,13 @@ class Pointer {
                 "The data from " +
                   mode_ +
                   "[" +
-                  JSON.stringify(q) +
+                  JSON.stringify(q_) +
                   "] was not available."
               )
             else
-              JLog.warn(
+              logger.warn(
                 "The data from [" +
-                  JSON.stringify(q) +
+                  JSON.stringify(q_) +
                   "] was not available. Callback has been canceled."
               )
           }
