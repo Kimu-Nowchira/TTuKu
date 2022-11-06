@@ -16,18 +16,17 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { createClient } from "redis"
-import { Pool } from "pg"
-import { logger } from "../sub/jjlog"
-import { Tail } from "../sub/lizard"
-import { config } from "../config"
-import { PostgresTable, RedisTable } from "../sub/collection"
-
 const LANG = ["ko", "en"]
-const Pub = require("../sub/checkpub")
+
+var PgPool = require("pg").Pool
+var GLOBAL = require("../sub/global.json")
+var JLog = require("../sub/jjlog")
+var Collection = require("../sub/collection")
+var Pub = require("../sub/checkpub")
+var Lizard = require("../sub/lizard")
 
 const FAKE_REDIS_FUNC = () => {
-  const R = new Tail()
+  var R = new Lizard.Tail()
 
   R.go({})
   return R
@@ -39,60 +38,60 @@ const FAKE_REDIS = {
   getSurround: FAKE_REDIS_FUNC,
 }
 
-Pub.ready = () => {
-  // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
-  const Redis = createClient({ host: "redis", port: 6379 }) // 구형 레디스 기준
-  const Pg = new Pool({
-    user: config.PG_USER,
-    password: config.PG_PASSWORD,
-    port: config.PG_PORT,
-    database: config.PG_DATABASE,
-    host: config.PG_HOST,
+Pub.ready = function (isPub) {
+  var Redis = require("redis").createClient()
+  var Pg = new PgPool({
+    user: GLOBAL.PG_USER,
+    password: GLOBAL.PG_PASSWORD,
+    port: GLOBAL.PG_PORT,
+    database: GLOBAL.PG_DATABASE,
+    host: GLOBAL.PG_HOST,
   })
-
-  Redis.on("connect", () => connectPg())
-
-  Redis.on("error", (err: Error) => {
-    logger.error("Error from Redis: " + err)
-    logger.warn("Run with no-redis mode.")
+  Redis.on("connect", function () {
+    connectPg()
+  })
+  Redis.on("error", function (err) {
+    JLog.error("Error from Redis: " + err)
+    JLog.alert("Run with no-redis mode.")
     Redis.quit()
     connectPg(true)
   })
-
   function connectPg(noRedis?: boolean) {
     Pg.connect(function (err, pgMain) {
       if (err) {
-        logger.error(
-          "Error when connect to PostgresSQL server: " + err.toString()
-        )
+        JLog.error("Error when connect to PostgreSQL server: " + err.toString())
         return
       }
+      var redisAgent = noRedis ? null : new Collection.Agent("Redis", Redis)
+      var mainAgent = new Collection.Agent("Postgres", pgMain)
 
-      const DB = exports
+      var DB = exports
+      var i
 
       DB.kkutu = {}
       DB.kkutu_cw = {}
       DB.kkutu_manner = {}
 
-      DB.redis = noRedis ? FAKE_REDIS : new RedisTable(pgMain, "KKuTu_Score")
-      for (const i in LANG) {
-        DB.kkutu[LANG[i]] = new PostgresTable(pgMain, "kkutu_" + LANG[i])
-        DB.kkutu_cw[LANG[i]] = new PostgresTable(pgMain, "kkutu_cw_" + LANG[i])
-        DB.kkutu_manner[LANG[i]] = new PostgresTable(
-          pgMain,
+      DB.redis = noRedis ? FAKE_REDIS : new redisAgent.Table("KKuTu_Score")
+      for (i in LANG) {
+        DB.kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
+        DB.kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
+        DB.kkutu_manner[LANG[i]] = new mainAgent.Table(
           "kkutu_manner_" + LANG[i]
         )
       }
-      DB.kkutu_injeong = new PostgresTable(pgMain, "kkutu_injeong")
-      DB.kkutu_shop = new PostgresTable(pgMain, "kkutu_shop")
-      DB.kkutu_shop_desc = new PostgresTable(pgMain, "kkutu_shop_desc")
+      DB.kkutu_injeong = new mainAgent.Table("kkutu_injeong")
+      DB.kkutu_shop = new mainAgent.Table("kkutu_shop")
+      DB.kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
 
-      DB.session = new PostgresTable(pgMain, "session")
-      DB.users = new PostgresTable(pgMain, "users")
-      DB.ip_block = new PostgresTable(pgMain, "ip_block")
+      DB.session = new mainAgent.Table("session")
+      DB.users = new mainAgent.Table("users")
+      /* Enhanced User Block System [S] */
+      DB.ip_block = new mainAgent.Table("ip_block")
+      /* Enhanced User Block System [E] */
 
       if (exports.ready) exports.ready(Redis, Pg)
-      else logger.warn("DB.onReady was not defined yet.")
+      else JLog.warn("DB.onReady was not defined yet.")
     })
   }
 }
