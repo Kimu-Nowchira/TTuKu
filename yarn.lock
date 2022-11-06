@@ -187,7 +187,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*":
+"@types/node@npm:*, @types/node@npm:^18.11.9":
   version: 18.11.9
   resolution: "@types/node@npm:18.11.9"
   checksum: cc0aae109e9b7adefc32eecb838d6fad931663bb06484b5e9cbbbf74865c721b03d16fd8d74ad90e31dbe093d956a7c2c306ba5429ba0c00f3f7505103d7a496
@@ -3816,6 +3816,7 @@ __metadata:
     "@types/express-session": ^1.17.5
     "@types/glob": ^8.0.0
     "@types/grunt": ^0.4.27
+    "@types/node": ^18.11.9
     "@types/passport": ^1.0.11
     "@types/passport-discord": ^0.1.6
     "@types/passport-facebook": ^2.1.11

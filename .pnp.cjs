@@ -34,6 +34,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/express-session", "npm:1.17.5"],\
             ["@types/glob", "npm:8.0.0"],\
             ["@types/grunt", "npm:0.4.27"],\
+            ["@types/node", "npm:18.11.9"],\
             ["@types/passport", "npm:1.0.11"],\
             ["@types/passport-discord", "npm:0.1.6"],\
             ["@types/passport-facebook", "npm:2.1.11"],\
@@ -4468,7 +4469,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@tsconfig/node12", "npm:1.0.11"],\
             ["@tsconfig/node14", "npm:1.0.3"],\
             ["@tsconfig/node16", "npm:1.0.3"],\
-            ["@types/node", null],\
+            ["@types/node", "npm:18.11.9"],\
             ["@types/swc__core", null],\
             ["@types/swc__wasm", null],\
             ["@types/typescript", null],\
@@ -4505,6 +4506,7 @@ function $$SETUP_STATE(hydrateRuntimeState, basePath) {
             ["@types/express-session", "npm:1.17.5"],\
             ["@types/glob", "npm:8.0.0"],\
             ["@types/grunt", "npm:0.4.27"],\
+            ["@types/node", "npm:18.11.9"],\
             ["@types/passport", "npm:1.0.11"],\
             ["@types/passport-discord", "npm:0.1.6"],\
             ["@types/passport-facebook", "npm:2.1.11"],\
