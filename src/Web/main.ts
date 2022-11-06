@@ -42,10 +42,12 @@ import {
   CATEGORIES,
   AVAIL_EQUIP,
   MOREMI_PART,
+  KKUTU_MAX,
 } from "../const"
-import { LangFile } from "../sub/webinit"
 import { urlencoded } from "body-parser"
 import { logger } from "../sub/jjlog"
+import { config } from "../config"
+import Secure from "../sub/secure"
 
 // import DDDoS from "dddos"
 // var Redission = require("connect-redis")(Exession)
@@ -53,11 +55,10 @@ import { logger } from "../sub/jjlog"
 
 var DB = require("./db")
 var WebInit = require("../sub/webinit")
-var GLOBAL = require("../sub/global.json")
-var Secure = require("../sub/secure")
-var Const = require("../const")
 
 const Server = Express()
+
+type LangFile = Record<string, Record<string, string>>
 
 const Language = {
   ko_KR: require("./lang/ko_KR.json") as LangFile,
@@ -227,7 +228,7 @@ MAIN_PORTS.forEach((v: number, i: number) => {
 
   gameServers[i] = new GameClient(
     KEY,
-    `${protocol}://${GLOBAL.GAME_SERVER_HOST}:${v}/${KEY}`
+    `${protocol}://${config.GAME_SERVER_HOST}:${v}/${KEY}`
   )
 })
 
@@ -292,7 +293,7 @@ Server.get("/servers", (req, res) => {
   gameServers.forEach(function (v, i) {
     list[i] = v.seek
   })
-  res.send({ list: list, max: Const.KKUTU_MAX })
+  res.send({ list: list, max: KKUTU_MAX })
 })
 
 Server.get("/legal/:page", (req, res) => {
