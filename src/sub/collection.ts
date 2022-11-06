@@ -268,10 +268,10 @@ class Pointer {
   findLimit = 0
 
   constructor(
-    private origin: PoolClient,
-    private col: string,
-    private mode: string,
-    private q: any[]
+    public origin: PoolClient,
+    public col: string,
+    public mode: string,
+    public q: any[]
   ) {}
 
   /* on: 입력받은 쿼리를 실행시킨다.
@@ -444,7 +444,7 @@ class Pointer {
 }
 
 export class RedisTable {
-  constructor(private origin: any, private key: string) {}
+  constructor(public origin: any, public key: string) {}
 
   putGlobal(id: string, score: number) {
     var R = new Tail()
@@ -512,7 +512,7 @@ export class RedisTable {
 export class PostgresTable {
   source: string = ""
 
-  constructor(private origin: PoolClient, private col: string) {
+  constructor(public origin: PoolClient, public col: string) {
     this.source = col
   }
 
