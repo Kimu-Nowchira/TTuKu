@@ -24,8 +24,8 @@ let step = [
     console.log("Please wait... This may take several minutes.")
     doStep()
   },
-  () => summon("npm install"),
-  () => summon(`npm install . --prefix "."`),
+  // () => summon("npm install"),
+  // () => summon(`npm install . --prefix "."`),
   () => removeCmd("acorn"),
   () => removeCmd("cake"),
   () => removeCmd("coffee"),
