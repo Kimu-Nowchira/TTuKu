@@ -64,7 +64,7 @@ const asValue = (val: any) => {
 
 const Escape = function (str: string, ...a) {
   var i = 1
-  var args = arguments
+  var args = [str, ...a]
 
   return str.replace(/%([%sILQkKV])/g, function (_, type) {
     if ("%" == type) return "%"
