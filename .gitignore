@@ -8,3 +8,5 @@ Server/lib/sub/auth.json
 Server/lib/sub/global.json
 .vscode
 .idea
+
+.yarn/cache
