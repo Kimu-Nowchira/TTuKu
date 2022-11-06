@@ -2,7 +2,11 @@ FROM node:12
 
 WORKDIR /app
 
+COPY . .
+
 COPY ./src/ ./lib/
+
+RUN yarn build
 
 RUN cd lib && node setup
 
