@@ -20,8 +20,8 @@ import { readFileSync } from "fs"
 import { SSL_OPTIONS } from "../const"
 
 export default () => ({
-  pfx: SSL_OPTIONS.isPFX ? readFileSync(SSL_OPTIONS.pfx) : null,
-  key: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.key),
-  cert: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.cert),
-  ca: SSL_OPTIONS.isCA ? readFileSync(SSL_OPTIONS.ca) : null,
+  pfx: SSL_OPTIONS.isPFX ? readFileSync(SSL_OPTIONS.PFX) : null,
+  key: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.PRIVKEY),
+  cert: SSL_OPTIONS.isPFX ? null : readFileSync(SSL_OPTIONS.CERT),
+  ca: SSL_OPTIONS.isCA ? readFileSync(SSL_OPTIONS.CA) : null,
 })
