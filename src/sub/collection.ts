@@ -16,76 +16,78 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import escape from "pg-escape"
+import { logger } from "./jjlog"
+import { Tail } from "./lizard"
+
 const DEBUG = true
 
-var _Escape = require("pg-escape")
-var Escape = function (str, ...a) {
-  var i = 1
-  var args = arguments
-
-  return str.replace(/%([%sILQkKV])/g, function (_, type) {
-    if ("%" == type) return "%"
-
-    var arg = args[i++]
-    switch (type) {
-      case "s":
-        return _Escape.string(arg)
-      case "I":
-        return _Escape.ident(arg)
-      case "L":
-        return _Escape.literal(arg)
-      case "Q":
-        return _Escape.dollarQuotedString(arg)
-      case "k":
-        return _Escape.asSKey(arg)
-      case "K":
-        return _Escape.asKey(arg)
-      case "V":
-        return _Escape.asValue(arg)
-    }
-  })
-}
-var Lizard = require("./lizard")
-var JLog = require("./jjlog")
-
-// (JSON ENDPOINT) KEY
-_Escape.asSKey = function (val) {
-  var c
-
-  if (val.indexOf(".") == -1) return _Escape.asKey(val)
-  c = val.split(".").map(function (item, x) {
-    return x ? _Escape.literal(item) : _Escape.ident(item)
-  })
-
-  return c.slice(0, c.length - 1).join("->") + "->>" + c[c.length - 1]
-}
 // KEY
-_Escape.asKey = function (val) {
+const asKey = (val: string) => {
   if (val.indexOf(".") == -1) {
-    var v = _Escape.ident(val)
+    const v = escape.ident(val)
 
     if (v.charAt(0) == '"') return v
     else return '"' + v + '"'
   }
-  var ar = val.split("."),
+  const ar = val.split("."),
     aEnd = ar.pop()
 
   return (
     ar
       .map(function (item, x) {
-        return x ? `'${_Escape.literal(item)}'` : _Escape.ident(item)
+        return x ? `'${escape.literal(item)}'` : escape.ident(item)
       })
       .join("->") + `->>'${aEnd}'`
   )
 }
-// VALUE
-_Escape.asValue = function (val) {
-  var type = typeof val
 
-  if (val instanceof Array) return _Escape.literal("{" + val.join(",") + "}")
+// (JSON ENDPOINT) KEY
+const asSKey = (val: string) => {
+  if (val.indexOf(".") == -1) return asKey(val)
+  const c = val.split(".").map(function (item, x) {
+    return x ? escape.literal(item) : escape.ident(item)
+  })
+
+  return c.slice(0, c.length - 1).join("->") + "->>" + c[c.length - 1]
+}
+
+// VALUE
+const asValue = (val: any) => {
+  const type = typeof val
+
+  if (val instanceof Array) return escape.literal("{" + val.join(",") + "}")
   if (type == "number") return val
-  if (type == "string") return _Escape.literal(val)
-  return _Escape.literal(JSON.stringify(val))
+  if (type == "string") return escape.literal(val)
+  return escape.literal(JSON.stringify(val))
+}
+
+const Escape = function (str: string, ...a: any[]) {
+  let i = 1
+  const args = [str, ...a]
+
+  return str.replace(/%([%sILQkKV])/g, (_, type) => {
+    if ("%" == type) return "%"
+
+    var arg = args[i++] || ""
+    switch (type) {
+      case "s":
+        return escape.string(arg)
+      case "I":
+        logger.debug("I", arg)
+        return escape.ident(arg)
+      case "L":
+        return escape.literal(arg)
+      case "Q":
+        return escape.dollarQuotedString(arg)
+      case "k":
+        return asSKey(arg)
+      case "K":
+        return asKey(arg)
+      case "V":
+        return asValue(arg)
+    }
+  })
 }
 
 global.getType = function (obj) {
@@ -264,7 +266,7 @@ exports.Agent = function (type, origin) {
     var my = this
 
     my.putGlobal = function (id, score) {
-      var R = new Lizard.Tail()
+      var R = new Tail()
 
       origin.zadd([key, score, id], function (err, res) {
         R.go(id)
@@ -272,7 +274,7 @@ exports.Agent = function (type, origin) {
       return R
     }
     my.getGlobal = function (id) {
-      var R = new Lizard.Tail()
+      var R = new Tail()
 
       origin.zrevrank([key, id], function (err, res) {
         R.go(res)
@@ -280,7 +282,7 @@ exports.Agent = function (type, origin) {
       return R
     }
     my.getPage = function (pg, lpp) {
-      var R = new Lizard.Tail()
+      var R = new Tail()
 
       origin.zrevrange(
         [key, pg * lpp, (pg + 1) * lpp - 1, "WITHSCORES"],
@@ -299,7 +301,7 @@ exports.Agent = function (type, origin) {
       return R
     }
     my.getSurround = function (id, rv) {
-      var R = new Lizard.Tail()
+      var R = new Tail()
       var i
 
       rv = rv || 8
