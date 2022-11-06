@@ -40,7 +40,8 @@ const FAKE_REDIS = {
 }
 
 Pub.ready = () => {
-  const Redis = createClient({ socket: { host: "redis" } })
+  // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
+  const Redis = createClient({ host: "redis", port: 6379 }) // 구형 레디스 기준
   const Pg = new Pool({
     user: GLOBAL.PG_USER,
     password: GLOBAL.PG_PASSWORD,
