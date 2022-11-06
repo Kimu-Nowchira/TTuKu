@@ -53,28 +53,27 @@ const asSKey = (val: string) => {
 }
 
 // VALUE
-const asValue = (val: any) => {
+const asValue = (val: string[] | number | string): string => {
   const type = typeof val
 
   if (val instanceof Array) return escape.literal("{" + val.join(",") + "}")
-  if (type == "number") return val
-  if (type == "string") return escape.literal(val)
+  if (typeof val === "number") return val.toString()
+  if (typeof val === "string") return escape.literal(val)
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = function (str: string, ...a: any[]) {
+const Escape = (str: string, ...a: string[]) => {
   let i = 1
   const args = [str, ...a]
 
   return str.replace(/%([%sILQkKV])/g, (_, type) => {
     if ("%" == type) return "%"
 
-    var arg = args[i++] || ""
+    const arg = args[i++] || ""
     switch (type) {
       case "s":
         return escape.string(arg)
       case "I":
-        logger.debug("I", arg)
         return escape.ident(arg)
       case "L":
         return escape.literal(arg)
@@ -90,35 +89,31 @@ const Escape = function (str: string, ...a: any[]) {
   })
 }
 
-global.getType = function (obj) {
+global.getType = (obj: any): string => {
   if (obj === undefined) return ""
-  var s = obj.constructor.toString()
 
+  const s = obj.constructor.toString()
   return s.slice(9, s.indexOf("("))
 }
-function query(_q) {
-  var i,
-    res = []
 
-  for (i in _q) if (_q[i]) res.push(_q[i])
-
+const query = (_q) => {
+  const res = []
+  for (const i in _q) if (_q[i]) res.push(_q[i])
   return res
 }
-function oQuery(_q) {
-  var i,
-    res = []
 
-  for (i in _q) if (_q[i]) res.push([i, _q[i]])
-
+const oQuery = (_q) => {
+  const res = []
+  for (const i in _q) if (_q[i]) res.push([i, _q[i]])
   return res
 }
-function uQuery(q, id) {
-  var i,
-    res = [],
-    noId = true
 
-  for (i in q) {
-    var c = q[i][0]
+const uQuery = (q, id: string): [string, string][] => {
+  const res = []
+  let noId = true
+
+  for (const i in q) {
+    let c = q[i][0]
 
     if (q[i][0] == "_id") {
       noId = false
@@ -139,21 +134,23 @@ function uQuery(q, id) {
   if (noId) res.push(["_id", id])
   return res
 }
-function sqlSelect(q) {
+
+const sqlSelect = (q: any[]) => {
   if (!Object.keys(q).length) return "*"
 
   return q
-    .map(function (item) {
+    .map((item) => {
       if (!item[1]) throw new Error(item[0])
       return Escape("%K", item[0])
     })
     .join(", ")
 }
-function sqlWhere(q) {
+
+const sqlWhere = (q: any[]) => {
   if (!Object.keys(q).length) return "TRUE"
 
-  function wSearch(item) {
-    var c
+  const wSearch = (item) => {
+    let c
 
     if ((c = item[1]["$not"]) !== undefined)
       return Escape("NOT (%s)", wSearch([item[0], c]))
@@ -166,11 +163,7 @@ function sqlWhere(q) {
       return Escape(
         "%I IN (%s)",
         item[0],
-        c
-          .map(function (i) {
-            return Escape("%V", i)
-          })
-          .join(",")
+        c.map((i) => Escape("%V", i)).join(",")
       )
     }
     if ((c = item[1]["$nin"]) !== undefined) {
@@ -178,79 +171,61 @@ function sqlWhere(q) {
       return Escape(
         "%I NOT IN (%s)",
         item[0],
-        c
-          .map(function (i) {
-            return Escape("%V", i)
-          })
-          .join(",")
+        c.map((i) => Escape("%V", i)).join(",")
       )
     }
     if (item[1] instanceof RegExp)
       return Escape("%K ~ %L", item[0], item[1].source)
     return Escape("%K=%V", item[0], item[1])
   }
+
   return q.map(wSearch).join(" AND ")
 }
-function sqlSet(q, inc?: boolean) {
+
+const sqlSet = (q, inc?: boolean) => {
   if (!q) {
     logger.warn("[sqlSet] Invalid query.")
     return null
   }
-  var doN = inc
-      ? function (k, v) {
-          return Escape("%K=%K+%V", k, k, v)
-        }
-      : function (k, v) {
-          return Escape("%K=%V", k, v)
-        },
+  const doN = inc
+      ? (k, v) => Escape("%K=%K+%V", k, k, v)
+      : (k, v) => Escape("%K=%V", k, v),
     doJ = inc
-      ? function (k, p, ok, v) {
+      ? (k, p, ok, v) => {
           logger.warn("[sqlSet] Cannot increase a value in JSON object.")
           return null //Escape("%K=jsonb_set(%K,%V,CAST(CAST(%k AS bigint)+%V AS text),true)", k, k, p, ok, Number(v));
         }
-      : function (k, p, ok, v) {
-          return Escape("%K=jsonb_set(%K,%V,%V,true)", k, k, p, v)
-        }
-  return q
-    .map(function (item) {
-      var c = item[0].split(".")
+      : (k, p, ok, v) => Escape("%K=jsonb_set(%K,%V,%V,true)", k, k, p, v)
 
-      if (c.length == 1) {
-        return doN(item[0], item[1])
-      }
+  return q
+    .map((item) => {
+      const c = item[0].split(".")
+
+      if (c.length === 1) return doN(item[0], item[1])
+
       /* JSON 값 내부를 수정하기
       1. UPSERT 할 수 없다.
       2. 한 쿼리에 여러 값을 수정할 수 없다.
     */
-      if (typeof item[1] == "number") item[1] = item[1].toString()
+
+      if (typeof item[1] === "number") item[1] = item[1].toString()
       return doJ(c[0], c.slice(1), item[0], item[1])
     })
     .join(", ")
 }
-function sqlIK(q) {
-  return q
-    .map(function (item) {
-      return Escape("%K", item[0])
-    })
-    .join(", ")
-}
-function sqlIV(q) {
-  return q
-    .map(function (item) {
-      return Escape("%V", item[1])
-    })
-    .join(", ")
-}
+
+const sqlIK = (q) => q.map((item) => Escape("%K", item[0])).join(", ")
+const sqlIV = (q) => q.map((item) => Escape("%V", item[1])).join(", ")
+
 function isDataAvailable(data, chk) {
-  var i, j
-  var path
-  var cursor
+  let path
+  let cursor
 
   if (data == null) return false
-  for (i in chk) {
+  for (const i in chk) {
     cursor = data
     path = i.split(".")
-    for (j in path) {
+    for (const j in path) {
       if (cursor[path[j]] === null) return false
       if (cursor.hasOwnProperty(path[j]) == chk[i]) cursor = data[path[j]]
       else return false
@@ -524,94 +499,3 @@ export const Agent = function (type, origin) {
   }
   this.Table = this[`${type}Table`]
 }
-
-/*exports.Mongo = function(col){
-	var my = this;
-	var pointer = function(mode, q, flag){
-		var _my = this;
-		_my.second = {};
-		_my.sorts = null;
-
-		this.on = function(f, chk, onFail){
-			var c;
-
-			function preCB(err, doc){
-				if(mode == "find"){
-					if(_my.sorts){
-						doc = doc.sort(_my.sorts);
-					}
-					doc.toArray(callback);
-				}else callback(err, doc);
-			}
-			function callback(err, doc){
-				if(err){
-					logger.error("Error when querying: "+JSON.stringify(q));
-					logger.error("Context: "+err.toString());
-					return;
-				}
-
-				if(f){
-					if(chk){
-						if(isDataAvailable(doc, chk)) f(doc);
-						else{
-							if(onFail) onFail(doc);
-							else if(DEBUG) throw new Error("The data from "+mode+"["+JSON.stringify(q)+"] was not available.");
-							else logger.warn("The data from ["+JSON.stringify(q)+"] was not available. Callback has been canceled.");
-						}
-					}else f(doc);
-				}
-			}
-
-			if(_my.findLimit){
-				c = my.source[mode](q, flag, { limit: _my.findLimit }, preCB);
-			}else{
-				c = my.source[mode](q, _my.second, flag, preCB);
-			}
-		};
-		// limit: find 쿼리에 걸린 문서를 필터링하는 지침을 정의한다.
-		this.limit = function(_data){
-			if(global.getType(_data) == "Number"){
-				_my.findLimit = _data;
-			}else{
-				_my.second = query(arguments);
-			}
-			return this;
-		};
-		this.sort = function(_data){
-			_my.sorts = query(arguments);
-			return this;
-		};
-		// set: update 쿼리에 걸린 문서를 수정하는 지침을 정의한다.
-		this.set = function(_data){
-			_my.second['$set'] = (global.getType(_data) == "Array") ? query(arguments) : _data;
-			return this;
-		};
-		// soi: upsert 쿼리에 걸린 문서에서, insert될 경우의 값을 정한다. (setOnInsert)
-		this.soi = function(_data){
-			_my.second['$setOnInsert'] = (global.getType(_data) == "Array") ? query(arguments) : _data;
-			return this;
-		};
-		// inc: update 쿼리에 걸린 문서의 특정 값을 늘인다.
-		this.inc = function(_data){
-			_my.second = { $inc: (global.getType(_data) == "Array") ? query(arguments) : _data };
-			return this;
-		};
-	};
-
-	my.source = col;
-	my.findOne = function(){
-		return new pointer("findOne", query(arguments));
-	};
-	my.find = function(){
-		return new pointer("find", query(arguments));
-	};
-	my.update = function(){
-		return new pointer("update", query(arguments));
-	};
-	my.upsert = function(){
-		return new pointer("update", query(arguments), { upsert: true });
-	};
-	my.remove = function(){
-		return new pointer("remove", query(arguments));
-	};
-};*/
