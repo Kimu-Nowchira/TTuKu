@@ -53,8 +53,8 @@ import Secure from "../sub/secure"
 // var Redission = require("connect-redis")(Exession)
 // var Redis = require("redis")
 
-var DB = require("./db")
-var WebInit = require("../sub/webinit")
+const DB = require("./db")
+const WebInit = require("../sub/webinit")
 
 const Server = Express()
 
@@ -91,10 +91,16 @@ Server.use(
   })
 )
 
+declare module "express-session" {
+  interface SessionData {
+    passport: any
+    profile: any
+  }
+}
+
 Server.use(passport.initialize())
 Server.use(passport.session())
 Server.use((req, res, next) => {
-  // @ts-ignore
   if (req.session.passport) delete req.session.passport
   next()
 })
