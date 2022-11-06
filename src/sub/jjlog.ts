@@ -15,8 +15,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+import { Logger } from "tslog"
 
-// TODO: tslog로 바꾸기
+export const logger = new Logger()
+
+// deprecated
 function callLog(text: string) {
   const date = new Date()
   const o = {
@@ -29,7 +32,9 @@ function callLog(text: string) {
   }
 
   for (const i in o) {
+    // @ts-ignore
     if (o[i] < 10) o[i] = "0" + o[i]
+    // @ts-ignore
     else o[i] = o[i].toString()
   }
   console.log(

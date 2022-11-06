@@ -9,6 +9,7 @@
   ],
   "author": "Kimu",
   "dependencies": {
+    "@types/redis": "^4.0.11",
     "body-parser": "^1.15.2",
     "colors": "^1.1.2",
     "connect-redis": "^3.2.0",
@@ -38,7 +39,9 @@
     "pg": "^8.0.3",
     "pg-escape": "^0.2.0",
     "pug": "^2.0.4",
+    "redis": "^4.4.0",
     "request": "^2.88.2",
+    "tslog": "^3.3.4",
     "ws": "^3.3.1"
   },
   "license": "GPL-3.0",
