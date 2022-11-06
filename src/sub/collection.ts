@@ -62,7 +62,7 @@ const asValue = (val: any) => {
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = (str: string) => {
+const Escape = (str: string, _a?: any, _b?: any, _c?: any, _d?: any) => {
   let i = 1
   const args = arguments
 
@@ -189,7 +189,7 @@ function sqlWhere(q) {
   return q.map(wSearch).join(" AND ")
 }
 
-function sqlSet(q, inc) {
+function sqlSet(q, inc?: boolean) {
   if (!q) {
     logger.warn("[sqlSet] Invalid query.")
     return null
@@ -331,7 +331,7 @@ exports.Agent = function (type, origin) {
   }
   this.PostgresTable = function (col) {
     var my = this
-    var pointer = function (mode, q, flag) {
+    var pointer = function (mode, q) {
       var _my = this
       /* on: 입력받은 쿼리를 실행시킨다.
 				@f		콜백 함수
@@ -351,7 +351,7 @@ exports.Agent = function (type, origin) {
             logger.error("Error when querying: " + sql)
             logger.error("Context: " + err.toString())
             if (onFail) {
-              logger.log("onFail calling...")
+              logger.warn("onFail calling...")
               onFail(err)
             }
             return
