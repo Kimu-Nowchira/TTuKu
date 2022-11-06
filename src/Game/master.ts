@@ -17,18 +17,19 @@
  */
 
 import { appendFile } from "fs"
-import { GAME_TYPE, IS_SECURED, KKUTU_MAX, TEST_PORT, TESTER } from "../const"
-import { logger } from "../sub/jjlog"
+import cluster from "node:cluster"
+import WebSocket from "ws"
+import * as https from "https"
 
-let Cluster = require("cluster")
-let WebSocket = require("ws")
-let https = require("https")
+import { GAME_TYPE, IS_SECURED, KKUTU_MAX, TEST_PORT, TESTER } from "../const"
+import { verifyRecaptcha } from "../sub/recaptcha"
+import { logger } from "../sub/jjlog"
+import Secure from "../sub/secure"
+import { config } from "../config"
+
 let HTTPS_Server
 
 let KKuTu = require("./kkutu")
-const GLOBAL = require("../sub/global.json")
-let Secure = require("../sub/secure")
-let Recaptcha = require("../sub/recaptcha")
 
 let MainDB
 
@@ -277,7 +278,8 @@ function narrateFriends(id, friends, stat) {
       }
     })
 }
-Cluster.on("message", function (worker, msg) {
+
+cluster.on("message", (worker, msg) => {
   let temp
 
   switch (msg.type) {
@@ -424,7 +426,7 @@ export const init = (_SID: string, CHAN) => {
         logger.warn("Error on #" + key + " on ws: " + err.toString())
       })
       // 웹 서버
-      if (info.headers.host.startsWith(GLOBAL.GAME_SERVER_HOST + ":")) {
+      if (info.headers.host.startsWith(config.GAME_SERVER_HOST + ":")) {
         if (WDIC[key]) WDIC[key].socket.close()
         WDIC[key] = new KKuTu.WebServer(socket)
         logger.info(`New web server #${key}`)
@@ -444,9 +446,9 @@ export const init = (_SID: string, CHAN) => {
         .limit(["profile", true])
         .on(function ($body) {
           $c = new KKuTu.Client(socket, $body ? $body.profile : null, key)
-          $c.admin = GLOBAL.ADMIN.indexOf($c.id) != -1
+          $c.admin = config.ADMIN.indexOf($c.id) != -1
           /* Enhanced User Block System [S] */
-          $c.remoteAddress = GLOBAL.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
+          $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
             ? info.connection.remoteAddress
             : info.headers["x-forwarded-for"] || info.connection.remoteAddress
           /* Enhanced User Block System [E] */
@@ -474,9 +476,9 @@ export const init = (_SID: string, CHAN) => {
           }
           /* Enhanced User Block System [S] */
           if (
-            GLOBAL.USER_BLOCK_OPTIONS.USE_MODULE &&
-            ((GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
-              !GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
+            config.USER_BLOCK_OPTIONS.USE_MODULE &&
+            ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
+              !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
           ) {
             MainDB.ip_block
               .findOne(["_id", $c.remoteAddress])
@@ -496,10 +498,10 @@ export const init = (_SID: string, CHAN) => {
                         type: "error",
                         code: 446,
                         reasonBlocked: !$body.reasonBlocked
-                          ? GLOBAL.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+                          ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
                           : $body.reasonBlocked,
                         ipBlockedUntil: !$body.ipBlockedUntil
-                          ? GLOBAL.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+                          ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
                           : $body.ipBlockedUntil,
                       })
                     )
@@ -539,13 +541,13 @@ export const init = (_SID: string, CHAN) => {
               MainDB.users.update(["_id", $c.id]).set(["server", SID]).on()
 
               if (
-                ($c.guest && GLOBAL.GOOGLE_RECAPTCHA_TO_GUEST) ||
-                GLOBAL.GOOGLE_RECAPTCHA_TO_USER
+                ($c.guest && config.GOOGLE_RECAPTCHA_TO_GUEST) ||
+                config.GOOGLE_RECAPTCHA_TO_USER
               ) {
                 $c.socket.send(
                   JSON.stringify({
                     type: "recaptcha",
-                    siteKey: GLOBAL.GOOGLE_RECAPTCHA_SITE_KEY,
+                    siteKey: config.GOOGLE_RECAPTCHA_SITE_KEY,
                   })
                 )
               } else {
@@ -609,24 +611,20 @@ KKuTu.onClientMessage = function ($c, msg) {
     processClientRequest($c, msg)
   } else {
     if (msg.type === "recaptcha") {
-      Recaptcha.verifyRecaptcha(
-        msg.token,
-        $c.remoteAddress,
-        function (success) {
-          if (success) {
-            $c.passRecaptcha = true
+      verifyRecaptcha(msg.token, $c.remoteAddress, function (success) {
+        if (success) {
+          $c.passRecaptcha = true
 
-            joinNewUser($c)
+          joinNewUser($c)
 
-            processClientRequest($c, msg)
-          } else {
-            logger.warn(`Recaptcha failed from IP ${$c.remoteAddress}`)
+          processClientRequest($c, msg)
+        } else {
+          logger.warn(`Recaptcha failed from IP ${$c.remoteAddress}`)
 
-            $c.sendError(447)
-            $c.socket.close()
-          }
+          $c.sendError(447)
+          $c.socket.close()
         }
-      )
+      })
     }
   }
 }
