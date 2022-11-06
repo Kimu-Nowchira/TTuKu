@@ -18,7 +18,6 @@
 import { createClient } from "redis"
 import { Pool } from "pg"
 import { logger } from "../sub/jjlog"
-import * as checkPub from "../sub/checkpub"
 import { Tail } from "../sub/lizard"
 
 const LANG = ["ko", "en"]
@@ -52,11 +51,9 @@ Pub.ready = () => {
     host: GLOBAL.PG_HOST,
   })
 
-  Redis.on("connect", function () {
-    connectPg()
-  })
+  Redis.on("connect", () => connectPg())
 
-  Redis.on("error", function (err) {
+  Redis.on("error", (err: Error) => {
     logger.error("Error from Redis: " + err)
     logger.warn("Run with no-redis mode.")
     Redis.quit()
