@@ -6,7 +6,7 @@ COPY . .
 
 COPY ./src/ ./lib/
 
-RUN yarn build
+RUN yarn && yarn build
 
 RUN cd lib && node setup
 
