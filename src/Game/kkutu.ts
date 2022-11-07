@@ -32,6 +32,7 @@ import {
   OPTIONS,
 } from "../const"
 import { logger } from "../sub/jjlog"
+import { WebSocket } from "ws"
 
 type RoomData = Record<number, any>
 type DICData = Record<string, any>
@@ -218,19 +219,17 @@ class Data {
   // 전, 승, 점수
 }
 
-exports.WebServer = function (socket) {
-  var my = this
-
-  my.socket = socket
-
-  my.send = function (type, data) {
-    var r = data || {}
-
-    r.type = type
-
-    if (socket.readyState == 1) socket.send(JSON.stringify(r))
+export class WebServer {
+  constructor(public socket: WebSocket) {
+    socket.on("message", this.onWebServerMessage)
   }
-  my.onWebServerMessage = function (msg) {
+
+  send(type: string, data: any) {
+    if (this.socket.readyState === 1)
+      this.socket.send(JSON.stringify({ ...(data || {}), type }))
+  }
+
+  onWebServerMessage(msg: any) {
     try {
       msg = JSON.parse(msg)
     } catch (e) {
@@ -239,7 +238,7 @@ exports.WebServer = function (socket) {
 
     switch (msg.type) {
       case "seek":
-        my.send("seek", { value: Object.keys(DIC).length })
+        this.send("seek", { value: Object.keys(DIC).length })
         break
       case "narrate-friend":
         exports.narrate(msg.list, "friend", {
@@ -251,7 +250,6 @@ exports.WebServer = function (socket) {
       default:
     }
   }
-  socket.on("message", my.onWebServerMessage)
 }
 
 exports.Client = function (socket, profile, sid) {
