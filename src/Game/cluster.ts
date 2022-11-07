@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import cluster from "node:cluster"
+import cluster, { Worker as ClusterWorker } from "node:cluster"
 import { logger } from "../sub/jjlog"
 import { MAIN_PORTS } from "../const"
 
@@ -39,7 +39,7 @@ if (isNaN(CPU)) {
 }
 
 if (cluster.isPrimary) {
-  const channels: Record<number, any> = {}
+  const channels: Record<number, ClusterWorker> = {}
   let chan: number
 
   for (let i = 0; i < CPU; i++) {
@@ -53,7 +53,7 @@ if (cluster.isPrimary) {
 
   cluster.on("exit", (w) => {
     for (const i in channels) {
-      if (channels[i] == w) {
+      if (channels[i] === w) {
         chan = Number(i)
         break
       }

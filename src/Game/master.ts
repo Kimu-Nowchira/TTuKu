@@ -17,7 +17,7 @@
  */
 
 import { appendFile } from "fs"
-import cluster from "node:cluster"
+import cluster, { Worker as ClusterWorker } from "node:cluster"
 import WebSocket from "ws"
 import * as https from "https"
 
@@ -399,7 +399,7 @@ cluster.on("message", (worker, msg) => {
   }
 })
 
-export const init = (_SID: string, CHAN) => {
+export const init = (_SID: string, CHAN: Record<string, ClusterWorker>) => {
   SID = _SID
   MainDB = require("../Web/db")
   MainDB.ready = function () {

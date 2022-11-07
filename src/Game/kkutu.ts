@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import cluster from "node:cluster"
+import cluster, { Worker as ClusterWorker } from "node:cluster"
 import { all, Tail } from "../sub/lizard"
 import {
   BLOCKED_LENGTH,
@@ -45,7 +45,7 @@ let ROOM: RoomData = {}
 var _rid
 const Rule: Record<string, any> = {}
 var guestProfiles = []
-var CHAN
+let CHAN: Record<string, ClusterWorker> = {}
 var channel = process.env["CHANNEL"] || 0
 
 const NUM_SLAVES = 4
@@ -60,7 +60,7 @@ export const init = (
   _DIC: DICData,
   _ROOM: RoomData,
   _GUEST_PERMISSION: Record<string, boolean>,
-  _CHAN
+  _CHAN: Record<string, ClusterWorker>
 ) => {
   DB = _DB
   DIC = _DIC
@@ -68,8 +68,6 @@ export const init = (
   GUEST_PERMISSION = _GUEST_PERMISSION
   CHAN = _CHAN
   _rid = 100
-
-  // 망할 셧다운제 if(Cluster.isMaster) setInterval(exports.processAjae, 60000);
 
   DB.kkutu_shop.find().on(($shop) => {
     SHOP = {}
@@ -85,22 +83,6 @@ export const init = (
     Rule[k].init(DB, DIC)
   }
 }
-
-/* 망할 셧다운제
-exports.processAjae = function(){
-	var i;
-	
-	exports.NIGHT = (new Date()).getHours() < 6;
-	if(exports.NIGHT){
-		for(i in DIC){
-			if(!DIC[i].isAjae){
-				DIC[i].sendError(440);
-				DIC[i].socket.close();
-			}
-		}
-	}
-};
-*/
 
 export const getUserList = () => {
   const res = {}
