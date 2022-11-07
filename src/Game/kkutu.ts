@@ -221,37 +221,130 @@ class Data {
 
 export class WebServer {
   constructor(public socket: WebSocket) {
-    socket.on("message", this.onWebServerMessage)
+    socket.on("message", (msg: any) => {
+      try {
+        msg = JSON.parse(msg)
+      } catch (e) {
+        return logger.error("JSON.parse() failed: " + msg)
+      }
+
+      switch (msg.type) {
+        case "seek":
+          this.send("seek", { value: Object.keys(DIC).length })
+          break
+        case "narrate-friend":
+          exports.narrate(msg.list, "friend", {
+            id: msg.id,
+            s: msg.s,
+            stat: msg.stat,
+          })
+      }
+    })
   }
 
   send(type: string, data: any) {
     const r = data || {}
     r.type = type
+    logger.debug("WS", JSON.stringify(r))
     if (this.socket.readyState == 1) this.socket.send(JSON.stringify(r))
   }
+}
 
-  onWebServerMessage(msg: any) {
-    try {
-      msg = JSON.parse(msg)
-    } catch (e) {
-      return
+/*
+class Client {
+  id: string
+  profile: any
+
+  place = 0
+  team = 0
+  ready = false
+  game = {}
+
+  subPlace = 0
+  error = false
+  blocked = false
+  spam = 0
+  _pub = new Date()
+
+  guest
+
+  constructor(public socket: WebSocket, profile, sid: string) {
+    if (profile) {
+      this.id = profile.id
+      this.profile = profile
+
+      delete this.profile.token
+      delete this.profile.sid
+
+      if (this.profile.title) this.profile.name = "anonymous"
+    } else {
+      const gp = guestProfiles[Math.floor(Math.random() * guestProfiles.length)]
+
+      this.id = "guest__" + sid
+      this.guest = true
+      this.isAjae = false
+      this.profile = {
+        id: sid,
+        title: getGuestName(sid),
+        image: GUEST_IMAGE,
+      }
     }
 
-    switch (msg.type) {
-      case "seek":
-        this.send("seek", { value: Object.keys(DIC).length })
-        break
-      case "narrate-friend":
-        exports.narrate(msg.list, "friend", {
-          id: msg.id,
-          s: msg.s,
-          stat: msg.stat,
+    if (cluster.isPrimary) {
+      my.onOKG = function (time) {
+        // ?? 이럴 일이 없어야 한다.
+      }
+    } else {
+      my.onOKG = function (time) {
+        var d = new Date().getDate()
+
+        if (my.guest) return
+        if (d != my.data.connectDate) {
+          my.data.connectDate = d
+          my.data.playTime = 0
+          my.okgCount = 0
+        }
+        my.data.playTime += time
+
+        while (my.data.playTime >= PER_OKG * (my.okgCount + 1)) {
+          if (my.okgCount >= MAX_OKG) return
+          my.okgCount++
+        }
+        my.send("okg", { time: my.data.playTime, count: my.okgCount })
+        // process.send({ type: 'okg', id: my.id, time: time });
+      }
+    }
+    socket.on("close", function (code) {
+      if (ROOM[my.place]) ROOM[my.place].go(my)
+      if (my.subPlace) my.pracRoom.go(my)
+      exports.onClientClosed(my, code)
+    })
+    socket.on("message", function (msg) {
+      var data,
+        room = ROOM[my.place]
+      if (!my) return
+      if (!msg) return
+
+      logger.info(`Chan @${channel} Msg #${my.id}: ${msg}`)
+      try {
+        data = JSON.parse(msg)
+      } catch (e) {
+        data = { error: 400 }
+      }
+      if (cluster.isWorker)
+        process.send({
+          type: "tail-report",
+          id: my.id,
+          chan: channel,
+          place: my.place,
+          msg: data.error ? msg : data,
         })
-        break
-      default:
-    }
+
+      exports.onClientMessage(my, data)
+    })
   }
 }
+*/
 
 exports.Client = function (socket, profile, sid) {
   var my = this
