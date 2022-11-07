@@ -248,28 +248,44 @@ export class WebServer {
   }
 }
 
-/*
-class Client {
+export class Client {
   id: string
-  profile: any
 
   place = 0
   team = 0
   ready = false
-  game = {}
+  game: Record<string, any> = {}
 
   subPlace = 0
   error = false
   blocked = false
   spam = 0
-  _pub = new Date()
+  _pub = Date.now()
 
-  guest
+  guest = false
+  isAjae: boolean
 
-  constructor(public socket: WebSocket, profile, sid: string) {
+  pracRoom: any // Room
+  data: Data
+
+  okgCount: number
+  form: any
+  money: number
+  equip: any
+  exordial: string
+  numSpam: any
+
+  box: any
+  noChat: boolean
+  friends: any
+
+  constructor(
+    public socket: WebSocket,
+    public profile: any,
+    public sid: string
+  ) {
     if (profile) {
       this.id = profile.id
-      this.profile = profile
 
       delete this.profile.token
       delete this.profile.sid
@@ -288,42 +304,19 @@ class Client {
       }
     }
 
-    if (cluster.isPrimary) {
-      my.onOKG = function (time) {
-        // ?? 이럴 일이 없어야 한다.
-      }
-    } else {
-      my.onOKG = function (time) {
-        var d = new Date().getDate()
-
-        if (my.guest) return
-        if (d != my.data.connectDate) {
-          my.data.connectDate = d
-          my.data.playTime = 0
-          my.okgCount = 0
-        }
-        my.data.playTime += time
-
-        while (my.data.playTime >= PER_OKG * (my.okgCount + 1)) {
-          if (my.okgCount >= MAX_OKG) return
-          my.okgCount++
-        }
-        my.send("okg", { time: my.data.playTime, count: my.okgCount })
-        // process.send({ type: 'okg', id: my.id, time: time });
-      }
-    }
-    socket.on("close", function (code) {
-      if (ROOM[my.place]) ROOM[my.place].go(my)
-      if (my.subPlace) my.pracRoom.go(my)
-      exports.onClientClosed(my, code)
+    socket.on("close", (code) => {
+      if (ROOM[this.place]) ROOM[this.place].go(this)
+      if (this.subPlace) this.pracRoom.go(this)
+      exports.onClientClosed(this, code)
     })
-    socket.on("message", function (msg) {
-      var data,
-        room = ROOM[my.place]
-      if (!my) return
+
+    socket.on("message", (msg: any) => {
+      let data
+      const room = ROOM[this.place]
+      if (!this) return
       if (!msg) return
 
-      logger.info(`Chan @${channel} Msg #${my.id}: ${msg}`)
+      logger.info(`Chan @${channel} Msg #${this.id}: ${msg}`)
       try {
         data = JSON.parse(msg)
       } catch (e) {
@@ -332,239 +325,151 @@ class Client {
       if (cluster.isWorker)
         process.send({
           type: "tail-report",
-          id: my.id,
+          id: this.id,
           chan: channel,
-          place: my.place,
+          place: this.place,
           msg: data.error ? msg : data,
         })
 
-      exports.onClientMessage(my, data)
+      exports.onClientMessage(this, data)
     })
   }
-}
-*/
 
-exports.Client = function (socket, profile, sid) {
-  var my = this
-  var gp, okg
+  onOKG(time: number) {
+    if (cluster.isPrimary) return
+    const d = new Date().getDate()
 
-  if (profile) {
-    my.id = profile.id
-    my.profile = profile
-    /* 망할 셧다운제
-		if(Cluster.isMaster){
-			my.isAjae = Ajae.checkAjae(profile.birth, profile._age);
-		}else{
-			my.isAjae = true;
-		}
-		my._birth = profile.birth;
-		my._age = profile._age;
-		delete my.profile.birth;
-		delete my.profile._age;
-		*/
-    delete my.profile.token
-    delete my.profile.sid
-
-    if (my.profile.title) my.profile.name = "anonymous"
-  } else {
-    gp = guestProfiles[Math.floor(Math.random() * guestProfiles.length)]
-
-    my.id = "guest__" + sid
-    my.guest = true
-    my.isAjae = false
-    my.profile = {
-      id: sid,
-      title: getGuestName(sid),
-      image: GUEST_IMAGE,
+    if (this.guest) return
+    if (d != this.data.connectDate) {
+      this.data.connectDate = d
+      this.data.playTime = 0
+      this.okgCount = 0
     }
+    this.data.playTime += time
+
+    while (this.data.playTime >= PER_OKG * (this.okgCount + 1)) {
+      if (this.okgCount >= MAX_OKG) return
+      this.okgCount++
+    }
+    this.send("okg", { time: this.data.playTime, count: this.okgCount })
+    // process.send({ type: 'okg', id: my.id, time: time });
   }
-  my.socket = socket
-  my.place = 0
-  my.team = 0
-  my.ready = false
-  my.game = {}
 
-  my.subPlace = 0
-  my.error = false
-  my.blocked = false
-  my.spam = 0
-  my._pub = new Date()
-
-  if (cluster.isPrimary) {
-    my.onOKG = function (time) {
-      // ?? 이럴 일이 없어야 한다.
-    }
-  } else {
-    my.onOKG = function (time) {
-      var d = new Date().getDate()
-
-      if (my.guest) return
-      if (d != my.data.connectDate) {
-        my.data.connectDate = d
-        my.data.playTime = 0
-        my.okgCount = 0
-      }
-      my.data.playTime += time
-
-      while (my.data.playTime >= PER_OKG * (my.okgCount + 1)) {
-        if (my.okgCount >= MAX_OKG) return
-        my.okgCount++
-      }
-      my.send("okg", { time: my.data.playTime, count: my.okgCount })
-      // process.send({ type: 'okg', id: my.id, time: time });
-    }
-  }
-  socket.on("close", function (code) {
-    if (ROOM[my.place]) ROOM[my.place].go(my)
-    if (my.subPlace) my.pracRoom.go(my)
-    exports.onClientClosed(my, code)
-  })
-  socket.on("message", function (msg) {
-    var data,
-      room = ROOM[my.place]
-    if (!my) return
-    if (!msg) return
-
-    logger.info(`Chan @${channel} Msg #${my.id}: ${msg}`)
-    try {
-      data = JSON.parse(msg)
-    } catch (e) {
-      data = { error: 400 }
-    }
-    if (cluster.isWorker)
-      process.send({
-        type: "tail-report",
-        id: my.id,
-        chan: channel,
-        place: my.place,
-        msg: data.error ? msg : data,
-      })
-
-    exports.onClientMessage(my, data)
-  })
-  /* 망할 셧다운제
-	my.confirmAjae = function(input){
-		if(Ajae.confirmAjae(input, my._birth, my._age)){
-			DB.users.update([ '_id', my.id ]).set([ 'birthday', input.join('-') ]).on(function(){
-				my.sendError(445);
-			});
-		}else{
-			DB.users.update([ '_id', my.id ]).set([ 'black', `[${input.join('-')}] 생년월일이 올바르게 입력되지 않았습니다. 잠시 후 다시 시도해 주세요.` ]).on(function(){
-				my.socket.close();
-			});
-		}
-	};
-	*/
-  my.getData = function (gaming: boolean) {
+  getData(gaming?: boolean) {
     return {
-      id: my.id,
-      guest: my.guest,
+      id: this.id,
+      guest: this.guest,
       game: {
-        ready: my.ready,
-        form: my.form,
-        team: my.team,
-        practice: my.subPlace,
-        score: my.game.score,
-        item: my.game.item,
+        ready: this.ready,
+        form: this.form,
+        team: this.team,
+        practice: this.subPlace,
+        score: this.game.score,
+        item: this.game.item,
       },
-      profile: gaming ? null : my.profile,
-      place: gaming ? null : my.place,
-      data: gaming ? null : my.data,
-      money: gaming ? null : my.money,
-      equip: gaming ? null : my.equip,
-      exordial: gaming ? null : my.exordial,
+      profile: gaming ? null : this.profile,
+      place: gaming ? null : this.place,
+      data: gaming ? null : this.data,
+      money: gaming ? null : this.money,
+      equip: gaming ? null : this.equip,
+      exordial: gaming ? null : this.exordial,
     }
   }
 
-  my.send = function (type, data) {
-    var i,
-      r = data || {}
+  send(type: string, data?: any) {
+    var r = data || {}
 
     r.type = type
 
-    if (socket.readyState == 1) socket.send(JSON.stringify(r))
+    if (this.socket.readyState == 1) this.socket.send(JSON.stringify(r))
   }
-  my.sendError = function (code, msg) {
-    my.send("error", { code: code, message: msg })
-  }
-  my.publish = function (type, data, noBlock) {
-    const now = Date.now()
-    const st = now - my._pub
 
-    if (st <= SPAM_ADD_DELAY) my.spam++
-    else if (st >= SPAM_CLEAR_DELAY) my.spam = 0
-    if (my.spam >= SPAM_LIMIT) {
-      if (!my.blocked) my.numSpam = 0
-      my.blocked = true
+  sendError(code: number, msg?: string) {
+    this.send("error", { code: code, message: msg })
+  }
+
+  publish(type, data, noBlock?: boolean) {
+    const now = Date.now()
+    const st = now - this._pub
+
+    if (st <= SPAM_ADD_DELAY) this.spam++
+    else if (st >= SPAM_CLEAR_DELAY) this.spam = 0
+    if (this.spam >= SPAM_LIMIT) {
+      if (!this.blocked) this.numSpam = 0
+      this.blocked = true
     }
     if (!noBlock) {
-      my._pub = now
-      if (my.blocked) {
+      this._pub = now
+      if (this.blocked) {
         if (st < BLOCKED_LENGTH) {
-          if (++my.numSpam >= KICK_BY_SPAM) {
-            if (cluster.isWorker) process.send({ type: "kick", target: my.id })
-            return my.socket.close()
+          if (++this.numSpam >= KICK_BY_SPAM) {
+            if (cluster.isWorker)
+              process.send({ type: "kick", target: this.id })
+            return this.socket.close()
           }
-          return my.send("blocked")
-        } else my.blocked = false
+          return this.send("blocked")
+        } else this.blocked = false
       }
     }
-    data.profile = my.profile
-    if (my.subPlace && type != "chat") my.send(type, data)
+    data.profile = this.profile
+    if (this.subPlace && type != "chat") this.send(type, data)
     else
       for (const i in DIC) {
-        if (DIC[i].place == my.place) DIC[i].send(type, data)
+        if (DIC[i].place == this.place) DIC[i].send(type, data)
       }
     if (cluster.isWorker && type == "user")
       process.send({ type: "user-publish", data: data })
   }
-  my.chat = function (msg, code) {
-    if (my.noChat) return my.send("chat", { notice: true, code: 443 })
-    my.publish("chat", { value: msg, notice: !!code, code: code })
+
+  chat(msg, code) {
+    if (this.noChat) return this.send("chat", { notice: true, code: 443 })
+    this.publish("chat", { value: msg, notice: !!code, code: code })
   }
-  my.checkExpire = function () {
+
+  checkExpire() {
     const d = new Date().getDate()
     const now = new Date().getTime() * 0.001
 
     var expired = []
     var gr
 
-    if (d != my.data.connectDate) {
-      my.data.connectDate = d
-      my.data.playTime = 0
+    if (d != this.data.connectDate) {
+      this.data.connectDate = d
+      this.data.playTime = 0
     }
-    for (const i in my.box) {
-      if (!my.box[i]) {
-        delete my.box[i]
+    for (const i in this.box) {
+      if (!this.box[i]) {
+        delete this.box[i]
         continue
       }
-      if (!my.box[i].expire) continue
-      if (my.box[i].expire < now) {
+      if (!this.box[i].expire) continue
+      if (this.box[i].expire < now) {
         gr = SHOP[i].group
 
         if (gr.substring(0, 3) == "BDG") gr = "BDG"
-        if (my.equip[gr] == i) delete my.equip[gr]
-        delete my.box[i]
+        if (this.equip[gr] == i) delete this.equip[gr]
+        delete this.box[i]
         expired.push(i)
       }
     }
     if (expired.length) {
-      my.send("expired", { list: expired })
-      my.flush(my.box, my.equip)
+      this.send("expired", { list: expired })
+      this.flush(this.box, this.equip)
     }
   }
-  my.refresh = function () {
+
+  refresh() {
     var R = new Tail()
 
-    if (my.guest) {
-      my.equip = {}
-      my.data = new Data()
-      my.money = 0
-      my.friends = {}
+    if (this.guest) {
+      this.equip = {}
+      this.data = new Data()
+      this.money = 0
+      this.friends = {}
 
       R.go({ result: 200 })
     } else
-      DB.users.findOne(["_id", my.id]).on(function ($user) {
+      DB.users.findOne(["_id", this.id]).on(($user) => {
         var first = !$user
         var black = first ? "" : $user.black
         /* Enhanced User Block System [S] */
@@ -576,33 +481,19 @@ exports.Client = function (socket, profile, sid) {
         if (black == "null") black = false
         if (black == "chat") {
           black = false
-          my.noChat = true
+          this.noChat = true
         }
-        /* 망할 셧다운제
-			if(Cluster.isMaster && !my.isAjae){ // null일 수는 없다.
-				my.isAjae = Ajae.checkAjae(($user.birthday || "").split('-'));
-				if(my.isAjae === null){
-					if(my._birth) my._checkAjae = setTimeout(function(){
-						my.sendError(442);
-						my.socket.close();
-					}, 300000);
-					else{
-						my.sendError(441);
-						my.socket.close();
-						return;
-					}
-				}
-			}*/
-        my.exordial = $user.exordial || ""
-        my.equip = $user.equip || {}
-        my.box = $user.box || {}
-        my.data = new Data($user.kkutu)
-        my.money = Number($user.money)
-        my.friends = $user.friends || {}
-        if (first) my.flush()
+
+        this.exordial = $user.exordial || ""
+        this.equip = $user.equip || {}
+        this.box = $user.box || {}
+        this.data = new Data($user.kkutu)
+        this.money = Number($user.money)
+        this.friends = $user.friends || {}
+        if (first) this.flush()
         else {
-          my.checkExpire()
-          my.okgCount = Math.floor((my.data.playTime || 0) / PER_OKG)
+          this.checkExpire()
+          this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
         }
         /* Enhanced User Block System [S] */
         if (black) {
@@ -612,56 +503,59 @@ exports.Client = function (socket, profile, sid) {
         } else if (cluster.isMaster && $user.server)
           /* Enhanced User Block System [E] */
           R.go({ result: 409, black: $user.server })
-        else if (exports.NIGHT && my.isAjae === false) R.go({ result: 440 })
+        else if (exports.NIGHT && this.isAjae === false) R.go({ result: 440 })
         else R.go({ result: 200 })
       })
     return R
   }
-  my.flush = function (box, equip, friends) {
+
+  flush(box?: boolean, equip?: boolean, friends?: boolean) {
     var R = new Tail()
 
-    if (my.guest) {
-      R.go({ id: my.id, prev: 0 })
+    if (this.guest) {
+      R.go({ id: this.id, prev: 0 })
       return R
     }
     DB.users
-      .upsert(["_id", my.id])
+      .upsert(["_id", this.id])
       .set(
-        !isNaN(my.money) ? ["money", my.money] : undefined,
-        my.data && !isNaN(my.data.score) ? ["kkutu", my.data] : undefined,
-        box ? ["box", my.box] : undefined,
-        equip ? ["equip", my.equip] : undefined,
-        friends ? ["friends", my.friends] : undefined
+        !isNaN(this.money) ? ["money", this.money] : undefined,
+        this.data && !isNaN(this.data.score) ? ["kkutu", this.data] : undefined,
+        box ? ["box", this.box] : undefined,
+        equip ? ["equip", this.equip] : undefined,
+        friends ? ["friends", this.friends] : undefined
       )
-      .on(function (__res) {
-        DB.redis.getGlobal(my.id).then(function (_res) {
-          DB.redis.putGlobal(my.id, my.data.score).then(function (res) {
+      .on((__res) => {
+        DB.redis.getGlobal(this.id).then((_res) => {
+          DB.redis.putGlobal(this.id, this.data.score).then((res) => {
             logger.info(
-              `FLUSHED [${my.id}] PTS=${my.data.score} MNY=${my.money}`
+              `FLUSHED [${this.id}] PTS=${this.data.score} MNY=${this.money}`
             )
-            R.go({ id: my.id, prev: _res })
+            R.go({ id: this.id, prev: _res })
           })
         })
       })
     return R
   }
-  my.invokeWordPiece = function (text, coef) {
-    if (!my.game.wpc) return
+
+  invokeWordPiece(text, coef) {
+    if (!this.game.wpc) return
     var v
 
     if (Math.random() <= 0.04 * coef) {
       v = text.charAt(Math.floor(Math.random() * text.length))
       if (!v.match(/[a-z가-힣]/)) return
-      my.game.wpc.push(v)
+      this.game.wpc.push(v)
     }
   }
-  my.enter = function (room, spec, pass) {
+
+  enter(room, spec, pass) {
     var $room, i
 
-    if (my.place) {
-      my.send("roomStuck")
+    if (this.place) {
+      this.send("roomStuck")
       logger.warn(
-        `Enter the room ${room.id} in the place ${my.place} by ${my.id}!`
+        `Enter the room ${room.id} in the place ${this.place} by ${this.id}!`
       )
       return
     } else if (room.id) {
@@ -674,31 +568,31 @@ exports.Client = function (socket, profile, sid) {
         } else {
           process.send({ type: "room-invalid", room: room })
         }
-        return my.sendError(430, room.id)
+        return this.sendError(430, room.id)
       }
       if (!spec) {
         if ($room.gaming) {
-          return my.send("error", { code: 416, target: $room.id })
-        } else if (my.guest)
+          return this.send("error", { code: 416, target: $room.id })
+        } else if (this.guest)
           if (!GUEST_PERMISSION.enter) {
-            return my.sendError(401)
+            return this.sendError(401)
           }
       }
       if ($room.players.length >= $room.limit + (spec ? MAX_OBSERVER : 0)) {
-        return my.sendError(429)
+        return this.sendError(429)
       }
-      if ($room.players.indexOf(my.id) != -1) {
-        return my.sendError(409)
+      if ($room.players.indexOf(this.id) != -1) {
+        return this.sendError(409)
       }
       if (cluster.isPrimary) {
-        my.send("preRoom", {
+        this.send("preRoom", {
           id: $room.id,
           pw: room.password,
           channel: $room.channel,
         })
         CHAN[$room.channel].send({
           type: "room-reserve",
-          session: sid,
+          session: this.sid,
           room: room,
           spec: spec,
           pass: pass,
@@ -707,17 +601,17 @@ exports.Client = function (socket, profile, sid) {
         $room = undefined
       } else {
         if (!pass && $room) {
-          if ($room.kicked.indexOf(my.id) != -1) {
-            return my.sendError(406)
+          if ($room.kicked.indexOf(this.id) != -1) {
+            return this.sendError(406)
           }
           if ($room.password != room.password && $room.password) {
             $room = undefined
-            return my.sendError(403)
+            return this.sendError(403)
           }
         }
       }
-    } else if (my.guest && !GUEST_PERMISSION.enter) {
-      my.sendError(401)
+    } else if (this.guest && !GUEST_PERMISSION.enter) {
+      this.sendError(401)
     } else {
       // 새 방 만들어 들어가기
       /*
@@ -732,11 +626,11 @@ exports.Client = function (socket, profile, sid) {
 
         room.id = _rid
         room._create = true
-        my.send("preRoom", { id: _rid, channel: av })
+        this.send("preRoom", { id: _rid, channel: av })
         CHAN[av].send({
           type: "room-reserve",
           create: true,
-          session: sid,
+          session: this.sid,
           room: room,
         })
 
@@ -748,47 +642,55 @@ exports.Client = function (socket, profile, sid) {
           room.id = room._id
           delete room._id
         }
-        if (my.place != 0) {
-          my.sendError(409)
+        if (this.place != 0) {
+          this.sendError(409)
         }
         $room = new exports.Room(room, getFreeChannel())
 
-        process.send({ type: "room-new", target: my.id, room: $room.getData() })
+        process.send({
+          type: "room-new",
+          target: this.id,
+          room: $room.getData(),
+        })
         ROOM[$room.id] = $room
         spec = false
       }
     }
     if ($room) {
-      if (spec) $room.spectate(my, room.password)
-      else $room.come(my, room.password, pass)
+      if (spec) $room.spectate(this, room.password)
+      else $room.come(this, room.password, pass)
     }
   }
-  my.leave = function (kickVote) {
-    var $room = ROOM[my.place]
 
-    if (my.subPlace) {
-      my.pracRoom.go(my)
-      if ($room) my.send("room", { target: my.id, room: $room.getData() })
-      my.publish("user", my.getData())
+  leave(kickVote) {
+    var $room = ROOM[this.place]
+
+    if (this.subPlace) {
+      this.pracRoom.go(this)
+      if ($room) this.send("room", { target: this.id, room: $room.getData() })
+      this.publish("user", this.getData())
       if (!kickVote) return
     }
-    if ($room) $room.go(my, kickVote)
+    if ($room) $room.go(this, kickVote)
   }
-  my.setForm = function (mode) {
-    var $room = ROOM[my.place]
+
+  setForm(mode) {
+    var $room = ROOM[this.place]
 
     if (!$room) return
 
-    my.form = mode
-    my.ready = false
-    my.publish("user", my.getData())
+    this.form = mode
+    this.ready = false
+    this.publish("user", this.getData())
   }
-  my.setTeam = function (team) {
-    my.team = team
-    my.publish("user", my.getData())
+
+  setTeam(team) {
+    this.team = team
+    this.publish("user", this.getData())
   }
-  my.kick = function (target, kickVote) {
-    var $room = ROOM[my.place]
+
+  kick(target, kickVote) {
+    var $room = ROOM[this.place]
     var i, $c
     var len = $room.players.length
 
@@ -814,10 +716,11 @@ exports.Client = function (socket, profile, sid) {
 
         $c.kickTimer = setTimeout($c.kickVote, 10000, $c, true)
       }
-      my.publish("kickVote", $room.kickVote, true)
+      this.publish("kickVote", $room.kickVote, true)
     }
   }
-  my.kickVote = function (client, agree) {
+
+  kickVote(client, agree) {
     var $room = ROOM[client.place]
     var $m
 
@@ -847,72 +750,77 @@ exports.Client = function (socket, profile, sid) {
     }
     clearTimeout(client.kickTimer)
   }
-  my.toggle = function () {
-    var $room = ROOM[my.place]
+
+  toggle() {
+    var $room = ROOM[this.place]
 
     if (!$room) return
-    if ($room.master == my.id) return
-    if (my.form != "J") return
+    if ($room.master == this.id) return
+    if (this.form != "J") return
 
-    my.ready = !my.ready
-    my.publish("user", my.getData())
+    this.ready = !this.ready
+    this.publish("user", this.getData())
   }
-  my.start = function () {
-    var $room = ROOM[my.place]
+
+  start() {
+    var $room = ROOM[this.place]
 
     if (!$room) return
-    if ($room.master != my.id) return
-    if ($room.players.length < 2) return my.sendError(411)
+    if ($room.master != this.id) return
+    if ($room.players.length < 2) return this.sendError(411)
 
     $room.ready()
   }
-  my.practice = function (level) {
-    var $room = ROOM[my.place]
+
+  practice(level) {
+    var $room = ROOM[this.place]
     var ud
     var pr
 
     if (!$room) return
-    if (my.subPlace) return
-    if (my.form != "J") return
+    if (this.subPlace) return
+    if (this.form != "J") return
 
-    my.team = 0
-    my.ready = false
-    ud = my.getData()
-    my.pracRoom = new exports.Room($room.getData())
-    my.pracRoom.id = $room.id + 1000
-    ud.game.practice = my.pracRoom.id
-    if ((pr = $room.preReady())) return my.sendError(pr)
-    my.publish("user", ud)
-    my.pracRoom.time /= my.pracRoom.rule.time
-    my.pracRoom.limit = 1
-    my.pracRoom.password = ""
-    my.pracRoom.practice = true
-    my.subPlace = my.pracRoom.id
-    my.pracRoom.come(my)
-    my.pracRoom.start(level)
-    my.pracRoom.game.hum = 1
+    this.team = 0
+    this.ready = false
+    ud = this.getData()
+    this.pracRoom = new exports.Room($room.getData())
+    this.pracRoom.id = $room.id + 1000
+    ud.game.practice = this.pracRoom.id
+    if ((pr = $room.preReady())) return this.sendError(pr)
+    this.publish("user", ud)
+    this.pracRoom.time /= this.pracRoom.rule.time
+    this.pracRoom.limit = 1
+    this.pracRoom.password = ""
+    this.pracRoom.practice = true
+    this.subPlace = this.pracRoom.id
+    this.pracRoom.come(this)
+    this.pracRoom.start(level)
+    this.pracRoom.game.hum = 1
   }
-  my.setRoom = function (room) {
-    var $room = ROOM[my.place]
+
+  setRoom(room) {
+    var $room = ROOM[this.place]
 
     if ($room) {
       if (!$room.gaming) {
-        if ($room.master == my.id) {
+        if ($room.master == this.id) {
           $room.set(room)
           exports.publish(
             "room",
-            { target: my.id, room: $room.getData(), modify: true },
+            { target: this.id, room: $room.getData(), modify: true },
             room.password
           )
         } else {
-          my.sendError(400)
+          this.sendError(400)
         }
       }
     } else {
-      my.sendError(400)
+      this.sendError(400)
     }
   }
-  my.applyEquipOptions = function (rw) {
+
+  applyEquipOptions(rw) {
     var $obj
     var i, j
     var pm = rw.playTime / 60000
@@ -920,9 +828,9 @@ exports.Client = function (socket, profile, sid) {
     rw._score = Math.round(rw.score)
     rw._money = Math.round(rw.money)
     rw._blog = []
-    my.checkExpire()
-    for (i in my.equip) {
-      $obj = SHOP[my.equip[i]]
+    this.checkExpire()
+    for (i in this.equip) {
+      $obj = SHOP[this.equip[i]]
       if (!$obj) continue
       if (!$obj.options) continue
       for (j in $obj.options) {
@@ -934,9 +842,9 @@ exports.Client = function (socket, profile, sid) {
         rw._blog.push("q" + j + $obj.options[j])
       }
     }
-    if (rw.together && my.okgCount > 0) {
-      i = 0.05 * my.okgCount
-      j = 0.05 * my.okgCount
+    if (rw.together && this.okgCount > 0) {
+      i = 0.05 * this.okgCount
+      j = 0.05 * this.okgCount
 
       rw.score += rw._score * i
       rw.money += rw._money * j
@@ -946,39 +854,43 @@ exports.Client = function (socket, profile, sid) {
     rw.score = Math.round(rw.score)
     rw.money = Math.round(rw.money)
   }
-  my.obtain = function (k, q, flush) {
-    if (my.guest) return
-    if (my.box[k]) my.box[k] += q
-    else my.box[k] = q
 
-    my.send("obtain", { key: k, q: q })
-    if (flush) my.flush(true)
+  obtain(k, q, flush) {
+    if (this.guest) return
+    if (this.box[k]) this.box[k] += q
+    else this.box[k] = q
+
+    this.send("obtain", { key: k, q: q })
+    if (flush) this.flush(true)
   }
-  my.addFriend = function (id) {
+
+  addFriend(id) {
     var fd = DIC[id]
 
     if (!fd) return
-    my.friends[id] = fd.profile.title || fd.profile.name
-    my.flush(false, false, true)
-    my.send("friendEdit", { friends: my.friends })
+    this.friends[id] = fd.profile.title || fd.profile.name
+    this.flush(false, false, true)
+    this.send("friendEdit", { friends: this.friends })
   }
-  my.removeFriend = function (id) {
+
+  removeFriend(id) {
     DB.users
       .findOne(["_id", id])
       .limit(["friends", true])
-      .on(function ($doc) {
+      .on(($doc) => {
         if (!$doc) return
 
         var f = $doc.friends
 
-        delete f[my.id]
+        delete f[this.id]
         DB.users.update(["_id", id]).set(["friends", f]).on()
       })
-    delete my.friends[id]
-    my.flush(false, false, true)
-    my.send("friendEdit", { friends: my.friends })
+    delete this.friends[id]
+    this.flush(false, false, true)
+    this.send("friendEdit", { friends: this.friends })
   }
 }
+
 exports.Room = function (room, channel) {
   var my = this
 
