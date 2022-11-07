@@ -225,8 +225,9 @@ export class WebServer {
   }
 
   send(type: string, data: any) {
-    if (this.socket.readyState === 1)
-      this.socket.send(JSON.stringify({ ...(data || {}), type }))
+    const r = data || {}
+    r.type = type
+    if (this.socket.readyState == 1) this.socket.send(JSON.stringify(r))
   }
 
   onWebServerMessage(msg: any) {
