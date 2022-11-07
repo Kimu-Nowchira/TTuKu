@@ -35,19 +35,21 @@ import { logger } from "../sub/jjlog"
 import { WebSocket } from "ws"
 
 type RoomData = Record<number, any>
-type DICData = Record<string, any>
+type DICData = Record<string, Client>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
 
 var DB
 var SHOP
+
 let DIC: DICData = {}
 let ROOM: RoomData = {}
-var _rid
-const Rule: Record<string, any> = {}
-var guestProfiles = []
 let CHAN: Record<string, ClusterWorker> = {}
-var channel = process.env["CHANNEL"] || 0
+
+let _rid: number
+const Rule: Record<string, any> = {}
+const guestProfiles = []
+const channel = process.env["CHANNEL"] || 0
 
 const NUM_SLAVES = 4
 const GUEST_IMAGE = "/img/kkutu/guest.png"
@@ -127,7 +129,7 @@ export class Robot {
 
   constructor(
     public target: string,
-    public place: string,
+    public place: number,
     public level: number
   ) {
     this.id = target + place + Math.floor(Math.random() * 1000000000)
