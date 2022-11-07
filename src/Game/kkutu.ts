@@ -243,10 +243,8 @@ export class WebServer {
   }
 
   send(type: string, data: any) {
-    const r = data || {}
-    r.type = type
-    logger.debug("WS", JSON.stringify(r))
-    if (this.socket.readyState == 1) this.socket.send(JSON.stringify(r))
+    if (this.socket.readyState === 1)
+      this.socket.send(JSON.stringify({ ...(data || {}), type }))
   }
 }
 
