@@ -47,7 +47,7 @@ export class Tail {
     else this.value = data
   }
 
-  then(cb: Function, __i: number) {
+  then(cb: Function, __i?: number) {
     this._i = __i
 
     if (this.value === undefined) this.callback = cb

@@ -16,11 +16,16 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Room } from "../kkutu"
+import { DICData, Room } from "../kkutu"
 import { Tail } from "../../sub/lizard"
 
 export class Game {
-  constructor(private room: Room) {}
+  // TODO: DB는 import 하는 걸로 변경해야 함
+  constructor(
+    protected room: Room,
+    protected DB: any,
+    protected DIC: DICData
+  ) {}
 
   getTitle() {
     return new Tail()
@@ -34,10 +39,3 @@ export class Game {
     return 0
   }
 }
-
-// <TEMPLATE>
-// export const init = (_DB, _DIC, _ROOM) => {
-//   DB = _DB
-//   DIC = _DIC
-//   ROOM = _ROOM
-// }
