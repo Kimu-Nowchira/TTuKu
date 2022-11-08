@@ -122,10 +122,10 @@ export const publish = (type: string, data, _room) => {
 
 export class Robot {
   id: string
-  robot: boolean
-  game: Record<string, any>
-  data: Record<string, any>
-  equip: Record<string, any>
+  robot: boolean = true
+  game: Record<string, any> = {}
+  data: Record<string, any> = {}
+  equip: Record<string, any> = { robot: true }
 
   constructor(
     public target: string | null,
@@ -133,11 +133,6 @@ export class Robot {
     public level: number
   ) {
     this.id = target + place + Math.floor(Math.random() * 1000000000)
-    this.robot = true
-    this.game = {}
-    this.data = {}
-    this.equip = { robot: true }
-
     this.setLevel(level)
     this.setTeam(0)
   }
@@ -183,6 +178,10 @@ export class Robot {
 
   chat(msg: string, _code: any) {
     this.publish("chat", { value: msg })
+  }
+
+  isRobot(): this is Robot {
+    return true
   }
 }
 
@@ -902,7 +901,7 @@ export class Room {
 
   master: string = null
   tail = []
-  players = []
+  players: any[] = [] // Array<number | Robot> 또는 Record<number | Robot>
   kicked = []
   kickVote = null
 
@@ -918,9 +917,12 @@ export class Room {
   practice: number
 
   rule: any
+  private _avTeam: any[]
+  private _teams: any[][]
 
   constructor(room: { id: number }, public channel) {
     this.id = room.id || _rid
+    this.set(room)
   }
 
   getData() {
@@ -993,12 +995,16 @@ export class Room {
     for (const i in this.players) {
       if (!this.players[i]) continue
       if (!this.players[i].robot) continue
+
+      // 참고: 아래는 Robot이 아닌 경우이므로 this.players[i]가 number이다.
       if (!target || this.players[i].id == target) {
         if (this.gaming) {
           const j = this.game.seq.indexOf(this.players[i])
           if (j != -1) this.game.seq.splice(j, 1)
         }
-        this.players.splice(i, 1)
+
+        // TODO: 아래의 Number()는 임시로, 타입이 확정되면 없애두자.
+        this.players.splice(Number(i), 1)
         if (!noEx) this.export()
         return true
       }
@@ -1012,6 +1018,7 @@ export class Room {
     if (this.players.push(client.id) == 1) {
       this.master = client.id
     }
+
     if (cluster.isWorker) {
       client.ready = false
       client.team = 0
@@ -1050,13 +1057,14 @@ export class Room {
 
     if (x == -1) {
       client.place = 0
-      if (this.players.length < 1) delete ROOM[my.id]
+      if (this.players.length < 1) delete ROOM[this.id]
       return client.sendError(409)
     }
     this.players.splice(x, 1)
     client.game = {}
     if (client.id == this.master) {
-      while (this.removeAI(false, true));
+      // TODO: 원래는 target이 false이었는데, 타입의 일관성을 위해 0으로 바꿈. (비직관적이므로 개선 필요)
+      while (this.removeAI(0, true));
       this.master = this.players[0]
     }
     if (DIC[this.master]) {
@@ -1117,7 +1125,7 @@ export class Room {
     this.title = room.title
     this.password = room.password
     this.limit = Math.max(
-      Math.min(8, my.players.length),
+      Math.min(8, this.players.length),
       Math.round(room.limit)
     )
     this.mode = room.mode
@@ -1137,16 +1145,15 @@ export class Room {
       } else this.opts.injpick = []
     }
     if (!this.rule.ai) {
-      while (this.removeAI(false, true));
+      // TODO: false -> 0 (임시조치)
+      while (this.removeAI(0, true));
     }
     for (const i in this.players) {
       if (DIC[this.players[i]]) DIC[this.players[i]].ready = false
     }
   }
-}
 
-exports.Room = function (room, channel) {
-  my.preReady = function (teams) {
+  preReady(teams) {
     var i,
       j,
       t = 0,
@@ -1174,16 +1181,16 @@ exports.Room = function (room, channel) {
           }
         }
         if (l < 2) return 418
-        my._avTeam = shuffle(avTeam)
+        this._avTeam = shuffle(avTeam)
       }
     }
     // 인정픽 검사
-    if (!my.rule) return 400
-    if (my.rule.opts.includes("ijp")) {
-      if (!my.opts.injpick) return 400
-      if (!my.opts.injpick.length) return 413
+    if (!this.rule) return 400
+    if (this.rule.opts.includes("ijp")) {
+      if (!this.opts.injpick) return 400
+      if (!this.opts.injpick.length) return 413
       if (
-        !my.opts.injpick.every(function (item) {
+        !this.opts.injpick.every(function (item) {
           return !IJP_EXCEPT.includes(item)
         })
       )
@@ -1191,82 +1198,84 @@ exports.Room = function (room, channel) {
     }
     return false
   }
-  my.ready = function () {
+
+  ready() {
     var i,
       all = true
     var len = 0
     var teams = [[], [], [], [], []]
 
-    for (i in my.players) {
-      if (my.players[i].robot) {
+    for (i in this.players) {
+      if (this.players[i].robot) {
         len++
-        teams[my.players[i].game.team].push(my.players[i])
+        teams[this.players[i].game.team].push(this.players[i])
         continue
       }
-      if (!DIC[my.players[i]]) continue
-      if (DIC[my.players[i]].form == "S") continue
+      if (!DIC[this.players[i]]) continue
+      if (DIC[this.players[i]].form == "S") continue
 
       len++
-      teams[DIC[my.players[i]].team].push(my.players[i])
+      teams[DIC[this.players[i]].team].push(this.players[i])
 
-      if (my.players[i] == my.master) continue
-      if (!DIC[my.players[i]].ready) {
+      if (this.players[i] == this.master) continue
+      if (!DIC[this.players[i]].ready) {
         all = false
         break
       }
     }
-    if (!DIC[my.master]) return
-    if (len < 2) return DIC[my.master].sendError(411)
-    if ((i = my.preReady(teams))) return DIC[my.master].sendError(i)
+    if (!DIC[this.master]) return
+    if (len < 2) return DIC[this.master].sendError(411)
+    if ((i = this.preReady(teams))) return DIC[this.master].sendError(i)
     if (all) {
-      my._teams = teams
-      my.start()
-    } else DIC[my.master].sendError(412)
+      this._teams = teams
+      this.start()
+    } else DIC[this.master].sendError(412)
   }
-  my.start = function (pracLevel) {
+
+  start(pracLevel: number = 0) {
     var i,
       j,
       o,
       hum = 0
     var now = new Date().getTime()
 
-    my.gaming = true
-    my.game.late = true
-    my.game.round = 0
-    my.game.turn = 0
-    my.game.seq = []
-    my.game.robots = []
-    if (my.practice) {
-      my.game.robots.push((o = new Robot(my.master, my.id, pracLevel)))
-      my.game.seq.push(o, my.master)
+    this.gaming = true
+    this.game.late = true
+    this.game.round = 0
+    this.game.turn = 0
+    this.game.seq = []
+    this.game.robots = []
+    if (this.practice) {
+      this.game.robots.push((o = new Robot(this.master, this.id, pracLevel)))
+      this.game.seq.push(o, this.master)
     } else {
-      for (i in my.players) {
-        if (my.players[i].robot) {
-          my.game.robots.push(my.players[i])
+      for (i in this.players) {
+        if (this.players[i].robot) {
+          this.game.robots.push(this.players[i])
         } else {
-          if (!(o = DIC[my.players[i]])) continue
+          if (!(o = DIC[this.players[i]])) continue
           if (o.form != "J") continue
           hum++
         }
-        if (my.players[i]) my.game.seq.push(my.players[i])
+        if (this.players[i]) this.game.seq.push(this.players[i])
       }
-      if (my._avTeam) {
-        o = my.game.seq.length
-        j = my._avTeam.length
-        my.game.seq = []
+      if (this._avTeam) {
+        o = this.game.seq.length
+        j = this._avTeam.length
+        this.game.seq = []
         for (i = 0; i < o; i++) {
-          var v = my._teams[my._avTeam[i % j]].shift()
+          var v = this._teams[this._avTeam[i % j]].shift()
 
           if (!v) continue
-          my.game.seq[i] = v
+          this.game.seq[i] = v
         }
       } else {
-        my.game.seq = shuffle(my.game.seq)
+        this.game.seq = shuffle(this.game.seq)
       }
     }
-    my.game.mission = null
-    for (i in my.game.seq) {
-      o = DIC[my.game.seq[i]] || my.game.seq[i]
+    this.game.mission = null
+    for (i in this.game.seq) {
+      o = DIC[this.game.seq[i]] || this.game.seq[i]
       if (!o) continue
       if (!o.game) continue
 
@@ -1279,29 +1288,32 @@ exports.Room = function (room, channel) {
       ]
       o.game.wpc = []
     }
-    my.game.hum = hum
-    my.getTitle().then(function (title) {
-      my.game.title = title
-      my.export()
-      setTimeout(my.roundReady, 2000)
+    this.game.hum = hum
+    this.getTitle().then((title) => {
+      this.game.title = title
+      this.export()
+      setTimeout(this.roundReady, 2000)
     })
-    my.byMaster("starting", { target: my.id })
-    delete my._avTeam
-    delete my._teams
+    this.byMaster("starting", { target: this.id })
+    delete this._avTeam
+    delete this._teams
   }
-  my.roundReady = function () {
-    if (!my.gaming) return
 
-    return my.route("roundReady")
+  roundReady() {
+    // TODO: if (this.gaming) return this.route("roundReady")
+    if (!this.gaming) return
+    return this.route("roundReady")
   }
-  my.interrupt = function () {
-    clearTimeout(my.game._rrt)
-    clearTimeout(my.game.turnTimer)
-    clearTimeout(my.game.hintTimer)
-    clearTimeout(my.game.hintTimer2)
-    clearTimeout(my.game.qTimer)
+
+  interrupt() {
+    clearTimeout(this.game._rrt)
+    clearTimeout(this.game.turnTimer)
+    clearTimeout(this.game.hintTimer)
+    clearTimeout(this.game.hintTimer2)
+    clearTimeout(this.game.qTimer)
   }
-  my.roundEnd = function (data) {
+
+  roundEnd(data?: any) {
     var o, rw
     const res: {
       id: string
@@ -1318,9 +1330,9 @@ exports.Room = function (room, channel) {
     var sumScore = 0
     var now = new Date().getTime()
 
-    my.interrupt()
-    for (const i in my.players) {
-      o = DIC[my.players[i]]
+    this.interrupt()
+    for (const i in this.players) {
+      o = DIC[this.players[i]]
       if (!o) continue
       if (o.cameWhenGaming) {
         o.cameWhenGaming = false
@@ -1332,8 +1344,8 @@ exports.Room = function (room, channel) {
         o.setForm("J")
       }
     }
-    for (const i in my.game.seq) {
-      o = DIC[my.game.seq[i]] || my.game.seq[i]
+    for (const i in this.game.seq) {
+      o = DIC[this.game.seq[i]] || this.game.seq[i]
       if (!o) continue
       if (o.robot) {
         if (o.game.team) teams[o.game.team].push(o.game.score)
@@ -1347,8 +1359,8 @@ exports.Room = function (room, channel) {
             return p + item
           }, 0),
         ]
-    for (const i in my.game.seq) {
-      o = DIC[my.game.seq[i]]
+    for (const i in this.game.seq) {
+      o = DIC[this.game.seq[i]]
       if (!o) continue
       sumScore += o.game.score
       res.push({
@@ -1371,7 +1383,7 @@ exports.Room = function (room, channel) {
       }
       pv = res[i].score
       rw = getRewards(
-        my.mode,
+        this.mode,
         o.game.score / res[i].dim,
         o.game.bonus,
         res[i].rank,
@@ -1390,17 +1402,17 @@ exports.Room = function (room, channel) {
       res[i].reward = rw
       o.data.score += rw.score || 0
       o.money += rw.money || 0
-      o.data.record[GAME_TYPE[my.mode]][2] += rw.score || 0
-      o.data.record[GAME_TYPE[my.mode]][3] += rw.playTime
-      if (!my.practice && rw.together) {
-        o.data.record[GAME_TYPE[my.mode]][0]++
-        if (res[i].rank == 0) o.data.record[GAME_TYPE[my.mode]][1]++
+      o.data.record[GAME_TYPE[this.mode]][2] += rw.score || 0
+      o.data.record[GAME_TYPE[this.mode]][3] += rw.playTime
+      if (!this.practice && rw.together) {
+        o.data.record[GAME_TYPE[this.mode]][0]++
+        if (res[i].rank == 0) o.data.record[GAME_TYPE[this.mode]][1]++
       }
       users[o.id] = o.getData()
 
       suv.push(o.flush(true))
     }
-    all(suv).then(function (uds) {
+    all(suv).then((uds) => {
       var o = {}
 
       suv = []
@@ -1414,23 +1426,25 @@ exports.Room = function (room, channel) {
 
           o[ranks[i].target].list = ranks[i].data
         }
-        my.byMaster(
+        this.byMaster(
           "roundEnd",
           { result: res, users: users, ranks: o, data: data },
           true
         )
       })
     })
-    my.gaming = false
-    my.export()
-    delete my.game.seq
-    delete my.game.wordLength
-    delete my.game.dic
+    this.gaming = false
+    this.export()
+    delete this.game.seq
+    delete this.game.wordLength
+    delete this.game.dic
   }
-  my.byMaster = function (type, data, nob) {
-    if (DIC[my.master]) DIC[my.master].publish(type, data, nob)
+
+  byMaster(type, data, noBlock?: boolean) {
+    if (DIC[this.master]) DIC[this.master].publish(type, data, noBlock)
   }
-  my.export = function (target, kickVote, spec) {
+
+  export(target?: string, kickVote?: boolean, spec?: boolean) {
     var obj: {
       room: any
       target?: any
@@ -1442,67 +1456,76 @@ exports.Room = function (room, channel) {
       boards?: any
       means?: any
       spec?: any
-    } = { room: my.getData() }
+    } = { room: this.getData() }
     var o
 
-    if (!my.rule) return
+    if (!this.rule) return
     if (target) obj.target = target
     if (kickVote) obj.kickVote = kickVote
-    if (spec && my.gaming) {
-      if (my.rule.rule == "Classic") {
-        if (my.game.chain) obj.chain = my.game.chain.length
-      } else if (my.rule.rule == "Jaqwi") {
-        obj.theme = my.game.theme
-        obj.conso = my.game.conso
-      } else if (my.rule.rule == "Crossword") {
-        obj.prisoners = my.game.prisoners
-        obj.boards = my.game.boards
-        obj.means = my.game.means
+    if (spec && this.gaming) {
+      if (this.rule.rule == "Classic") {
+        if (this.game.chain) obj.chain = this.game.chain.length
+      } else if (this.rule.rule == "Jaqwi") {
+        obj.theme = this.game.theme
+        obj.conso = this.game.conso
+      } else if (this.rule.rule == "Crossword") {
+        obj.prisoners = this.game.prisoners
+        obj.boards = this.game.boards
+        obj.means = this.game.means
       }
       obj.spec = {}
-      for (const i in my.game.seq) {
-        if ((o = DIC[my.game.seq[i]])) obj.spec[o.id] = o.game.score
+      for (const i in this.game.seq) {
+        if ((o = DIC[this.game.seq[i]])) obj.spec[o.id] = o.game.score
       }
     }
-    if (my.practice) {
-      if (DIC[my.master || target]) DIC[my.master || target].send("room", obj)
+    if (this.practice) {
+      if (DIC[this.master || target])
+        DIC[this.master || target].send("room", obj)
     } else {
-      exports.publish("room", obj, my.password)
+      exports.publish("room", obj, this.password)
     }
   }
-  my.turnStart = function (force) {
-    if (!my.gaming) return
 
-    return my.route("turnStart", force)
-  }
-  my.readyRobot = function (robot) {
-    if (!my.gaming) return
+  turnStart(force) {
+    if (!this.gaming) return
 
-    return my.route("readyRobot", robot)
+    return this.route("turnStart", force)
   }
-  my.turnRobot = function (robot, text, data) {
-    if (!my.gaming) return
 
-    my.submit(robot, text, data)
-    //return my.route("turnRobot", robot, text);
-  }
-  my.turnNext = function (force) {
-    if (!my.gaming) return
-    if (!my.game.seq) return
+  readyRobot(robot) {
+    if (!this.gaming) return
 
-    my.game.turn = (my.game.turn + 1) % my.game.seq.length
-    my.turnStart(force)
+    return this.route("readyRobot", robot)
   }
-  my.turnEnd = function () {
-    return my.route("turnEnd")
+
+  turnRobot(robot, text, data) {
+    if (!this.gaming) return
+
+    this.submit(robot, text, data)
+    //return this.route("turnRobot", robot, text);
   }
-  my.submit = function (client, text, data) {
-    return my.route("submit", client, text, data)
+
+  turnNext(force) {
+    if (!this.gaming) return
+    if (!this.game.seq) return
+
+    this.game.turn = (this.game.turn + 1) % this.game.seq.length
+    this.turnStart(force)
   }
-  my.getScore = function (text, delay, ignoreMission) {
-    return my.routeSync("getScore", text, delay, ignoreMission)
+
+  turnEnd() {
+    return this.route("turnEnd")
   }
-  my.getTurnSpeed = function (rt) {
+
+  submit(client, text, data) {
+    return this.route("submit", client, text, data)
+  }
+
+  getScore(text, delay, ignoreMission) {
+    return this.routeSync("getScore", text, delay, ignoreMission)
+  }
+
+  getTurnSpeed(rt) {
     if (rt < 5000) return 10
     else if (rt < 11000) return 9
     else if (rt < 18000) return 8
@@ -1515,32 +1538,36 @@ exports.Room = function (room, channel) {
     else if (rt < 95000) return 1
     else return 0
   }
-  my.getTitle = function () {
-    return my.route("getTitle")
+
+  getTitle() {
+    return this.route("getTitle")
   }
-  /*my.route = function(func, ...args){
-		var cf;
-		
-		if(!(cf = my.checkRoute(func))) return;
-		return Slave.run(my, func, args);
-	};*/
-  my.route = my.routeSync = function (func, ...args) {
+
+  route(func, ...args) {
     var cf
 
-    if (!(cf = my.checkRoute(func))) return
-    return cf.apply(my, args)
+    if (!(cf = this.checkRoute(func))) return
+    return cf.apply(this, args)
   }
-  my.checkRoute = function (func) {
+
+  routeSync(func, ...args) {
+    var cf
+
+    if (!(cf = this.checkRoute(func))) return
+    return cf.apply(this, args)
+  }
+
+  checkRoute(func) {
     var c
 
-    if (!my.rule) return logger.warn("Unknown mode: " + my.mode), false
-    if (!(c = Rule[my.rule.rule]))
-      return logger.warn("Unknown rule: " + my.rule.rule), false
+    if (!this.rule) return logger.warn("Unknown mode: " + this.mode), false
+    if (!(c = Rule[this.rule.rule]))
+      return logger.warn("Unknown rule: " + this.rule.rule), false
     if (!c[func]) return logger.warn("Unknown function: " + func), false
     return c[func]
   }
-  my.set(room)
 }
+
 function getFreeChannel() {
   var i,
     list = {}
@@ -1565,6 +1592,7 @@ function getFreeChannel() {
     return channel || 0
   }
 }
+
 function getGuestName(sid) {
   var i,
     len = sid.length,
