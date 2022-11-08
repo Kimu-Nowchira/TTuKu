@@ -300,9 +300,11 @@ class Classic extends Game {
         case 1:
           return text[0] == char || text[0] == subChar
         case 2:
-          return text.substr(0, 2) == char
+          return text.substring(0, 2) == char
         case 3:
-          return text.substr(0, 3) == char || text.substr(0, 2) == char.slice(1)
+          return (
+            text.substring(0, 3) == char || text.substr(0, 2) == char.slice(1)
+          )
         default:
           return false
       }
@@ -390,7 +392,7 @@ class Classic extends Game {
               }
             }
           })
-        else approved()
+        else await approved()
       }
 
       const denied = (code = 404) => {
@@ -407,7 +409,7 @@ class Classic extends Game {
           denied(406)
         else if (this.room.opts.loanword && $doc.flag & KOR_FLAG.LOANWORD)
           denied(405)
-        else preApproved()
+        else await preApproved()
       } else {
         denied()
       }
@@ -610,7 +612,7 @@ function getAuto(char, subc, type) {
         break
       case 1:
         aft = function ($md) {
-          R.go($md.length ? true : false)
+          R.go(!!$md.length)
         }
         break
       case 2:
@@ -622,11 +624,11 @@ function getAuto(char, subc, type) {
     this.DB.kkutu[this.room.rule.lang].find
       .apply(this, aqs)
       .limit(bool ? 1 : 123)
-      .on(function ($md) {
+      .on(($md) => {
         forManner($md)
         if (this.room.game.chain)
           aft(
-            $md.filter(function (item) {
+            $md.filter((item) => {
               return !this.room.game.chain.includes(item)
             })
           )
@@ -641,9 +643,7 @@ function getAuto(char, subc, type) {
 
     const forManner = (list) => {
       lst = list
-      MAN.upsert(["_id", char])
-        .set([key, lst.length ? true : false])
-        .on(null, null, onFail)
+      MAN.upsert(["_id", char]).set([key, !!lst.length]).on(null, null, onFail)
     }
   }
 
