@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { DICData, Room } from "../kkutu"
+import { Client, DICData, Robot, Room } from "../kkutu"
 import { Tail } from "../../sub/lizard"
 
 export class Game {
@@ -31,11 +31,15 @@ export class Game {
     return new Tail()
   }
 
-  roundReady() {}
-  turnStart() {}
-  turnEnd() {}
-  submit() {}
-  getScore(): number {
+  async roundReady() {}
+  async turnStart(force) {}
+  async turnEnd() {}
+  async submit(client: Client, text: string, data?: any) {}
+  async readyRobot(robot: Robot) {}
+
+  getScore(text: string, delay: number, ignoreMission: boolean): number {
     return 0
   }
 }
+
+export * from "./classic"

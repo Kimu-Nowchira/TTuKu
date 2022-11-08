@@ -25,7 +25,6 @@ import {
   IJP_EXCEPT,
   KICK_BY_SPAM,
   MAX_OBSERVER,
-  RULE,
   SPAM_ADD_DELAY,
   SPAM_CLEAR_DELAY,
   SPAM_LIMIT,
@@ -33,9 +32,11 @@ import {
 } from "../const"
 import { logger } from "../sub/jjlog"
 import { WebSocket } from "ws"
+import { Game } from "./games"
+import Classic from "./games/classic"
 
-type RoomData = Record<number, Room>
-type DICData = Record<string, Client>
+export type RoomData = Record<number, Room>
+export type DICData = Record<string, Client>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
 
@@ -48,7 +49,9 @@ let CHAN: Record<string, ClusterWorker> = {}
 
 let _rid: number
 
-const Rule: Record<string, any> = {} // Record<string, Module>
+const Rule: Record<string, typeof Game> = {
+  Classic: Classic,
+}
 
 const guestProfiles = []
 const channel = process.env["CHANNEL"] || 0
@@ -82,11 +85,12 @@ export const init = (
     })
   })
 
-  for (const i in RULE) {
-    const k = RULE[i as keyof typeof RULE].rule as string
-    Rule[k] = require(`./games/${k.toLowerCase()}`)
-    Rule[k].init(DB, DIC)
-  }
+  // 새로운 방식을 사용함에 따라 비활성화
+  // for (const i in RULE) {
+  //   const k = RULE[i as keyof typeof RULE].rule as string
+  //   Rule[k] = require(`./games/${k.toLowerCase()}`)
+  //   Rule[k].init(DB, DIC)
+  // }
 }
 
 export const getUserList = () => {
@@ -284,6 +288,8 @@ export class Client {
 
   cameWhenGaming: boolean
 
+  robot = false
+
   constructor(
     public socket: WebSocket,
     public profile: any,
@@ -426,7 +432,7 @@ export class Client {
       process.send({ type: "user-publish", data: data })
   }
 
-  chat(msg, code) {
+  chat(msg: string, code?: string) {
     if (this.noChat) return this.send("chat", { notice: true, code: 443 })
     this.publish("chat", { value: msg, notice: !!code, code: code })
   }
@@ -929,6 +935,8 @@ export class Room {
   _avTeam: any[]
   _teams: any[][]
 
+  gameData?: Game
+
   constructor(room: { id: number }, public channel) {
     this.id = room.id || _rid
     this.set(room)
@@ -1243,6 +1251,11 @@ export class Room {
     } else DIC[this.master].sendError(412)
   }
 
+  loadGame() {
+    const _Game = Rule[this.rule.rule]
+    this.gameData = new _Game(this, DB, DIC)
+  }
+
   async start(pracLevel?: number) {
     var i,
       j,
@@ -1251,6 +1264,9 @@ export class Room {
     var now = new Date().getTime()
 
     logger.debug("Game Start")
+
+    // 신기술
+    this.loadGame()
     this.gaming = true
     logger.debug("DEBUG", this.gaming)
     this.game.late = true
@@ -1324,7 +1340,8 @@ export class Room {
     // TODO: if (this.gaming) return this.route("roundReady")
     logger.debug("DEBUG4", this.gaming)
     if (!this.gaming) return logger.warn("roundReady: this.gaming is false")
-    return this.route("roundReady")
+    // return 없앴는데 괜찮겠지?
+    this.gameData.roundReady().then()
   }
 
   interrupt() {
@@ -1516,19 +1533,16 @@ export class Room {
 
   turnStart(force) {
     if (!this.gaming) return logger.warn("turnStart: not gaming", this.gaming)
-
-    return this.route("turnStart", force)
+    return this.gameData.turnStart(force).then()
   }
 
-  readyRobot(robot) {
+  readyRobot(robot: Robot) {
     if (!this.gaming) return logger.warn("readyRobot: not gaming")
-
-    return this.route("readyRobot", robot)
+    return this.gameData.readyRobot(robot).then()
   }
 
   turnRobot(robot, text, data) {
     if (!this.gaming) return logger.warn("turnRobot: not gaming")
-
     this.submit(robot, text, data)
     //return this.route("turnRobot", robot, text);
   }
@@ -1542,15 +1556,15 @@ export class Room {
   }
 
   turnEnd() {
-    return this.route("turnEnd")
+    this.gameData.turnEnd().then()
   }
 
   submit(client, text, data) {
-    return this.route("submit", client, text, data)
+    this.gameData.submit(client, text, data).then()
   }
 
-  getScore(text, delay, ignoreMission) {
-    return this.routeSync("getScore", text, delay, ignoreMission)
+  getScore(text, delay, ignoreMission?: boolean) {
+    return this.gameData.getScore(text, delay, ignoreMission)
   }
 
   getTurnSpeed(rt) {
@@ -1568,38 +1582,24 @@ export class Room {
   }
 
   getTitle() {
-    return this.route("getTitle")
+    return this.gameData.getTitle()
   }
 
-  route(func, ...args) {
-    const cf = this.checkRoute(func)
-    if (!cf) return logger.warn("route: no func")
-
-    return cf.apply(this, args)
-  }
-
-  routeSync(func: string, ...args) {
-    const cf = this.checkRoute(func)
-    if (!cf) return logger.warn("routeSync: no func")
-
-    return cf.apply(this, args)
-  }
-
-  checkRoute(func: string) {
+  checkRoute(func: string): undefined | any {
     // c는 해당 게임의 js (결국은 Object이긴 한데...)
     const c = Rule[this.rule.rule]
 
     if (!this.rule) {
       logger.warn("Unknown mode: " + this.mode)
-      return false
+      return
     }
     if (!c) {
       logger.warn("Unknown rule: " + this.rule.rule)
-      return false
+      return
     }
     if (!c[func]) {
       logger.warn("Unknown function: " + func)
-      return false
+      return
     }
 
     // 각 게임의 오브젝트(js파일 자체)에서 불러옴
