@@ -1515,7 +1515,7 @@ export class Room {
   }
 
   turnStart(force) {
-    if (!this.gaming) return logger.warn("turnStart: not gaming")
+    if (!this.gaming) return logger.warn("turnStart: not gaming", this.gaming)
 
     return this.route("turnStart", force)
   }
