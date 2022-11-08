@@ -17,6 +17,17 @@
  */
 import { config } from "./config"
 
+export type CustomRule =
+  | "man"
+  | "ext"
+  | "mis"
+  | "loa"
+  | "str"
+  | "k32"
+  | "ijp"
+  | "prv"
+  | "no2"
+
 export const KKUTU_MAX = 400
 export const MAIN_PORTS = config.MAIN_PORTS
 export const TEST_PORT = 4040
@@ -29,7 +40,7 @@ export const MAX_OBSERVER = 4
 export const TESTER = config.ADMIN.concat(["Input tester id here"])
 export const IS_SECURED = config.IS_SECURED
 export const SSL_OPTIONS = config.SSL_OPTIONS
-export const OPTIONS = {
+export const OPTIONS: Record<CustomRule, { name: string }> = {
   man: { name: "Manner" },
   ext: { name: "Injeong" },
   mis: { name: "Mission" },
@@ -38,6 +49,9 @@ export const OPTIONS = {
   str: { name: "Strict" },
   k32: { name: "Sami" },
   no2: { name: "No2" },
+
+  // TODO: 타입을 맞추기 위해 임시로 끼운 것
+  ijp: { name: "" },
 }
 export const MOREMI_PART = [
   "back",
@@ -89,17 +103,26 @@ export const GROUPS = {
   back: ["Mback", "Mfront"],
 }
 
-export const RULE = {
-  /*
-	유형: { lang: 언어,
-		rule: 이름,
-		opts: [ 추가 규칙 ],
-		time: 시간 상수,
-		ai: AI 가능?,
-		big: 큰 화면?,
-		ewq: 현재 턴 나가면 라운드 종료?
-	}
-*/
+export interface IGameRule {
+  lang: "en" | "ko"
+  // 규칙 이름
+  rule: string
+  // 추가 규칙
+  opts: Array<CustomRule>
+  // 시간 상수
+  time: number
+  // AI 가능 여부
+  ai: boolean
+  // 큰 화면?
+  big: boolean
+  // 현재 턴 나가면 라운드 종료?
+  ewq: boolean
+
+  // KAP 전용
+  _back?: boolean
+}
+
+export const RULE: Record<string, IGameRule> = {
   EKT: {
     lang: "en",
     rule: "Classic",
@@ -442,5 +465,5 @@ export const KOR_FLAG = {
   MUNHWA: 32, // 문화어
 }
 export const WP_REWARD = () => 10 + Math.floor(Math.random() * 91)
-export const getRule = (mode: number) =>
+export const getRule = (mode: number): IGameRule =>
   RULE[GAME_TYPE[mode] as keyof typeof RULE]

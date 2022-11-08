@@ -29,19 +29,22 @@ import {
   SPAM_CLEAR_DELAY,
   SPAM_LIMIT,
   OPTIONS,
+  IGameRule,
+  CustomRule,
 } from "../const"
 import { logger } from "../sub/jjlog"
 import { WebSocket } from "ws"
 import { Game } from "./games"
 import Classic from "./games/classic"
+import { Crossword } from "./games/crossword"
 
 export type RoomData = Record<number, Room>
 export type DICData = Record<string, Client>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
 
-var DB
-var SHOP
+let DB
+let SHOP
 
 let DIC: DICData = {}
 let ROOM: RoomData = {}
@@ -51,12 +54,13 @@ let _rid: number
 
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
+  Crossword: Crossword,
 }
 
-const guestProfiles = []
+// const guestProfiles = []
 const channel = process.env["CHANNEL"] || 0
 
-const NUM_SLAVES = 4
+// const NUM_SLAVES = 4
 const GUEST_IMAGE = "/img/kkutu/guest.png"
 const MAX_OKG = 18
 const PER_OKG = 600000
@@ -84,13 +88,6 @@ export const init = (
       SHOP[item._id] = item
     })
   })
-
-  // 새로운 방식을 사용함에 따라 비활성화
-  // for (const i in RULE) {
-  //   const k = RULE[i as keyof typeof RULE].rule as string
-  //   Rule[k] = require(`./games/${k.toLowerCase()}`)
-  //   Rule[k].init(DB, DIC)
-  // }
 }
 
 export const getUserList = () => {
@@ -306,7 +303,7 @@ export class Client {
 
       if (this.profile.title) this.profile.name = "anonymous"
     } else {
-      const gp = guestProfiles[Math.floor(Math.random() * guestProfiles.length)]
+      // const gp = guestProfiles[Math.floor(Math.random() * guestProfiles.length)]
 
       this.id = "guest__" + sid
       this.guest = true
@@ -326,7 +323,7 @@ export class Client {
 
     socket.on("message", (msg: any) => {
       let data
-      const room = ROOM[this.place]
+      // const room = ROOM[this.place]
       if (!this) return logger.warn("this is null")
       if (!msg) return logger.warn("msg is null")
 
@@ -934,7 +931,7 @@ export class Room {
   time: number
   practice: number
 
-  rule: any
+  rule: IGameRule
   _avTeam: any[]
   _teams: any[][]
 
@@ -1010,8 +1007,6 @@ export class Room {
   }
 
   removeAI(target: number, noEx?: boolean) {
-    let j: number
-
     for (const i in this.players) {
       if (!this.players[i]) continue
       if (!this.players[i].robot) continue
@@ -1142,7 +1137,7 @@ export class Room {
   }
 
   set(room) {
-    var k, ijc, ij
+    var ijc, ij
 
     this.title = room.title
     this.password = room.password
@@ -1156,8 +1151,8 @@ export class Room {
     this.time = room.time * this.rule.time
     if (room.opts && this.opts) {
       for (const i in OPTIONS) {
-        k = OPTIONS[i].name.toLowerCase()
-        this.opts[k] = room.opts[k] && this.rule.opts.includes(i)
+        const k = OPTIONS[i].name.toLowerCase()
+        this.opts[k] = room.opts[k] && this.rule.opts.includes(i as CustomRule)
       }
       if ((ijc = this.rule.opts.includes("ijp"))) {
         ij = require("../const")[`${this.rule.lang.toUpperCase()}_IJP`]
@@ -1587,27 +1582,6 @@ export class Room {
 
   getTitle() {
     return this.gameData.getTitle()
-  }
-
-  checkRoute(func: string): undefined | any {
-    // c는 해당 게임의 js (결국은 Object이긴 한데...)
-    const c = Rule[this.rule.rule]
-
-    if (!this.rule) {
-      logger.warn("Unknown mode: " + this.mode)
-      return
-    }
-    if (!c) {
-      logger.warn("Unknown rule: " + this.rule.rule)
-      return
-    }
-    if (!c[func]) {
-      logger.warn("Unknown function: " + func)
-      return
-    }
-
-    // 각 게임의 오브젝트(js파일 자체)에서 불러옴
-    return c[func]
   }
 }
 
