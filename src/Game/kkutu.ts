@@ -316,8 +316,8 @@ export class Client {
     socket.on("message", (msg: any) => {
       let data
       const room = ROOM[this.place]
-      if (!this) return
-      if (!msg) return
+      if (!this) return logger.warn("this is null")
+      if (!msg) return logger.warn("msg is null")
 
       logger.info(`Chan @${channel} Msg #${this.id}: ${msg}`)
       try {
@@ -339,10 +339,10 @@ export class Client {
   }
 
   onOKG(time: number) {
-    if (cluster.isPrimary) return
+    if (cluster.isPrimary) return logger.warn("onOKG() called on primary")
     const d = new Date().getDate()
 
-    if (this.guest) return
+    if (this.guest) return logger.warn("onOKG() called on guest")
     if (d != this.data.connectDate) {
       this.data.connectDate = d
       this.data.playTime = 0
@@ -1304,7 +1304,7 @@ export class Room {
 
   roundReady() {
     // TODO: if (this.gaming) return this.route("roundReady")
-    if (!this.gaming) return
+    if (!this.gaming) return logger.warn("roundReady: this.gaming is false")
     return this.route("roundReady")
   }
 
@@ -1554,14 +1554,14 @@ export class Room {
   route(func, ...args) {
     var cf
 
-    if (!(cf = this.checkRoute(func))) return
+    if (!(cf = this.checkRoute(func))) return logger.warn("route: no func")
     return cf.apply(this, args)
   }
 
   routeSync(func, ...args) {
     var cf
 
-    if (!(cf = this.checkRoute(func))) return
+    if (!(cf = this.checkRoute(func))) return logger.warn("no route")
     return cf.apply(this, args)
   }
 
