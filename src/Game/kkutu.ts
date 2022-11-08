@@ -38,7 +38,7 @@ import { Game } from "./games"
 import Classic from "./games/classic"
 import { Crossword } from "./games/crossword"
 
-export type RoomData = Record<number, Room>
+export type IRooms = Record<number, Room>
 export type DICData = Record<string, Client>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
@@ -47,8 +47,8 @@ let DB
 let SHOP
 
 let DIC: DICData = {}
-let ROOM: RoomData = {}
-let CHAN: Record<string, ClusterWorker> = {}
+let ROOM: IRooms = {}
+let CHAN: Record<number, ClusterWorker> = {}
 
 let _rid: number
 
@@ -58,7 +58,7 @@ const Rule: Record<string, typeof Game> = {
 }
 
 // const guestProfiles = []
-const channel = process.env["CHANNEL"] || 0
+const channel = Number(process.env["CHANNEL"]) || 0
 
 // const NUM_SLAVES = 4
 const GUEST_IMAGE = "/img/kkutu/guest.png"
@@ -70,7 +70,7 @@ export const NIGHT = false
 export const init = (
   _DB,
   _DIC: DICData,
-  _ROOM: RoomData,
+  _ROOM: IRooms,
   _GUEST_PERMISSION: Record<string, boolean>,
   _CHAN: Record<string, ClusterWorker>
 ) => {
@@ -633,7 +633,7 @@ export class Client {
 				5. 마스터가 방 정보를 반영한다.
 			*/
       if (cluster.isPrimary) {
-        var av = getFreeChannel()
+        const av = getFreeChannel()
 
         room.id = _rid
         room._create = true
@@ -656,7 +656,7 @@ export class Client {
         if (this.place != 0) {
           this.sendError(409)
         }
-        $room = new exports.Room(room, getFreeChannel())
+        $room = new Room(room, getFreeChannel())
 
         process.send({
           type: "room-new",
@@ -701,28 +701,35 @@ export class Client {
   }
 
   kick(target, kickVote) {
-    var $room = ROOM[this.place]
-    var len = $room.players.length
+    const $room = ROOM[this.place]
+    let len = $room.players.length
 
-    if (target == null) {
+    if (target === null) {
       // 로봇 (이 경우 kickVote는 로봇의 식별자)
       $room.removeAI(kickVote)
       return
     }
-    for (const i in $room.players) {
-      if ($room.players[i].robot) len--
-    }
+
+    for (const i in $room.players)
+      if (typeof $room.players[i] !== "number") len--
+
     if (len < 4) kickVote = { target: target, Y: 1, N: 0 }
+
     if (kickVote) {
       $room.kicked.push(target)
       $room.kickVote = null
       if (DIC[target]) DIC[target].leave(kickVote)
     } else {
       $room.kickVote = { target: target, Y: 1, N: 0, list: [] }
+
       for (const i in $room.players) {
-        const $c = DIC[$room.players[i]]
+        const player = $room.players[i]
+        if (typeof player !== "number") continue
+
+        const $c = DIC[player]
         if (!$c) continue
-        if ($c.id == $room.master) continue
+
+        if ($c.id === $room.master) continue
 
         // TODO: 임시 Promise (나중에 수정 필요)
         const kickVoteAfter10Sec = async () => {
@@ -802,7 +809,7 @@ export class Client {
     this.team = 0
     this.ready = false
     ud = this.getData()
-    this.pracRoom = new exports.Room($room.getData())
+    this.pracRoom = new Room($room.getData())
     this.pracRoom.id = $room.id + 1000
     ud.game.practice = this.pracRoom.id
     if ((pr = $room.preReady())) return this.sendError(pr)
@@ -909,6 +916,30 @@ export class Client {
   }
 }
 
+interface RoomData {
+  id: number
+  channel: number
+  title: string
+  password: string | boolean
+  limit: number
+  mode: number
+  round: number
+  time: number
+  master: string
+  players: any[]
+  readies: any
+  gaming: boolean
+  game: {
+    round: number
+    turn: number
+    seq: any
+    title: string
+    mission: string
+  }
+  practice: string | boolean
+  opts: any
+}
+
 export class Room {
   id: number
 
@@ -916,7 +947,7 @@ export class Room {
 
   master: string = null
   tail = []
-  players: any[] = [] // Array<number | Robot> 또는 Record<number | Robot>
+  players: any[] = [] // Array<number | Robot>
   kicked = []
   kickVote = null
 
@@ -937,7 +968,7 @@ export class Room {
 
   gameData?: Game
 
-  constructor(room: { id: number }, public channel) {
+  constructor(room: RoomData, public channel?: number) {
     this.id = room.id || _rid
     this.set(room)
   }
@@ -946,10 +977,10 @@ export class Room {
     var readies = {}
     var pls = []
     var seq = this.game.seq ? this.game.seq.map(filterRobot) : []
-    var o
 
     for (const i in this.players) {
-      if ((o = DIC[this.players[i]])) {
+      const o = DIC[this.players[i]]
+      if (o) {
         readies[this.players[i]] = {
           r: o.ready || o.game.ready,
           f: o.form || o.game.form,
@@ -1066,7 +1097,7 @@ export class Room {
     }
   }
 
-  go(client, kickVote?) {
+  go(client: Client, kickVote?) {
     var x = this.players.indexOf(client.id)
     var me
 
@@ -1585,29 +1616,22 @@ export class Room {
   }
 }
 
-function getFreeChannel() {
-  var i,
-    list = {}
+function getFreeChannel(): number {
+  if (!cluster.isPrimary) return channel || 0
 
-  if (cluster.isPrimary) {
-    var mk = 1
+  const list: Record<number, number> = {}
+  let mk = 1
 
-    for (i in CHAN) {
-      // if(CHAN[i].isDead()) continue;
-      list[i] = 0
-    }
-    for (i in ROOM) {
-      // if(!list.hasOwnProperty(i)) continue;
-      mk = ROOM[i].channel
-      list[mk]++
-    }
-    for (i in list) {
-      if (list[i] < list[mk]) mk = i
-    }
-    return Number(mk)
-  } else {
-    return channel || 0
+  for (const i in CHAN) list[i] = 0
+
+  for (const i in ROOM) {
+    mk = ROOM[i].channel
+    list[mk]++
   }
+
+  for (const i in list) if (list[i] < list[mk]) mk = Number(i)
+
+  return Number(mk)
 }
 
 function getGuestName(sid) {
