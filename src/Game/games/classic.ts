@@ -90,7 +90,7 @@ class Classic extends Game {
         for (i = 0; i < len; i++)
           list.push(
             getAuto.call(
-              this.room,
+              this,
               title[i],
               getSubChar.call(this.room, title[i]),
               1
@@ -249,7 +249,7 @@ class Classic extends Game {
         target.game.score += score
       }
     getAuto
-      .call(this.room, this.room.game.char, this.room.game.subChar, 0)
+      .call(this, this.room.game.char, this.room.game.subChar, 0)
       .then((w) => {
         this.room.byMaster(
           "turnEnd",
@@ -375,7 +375,7 @@ class Classic extends Game {
           this.room.turnNext()
         }
         if (firstMove || this.room.opts.manner)
-          getAuto.call(this.room, preChar, preSubChar, 1).then((w) => {
+          getAuto.call(this, preChar, preSubChar, 1).then((w) => {
             if (w) approved()
             else {
               this.room.game.loading = false
@@ -443,7 +443,7 @@ class Classic extends Game {
     var isRev = GAME_TYPE[this.room.mode] == "KAP"
 
     getAuto
-      .call(this.room, this.room.game.char, this.room.game.subChar, 2)
+      .call(this, this.room.game.char, this.room.game.subChar, 2)
       .then((list) => {
         if (list.length) {
           list.sort(function (a, b) {
@@ -552,16 +552,16 @@ function getMission(l) {
 
 function getAuto(char, subc, type) {
   /* type
-		0 ������ �ܾ� �ϳ�
-		1 ���� ����
-		2 �ܾ� ���
-	*/
-  var my = this
+    0 무작위 단어 하나
+    1 존재 여부
+    2 단어 목록
+  */
+
   var R = new Tail()
-  var gameType = GAME_TYPE[my.mode]
+  var gameType = GAME_TYPE[this.room.mode]
   var adv, adc
-  var key = gameType + "_" + keyByOptions(my.opts)
-  var MAN = this.DB.kkutu_manner[my.rule.lang]
+  var key = gameType + "_" + keyByOptions(this.room.opts)
+  var MAN = this.DB.kkutu_manner[this.room.rule.lang]
   var bool = type == 1
 
   adc = char + (subc ? "|" + subc : "")
@@ -576,7 +576,7 @@ function getAuto(char, subc, type) {
       adv = `^(${adc})...`
       break
     case "KKT":
-      adv = `^(${adc}).{${my.game.wordLength - 1}}$`
+      adv = `^(${adc}).{${this.room.game.wordLength - 1}}$`
       break
     case "KAP":
       adv = `.(${adc})$`
@@ -585,23 +585,18 @@ function getAuto(char, subc, type) {
   if (!char) {
     console.log(`Undefined char detected! key=${key} type=${type} adc=${adc}`)
   }
-  MAN.findOne(["_id", char || "��"]).on(function ($mn) {
-    if ($mn && bool) {
-      if ($mn[key] === null) produce()
-      else R.go($mn[key])
-    } else {
-      produce()
-    }
-  })
-  function produce() {
+
+  const produce = () => {
     var aqs = [["_id", new RegExp(adv)]] as [string, any][]
     var aft
     var lst
 
-    if (!my.opts.injeong) aqs.push(["flag", { $nand: KOR_FLAG.INJEONG }])
-    if (my.rule.lang == "ko") {
-      if (my.opts.loanword) aqs.push(["flag", { $nand: KOR_FLAG.LOANWORD }])
-      if (my.opts.strict) aqs.push(["type", KOR_STRICT], ["flag", { $lte: 3 }])
+    if (!this.room.opts.injeong) aqs.push(["flag", { $nand: KOR_FLAG.INJEONG }])
+    if (this.room.rule.lang == "ko") {
+      if (this.room.opts.loanword)
+        aqs.push(["flag", { $nand: KOR_FLAG.LOANWORD }])
+      if (this.room.opts.strict)
+        aqs.push(["type", KOR_STRICT], ["flag", { $lte: 3 }])
       else aqs.push(["type", KOR_GROUP])
     } else {
       aqs.push(["_id", ENG_ID])
@@ -624,31 +619,42 @@ function getAuto(char, subc, type) {
         }
         break
     }
-    DB.kkutu[my.rule.lang].find
+    DB.kkutu[this.room.rule.lang].find
       .apply(this, aqs)
       .limit(bool ? 1 : 123)
       .on(function ($md) {
         forManner($md)
-        if (my.game.chain)
+        if (this.room.game.chain)
           aft(
             $md.filter(function (item) {
-              return !my.game.chain.includes(item)
+              return !this.room.game.chain.includes(item)
             })
           )
         else aft($md)
       })
-    function forManner(list) {
+
+    const onFail = () => {
+      MAN.createColumn(key, "boolean").on(function () {
+        forManner(lst)
+      })
+    }
+
+    const forManner = (list) => {
       lst = list
       MAN.upsert(["_id", char])
         .set([key, lst.length ? true : false])
         .on(null, null, onFail)
     }
-    function onFail() {
-      MAN.createColumn(key, "boolean").on(function () {
-        forManner(lst)
-      })
-    }
   }
+
+  MAN.findOne(["_id", char || "★"]).on(($mn) => {
+    if ($mn && bool) {
+      if ($mn[key] === null) produce()
+      else R.go($mn[key])
+    } else {
+      produce()
+    }
+  })
   return R
 }
 
