@@ -1246,6 +1246,7 @@ export class Room {
 
     logger.debug("Game Start")
     this.gaming = true
+    logger.debug("DEBUG", this.gaming)
     this.game.late = true
     this.game.round = 0
     this.game.turn = 0
@@ -1298,8 +1299,10 @@ export class Room {
     this.getTitle().then((title) => {
       this.game.title = title
       this.export()
+      logger.debug("DEBUG3", this.gaming)
       setTimeout(this.roundReady, 2000)
     })
+    logger.debug("DEBUG2", this.gaming)
     this.byMaster("starting", { target: this.id })
     delete this._avTeam
     delete this._teams
@@ -1307,6 +1310,7 @@ export class Room {
 
   roundReady() {
     // TODO: if (this.gaming) return this.route("roundReady")
+    logger.debug("DEBUG4", this.gaming)
     if (!this.gaming) return logger.warn("roundReady: this.gaming is false")
     return this.route("roundReady")
   }
