@@ -1531,7 +1531,7 @@ export class Room {
     }
   }
 
-  turnStart(force) {
+  turnStart(force?) {
     if (!this.gaming) return logger.warn("turnStart: not gaming", this.gaming)
     return this.gameData.turnStart(force).then()
   }
@@ -1541,13 +1541,13 @@ export class Room {
     return this.gameData.readyRobot(robot).then()
   }
 
-  turnRobot(robot, text, data) {
+  turnRobot(robot, text, data?) {
     if (!this.gaming) return logger.warn("turnRobot: not gaming")
     this.submit(robot, text, data)
     //return this.route("turnRobot", robot, text);
   }
 
-  turnNext(force) {
+  turnNext(force?) {
     if (!this.gaming) return logger.warn("turnNext: not gaming")
     if (!this.game.seq) return logger.warn("turnNext: no seq")
 

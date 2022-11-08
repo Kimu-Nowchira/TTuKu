@@ -168,7 +168,11 @@ class Classic extends Game {
         },
         true
       )
-      this.room.game.turnTimer = setTimeout(this.room.turnStart, 2400)
+
+      await new Promise(
+        (resolve) => (this.room.game.turnTimer = setTimeout(resolve, 2400))
+      )
+      this.room.turnStart()
     } else {
       this.room.roundEnd()
     }
@@ -207,15 +211,20 @@ class Classic extends Game {
       },
       true
     )
-    this.room.game.turnTimer = setTimeout(
-      this.room.turnEnd,
-      Math.min(this.room.game.roundTime, this.room.game.turnTime + 100)
-    )
     if ((si = this.room.game.seq[this.room.game.turn]))
       if (si.robot) {
         si._done = []
         this.room.readyRobot(si)
       }
+
+    await new Promise(
+      (resolve) =>
+        (this.room.game.turnTimer = setTimeout(
+          resolve,
+          Math.min(this.room.game.roundTime, this.room.game.turnTime + 100)
+        ))
+    )
+    this.room.turnEnd()
   }
 
   async turnEnd() {
@@ -228,9 +237,11 @@ class Classic extends Game {
       this.room.game.seq[this.room.game.turn]
 
     if (this.room.game.loading) {
-      this.room.game.turnTimer = setTimeout(this.room.turnEnd, 100)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      this.room.turnEnd()
       return
     }
+
     this.room.game.late = true
     if (target)
       if (target.game) {
@@ -250,7 +261,16 @@ class Classic extends Game {
           },
           true
         )
-        this.room.game._rrt = setTimeout(this.room.roundReady, 3000)
+
+        // TODO: 임시
+        const roundReadyAfter3Sec = async () => {
+          await new Promise(
+            (resolve) => (this.room.game._rrt = setTimeout(resolve, 3000))
+          )
+          this.room.roundReady()
+        }
+
+        roundReadyAfter3Sec().then()
       })
     clearTimeout(this.room.game.robotTimer)
   }
@@ -297,14 +317,14 @@ class Classic extends Game {
     l = this.room.rule.lang
     this.room.game.loading = true
 
-    const onDB = ($doc) => {
+    const onDB = async ($doc) => {
       if (!this.room.game.chain) return
       var preChar = getChar.call(this.room, text)
       var preSubChar = getSubChar.call(this.room, preChar)
       var firstMove = this.room.game.chain.length < 1
 
-      const preApproved = () => {
-        const approved = () => {
+      const preApproved = async () => {
+        const approved = async () => {
           if (this.room.game.late) return
           if (!this.room.game.chain) return
           if (!this.room.game.dic) return
@@ -340,7 +360,7 @@ class Classic extends Game {
           if (this.room.game.mission === true) {
             this.room.game.mission = getMission(this.room.rule.lang)
           }
-          setTimeout(this.room.turnNext, this.room.game.turnTime / 6)
+
           if (!client.robot) {
             client.invokeWordPiece(text, 1)
             DB.kkutu[l]
@@ -348,6 +368,11 @@ class Classic extends Game {
               .set(["hit", $doc.hit + 1])
               .on()
           }
+
+          await new Promise((res) =>
+            setTimeout(res, this.room.game.turnTime / 6)
+          )
+          this.room.turnNext()
         }
         if (firstMove || this.room.opts.manner)
           getAuto.call(this.room, preChar, preSubChar, 1).then((w) => {
@@ -475,10 +500,12 @@ class Classic extends Game {
       } else denied()
     }
 
-    const after = () => {
+    const after = async () => {
       delay += text.length * ROBOT_TYPE_COEF[level]
       robot._done.push(text)
-      setTimeout(this.room.turnRobot, delay, robot, text)
+
+      await new Promise((res) => setTimeout(res, delay))
+      this.room.turnRobot(robot, text)
     }
 
     const getWishList = (list) => {
