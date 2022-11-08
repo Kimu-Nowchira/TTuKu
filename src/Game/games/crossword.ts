@@ -15,16 +15,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 import { all, Tail } from "../../sub/lizard"
 import { Game } from "./index"
+import { Client } from "../kkutu"
 
-var ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
-var ROBOT_CATCH_RATE = [0.05, 0.2, 0.4, 0.6, 0.99]
-var ROBOT_TYPE_COEF = [2000, 1200, 800, 300, 0]
+// const ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
+// const ROBOT_CATCH_RATE = [0.05, 0.2, 0.4, 0.6, 0.99]
+// const ROBOT_TYPE_COEF = [2000, 1200, 800, 300, 0]
 
 export class Crossword extends Game {
   getTitle() {
-    var R = new Tail()
+    const R = new Tail()
     var means = []
     var mdb = []
 
@@ -65,7 +67,7 @@ export class Crossword extends Game {
         R.go("①②③④⑤⑥⑦⑧⑨⑩")
       })
     })
-    const getMeaning = (round, bItem) => {
+    const getMeaning = (round: string, bItem) => {
       var R = new Tail()
       var word = bItem[4]
       var x = Number(bItem[0]),
@@ -167,7 +169,7 @@ export class Crossword extends Game {
     this.room.roundReady()
   }
 
-  async submit(client, text, data) {
+  async submit(client: Client, text: string, data) {
     var obj, score, mbjs, mbj, jx, jy, v
     var play =
       (this.room.game.seq ? this.room.game.seq.includes(client.id) : false) ||
@@ -184,7 +186,9 @@ export class Crossword extends Game {
       if (!mbjs) return
       if (obj && obj == text) {
         score = text.length * 10
-        ;(jx = Number(data[1])), (jy = Number(data[2]))
+
+        jx = Number(data[1])
+        jy = Number(data[2])
         this.room.game.prisoners[key] = text
         this.room.game.answers[key] = false
         for (i = 0; i < obj.length; i++) {
