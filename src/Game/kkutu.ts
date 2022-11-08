@@ -34,7 +34,7 @@ import {
 import { logger } from "../sub/jjlog"
 import { WebSocket } from "ws"
 
-type RoomData = Record<number, any>
+type RoomData = Record<number, Room>
 type DICData = Record<string, Client>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
@@ -503,7 +503,7 @@ export class Client {
           if (blockedUntil)
             R.go({ result: 444, black: black, blockedUntil: blockedUntil })
           else R.go({ result: 444, black: black })
-        } else if (cluster.isMaster && $user.server)
+        } else if (cluster.isPrimary && $user.server)
           /* Enhanced User Block System [E] */
           R.go({ result: 409, black: $user.server })
         else if (exports.NIGHT && this.isAjae === false) R.go({ result: 440 })
@@ -766,10 +766,13 @@ export class Client {
   }
 
   start() {
-    var $room = ROOM[this.place]
+    const $room = ROOM[this.place]
 
-    if (!$room) return
-    if ($room.master != this.id) return
+    if (!$room) return logger.warn("방이 없는데 start 요청함")
+    if ($room.master != this.id)
+      return logger.warn("방 주인이 아닌 사람의 start 요청")
+
+    // 혼자서 게임 시작 버튼을 누른 경우
     if ($room.players.length < 2) return this.sendError(411)
 
     $room.ready()
@@ -989,7 +992,7 @@ export class Room {
     return false
   }
 
-  removeAI(target: number, noEx: boolean) {
+  removeAI(target: number, noEx?: boolean) {
     let j: number
 
     for (const i in this.players) {
@@ -1051,7 +1054,7 @@ export class Room {
     }
   }
 
-  go(client, kickVote) {
+  go(client, kickVote?) {
     var x = this.players.indexOf(client.id)
     var me
 
@@ -1153,7 +1156,7 @@ export class Room {
     }
   }
 
-  preReady(teams) {
+  preReady(teams?) {
     var i,
       j,
       t = 0,
@@ -1223,7 +1226,7 @@ export class Room {
         break
       }
     }
-    if (!DIC[this.master]) return
+    if (!DIC[this.master]) return logger.error("DIC[this.master] is undefined")
     if (len < 2) return DIC[this.master].sendError(411)
     if ((i = this.preReady(teams))) return DIC[this.master].sendError(i)
     if (all) {
@@ -1441,6 +1444,7 @@ export class Room {
   }
 
   byMaster(type, data, noBlock?: boolean) {
+    logger.debug("byMaster", type, data)
     if (DIC[this.master]) DIC[this.master].publish(type, data, noBlock)
   }
 
