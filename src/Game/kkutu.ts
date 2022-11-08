@@ -128,7 +128,7 @@ export class Robot {
   equip: Record<string, any>
 
   constructor(
-    public target: string,
+    public target: string | null,
     public place: number,
     public level: number
   ) {
@@ -172,7 +172,7 @@ export class Robot {
   invokeWordPiece(_text: any, _coef: any) {}
 
   publish(type: string, data: any, _noBlock?: boolean) {
-    if (this.target == null) {
+    if (this.target === null) {
       for (const i in DIC) {
         if (DIC[i].place == this.place) DIC[i].send(type, data)
       }
@@ -280,6 +280,8 @@ export class Client {
   box: any
   noChat: boolean
   friends: any
+
+  cameWhenGaming: boolean
 
   constructor(
     public socket: WebSocket,
@@ -893,127 +895,122 @@ export class Client {
   }
 }
 
-exports.Room = function (room, channel) {
-  var my = this
+export class Room {
+  id: number
 
-  my.id = room.id || _rid
-  my.channel = channel
-  my.opts = {}
-  /*my.title = room.title;
-	my.password = room.password;
-	my.limit = Math.round(room.limit);
-	my.mode = room.mode;
-	my.rule = getRule(room.mode);
-	my.round = Math.round(room.round);
-	my.time = room.time * my.rule.time;
-	my.opts = {
-		manner: room.opts.manner,
-		extend: room.opts.injeong,
-		mission: room.opts.mission,
-		loanword: room.opts.loanword,
-		injpick: room.opts.injpick || []
-	};*/
-  my.master = null
-  my.tail = []
-  my.players = []
-  my.kicked = []
-  my.kickVote = null
+  opts = {} as any
 
-  my.gaming = false
-  my.game = {}
+  master: string = null
+  tail = []
+  players = []
+  kicked = []
+  kickVote = null
 
-  my.getData = function () {
-    var i,
-      readies = {}
+  gaming = false
+  game = {} as any
+
+  title: string
+  password: string
+  limit: number
+  mode: number
+  round: number
+  time: number
+  practice: number
+
+  rule: any
+
+  constructor(room: { id: number }, public channel) {
+    this.id = room.id || _rid
+  }
+
+  getData() {
+    var readies = {}
     var pls = []
-    var seq = my.game.seq ? my.game.seq.map(filterRobot) : []
+    var seq = this.game.seq ? this.game.seq.map(filterRobot) : []
     var o
 
-    for (i in my.players) {
-      if ((o = DIC[my.players[i]])) {
-        readies[my.players[i]] = {
+    for (const i in this.players) {
+      if ((o = DIC[this.players[i]])) {
+        readies[this.players[i]] = {
           r: o.ready || o.game.ready,
           f: o.form || o.game.form,
           t: o.team || o.game.team,
         }
       }
-      pls.push(filterRobot(my.players[i]))
+      pls.push(filterRobot(this.players[i]))
     }
     return {
-      id: my.id,
-      channel: my.channel,
-      title: my.title,
-      password: !!my.password,
-      limit: my.limit,
-      mode: my.mode,
-      round: my.round,
-      time: my.time,
-      master: my.master,
+      id: this.id,
+      channel: this.channel,
+      title: this.title,
+      password: !!this.password,
+      limit: this.limit,
+      mode: this.mode,
+      round: this.round,
+      time: this.time,
+      master: this.master,
       players: pls,
       readies: readies,
-      gaming: my.gaming,
+      gaming: this.gaming,
       game: {
-        round: my.game.round,
-        turn: my.game.turn,
+        round: this.game.round,
+        turn: this.game.turn,
         seq: seq,
-        title: my.game.title,
-        mission: my.game.mission,
+        title: this.game.title,
+        mission: this.game.mission,
       },
-      practice: !!my.practice,
-      opts: my.opts,
+      practice: !!this.practice,
+      opts: this.opts,
     }
   }
-  my.addAI = function (caller) {
-    if (my.players.length >= my.limit) {
-      return caller.sendError(429)
-    }
-    if (my.gaming) {
-      return caller.send("error", { code: 416, target: my.id })
-    }
-    if (!my.rule.ai) {
-      return caller.sendError(415)
-    }
-    my.players.push(new Robot(null, my.id, 2))
-    my.export()
-  }
-  my.setAI = function (target, level, team) {
-    var i
 
-    for (i in my.players) {
-      if (!my.players[i]) continue
-      if (!my.players[i].robot) continue
-      if (my.players[i].id == target) {
-        my.players[i].setLevel(level)
-        my.players[i].setTeam(team)
-        my.export()
+  addAI(caller) {
+    if (this.players.length >= this.limit) return caller.sendError(429)
+    if (this.gaming) return caller.send("error", { code: 416, target: this.id })
+    if (!this.rule.ai) return caller.sendError(415)
+
+    this.players.push(new Robot(null, this.id, 2))
+    this.export()
+  }
+
+  setAI(target: number, level: number, team: number) {
+    for (const i in this.players) {
+      if (!this.players[i]) continue
+      if (!this.players[i].robot) continue
+      if (this.players[i].id == target) {
+        this.players[i].setLevel(level)
+        this.players[i].setTeam(team)
+        this.export()
         return true
       }
     }
     return false
   }
-  my.removeAI = function (target, noEx) {
-    var i, j
 
-    for (i in my.players) {
-      if (!my.players[i]) continue
-      if (!my.players[i].robot) continue
-      if (!target || my.players[i].id == target) {
-        if (my.gaming) {
-          j = my.game.seq.indexOf(my.players[i])
-          if (j != -1) my.game.seq.splice(j, 1)
+  removeAI(target: number, noEx: boolean) {
+    let j: number
+
+    for (const i in this.players) {
+      if (!this.players[i]) continue
+      if (!this.players[i].robot) continue
+      if (!target || this.players[i].id == target) {
+        if (this.gaming) {
+          const j = this.game.seq.indexOf(this.players[i])
+          if (j != -1) this.game.seq.splice(j, 1)
         }
-        my.players.splice(i, 1)
-        if (!noEx) my.export()
+        this.players.splice(i, 1)
+        if (!noEx) this.export()
         return true
       }
     }
     return false
   }
-  my.come = function (client) {
-    if (!my.practice) client.place = my.id
 
-    if (my.players.push(client.id) == 1) {
-      my.master = client.id
+  come(client: Client) {
+    if (!this.practice) client.place = this.id
+
+    if (this.players.push(client.id) == 1) {
+      this.master = client.id
     }
     if (cluster.isWorker) {
       client.ready = false
@@ -1021,126 +1018,134 @@ exports.Room = function (room, channel) {
       client.cameWhenGaming = false
       client.form = "J"
 
-      if (!my.practice)
-        process.send({ type: "room-come", target: client.id, id: my.id })
-      my.export(client.id)
+      if (!this.practice)
+        process.send({ type: "room-come", target: client.id, id: this.id })
+      this.export(client.id)
     }
   }
-  my.spectate = function (client, password) {
-    if (!my.practice) client.place = my.id
-    var len = my.players.push(client.id)
+
+  spectate(client, password) {
+    if (!this.practice) client.place = this.id
+    var len = this.players.push(client.id)
 
     if (cluster.isWorker) {
       client.ready = false
       client.team = 0
       client.cameWhenGaming = true
-      client.form = len > my.limit ? "O" : "S"
+      client.form = len > this.limit ? "O" : "S"
 
       process.send({
         type: "room-spectate",
         target: client.id,
-        id: my.id,
+        id: this.id,
         pw: password,
       })
-      my.export(client.id, false, true)
+      this.export(client.id, false, true)
     }
   }
-  my.go = function (client, kickVote) {
-    var x = my.players.indexOf(client.id)
+
+  go(client, kickVote) {
+    var x = this.players.indexOf(client.id)
     var me
 
     if (x == -1) {
       client.place = 0
-      if (my.players.length < 1) delete ROOM[my.id]
+      if (this.players.length < 1) delete ROOM[my.id]
       return client.sendError(409)
     }
-    my.players.splice(x, 1)
+    this.players.splice(x, 1)
     client.game = {}
-    if (client.id == my.master) {
-      while (my.removeAI(false, true));
-      my.master = my.players[0]
+    if (client.id == this.master) {
+      while (this.removeAI(false, true));
+      this.master = this.players[0]
     }
-    if (DIC[my.master]) {
-      DIC[my.master].ready = false
-      if (my.gaming) {
-        x = my.game.seq.indexOf(client.id)
+    if (DIC[this.master]) {
+      DIC[this.master].ready = false
+      if (this.gaming) {
+        x = this.game.seq.indexOf(client.id)
         if (x != -1) {
-          if (my.game.seq.length <= 2) {
-            my.game.seq.splice(x, 1)
-            my.roundEnd()
+          if (this.game.seq.length <= 2) {
+            this.game.seq.splice(x, 1)
+            this.roundEnd()
           } else {
-            me = my.game.turn == x
-            if (me && my.rule.ewq) {
-              clearTimeout(my.game._rrt)
-              my.game.loading = false
-              if (cluster.isWorker) my.turnEnd()
+            me = this.game.turn == x
+            if (me && this.rule.ewq) {
+              clearTimeout(this.game._rrt)
+              this.game.loading = false
+              if (cluster.isWorker) this.turnEnd()
             }
-            my.game.seq.splice(x, 1)
-            if (my.game.turn > x) {
-              my.game.turn--
-              if (my.game.turn < 0) my.game.turn = my.game.seq.length - 1
+            this.game.seq.splice(x, 1)
+            if (this.game.turn > x) {
+              this.game.turn--
+              if (this.game.turn < 0) this.game.turn = this.game.seq.length - 1
             }
-            if (my.game.turn >= my.game.seq.length) my.game.turn = 0
+            if (this.game.turn >= this.game.seq.length) this.game.turn = 0
           }
         }
       }
     } else {
-      if (my.gaming) {
-        my.interrupt()
-        my.game.late = true
-        my.gaming = false
-        my.game = {}
+      if (this.gaming) {
+        this.interrupt()
+        this.game.late = true
+        this.gaming = false
+        this.game = {}
       }
-      delete ROOM[my.id]
+      delete ROOM[this.id]
     }
-    if (my.practice) {
-      clearTimeout(my.game.turnTimer)
+    if (this.practice) {
+      clearTimeout(this.game.turnTimer)
       client.subPlace = 0
     } else client.place = 0
 
     if (cluster.isWorker) {
-      if (!my.practice) {
+      if (!this.practice) {
         client.socket.close()
         process.send({
           type: "room-go",
           target: client.id,
-          id: my.id,
-          removed: !ROOM.hasOwnProperty(my.id),
+          id: this.id,
+          removed: !ROOM.hasOwnProperty(this.id),
         })
       }
-      my.export(client.id, kickVote)
+      this.export(client.id, kickVote)
     }
   }
-  my.set = function (room) {
+
+  set(room) {
     var k, ijc, ij
 
-    my.title = room.title
-    my.password = room.password
-    my.limit = Math.max(Math.min(8, my.players.length), Math.round(room.limit))
-    my.mode = room.mode
-    my.rule = getRule(room.mode)
-    my.round = Math.round(room.round)
-    my.time = room.time * my.rule.time
-    if (room.opts && my.opts) {
+    this.title = room.title
+    this.password = room.password
+    this.limit = Math.max(
+      Math.min(8, my.players.length),
+      Math.round(room.limit)
+    )
+    this.mode = room.mode
+    this.rule = getRule(room.mode)
+    this.round = Math.round(room.round)
+    this.time = room.time * this.rule.time
+    if (room.opts && this.opts) {
       for (const i in OPTIONS) {
         k = OPTIONS[i].name.toLowerCase()
-        my.opts[k] = room.opts[k] && my.rule.opts.includes(i)
+        this.opts[k] = room.opts[k] && this.rule.opts.includes(i)
       }
-      if ((ijc = my.rule.opts.includes("ijp"))) {
-        ij = require("../const")[`${my.rule.lang.toUpperCase()}_IJP`]
-        my.opts.injpick = (room.opts.injpick || []).filter(function (item) {
+      if ((ijc = this.rule.opts.includes("ijp"))) {
+        ij = require("../const")[`${this.rule.lang.toUpperCase()}_IJP`]
+        this.opts.injpick = (room.opts.injpick || []).filter(function (item) {
           return ij.includes(item)
         })
-      } else my.opts.injpick = []
+      } else this.opts.injpick = []
     }
-    if (!my.rule.ai) {
-      while (my.removeAI(false, true));
+    if (!this.rule.ai) {
+      while (this.removeAI(false, true));
     }
-    for (const i in my.players) {
-      if (DIC[my.players[i]]) DIC[my.players[i]].ready = false
+    for (const i in this.players) {
+      if (DIC[this.players[i]]) DIC[this.players[i]].ready = false
     }
   }
+}
 
+exports.Room = function (room, channel) {
   my.preReady = function (teams) {
     var i,
       j,
