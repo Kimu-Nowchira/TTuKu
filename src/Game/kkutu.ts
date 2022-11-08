@@ -1445,7 +1445,11 @@ export class Room {
 
   byMaster(type, data, noBlock?: boolean) {
     logger.debug("byMaster", type, data)
-    if (DIC[this.master]) DIC[this.master].publish(type, data, noBlock)
+
+    if (!DIC[this.master])
+      logger.warn("Master가 아닌 클라이언트의 byMaster 호출")
+
+    DIC[this.master].publish(type, data, noBlock)
   }
 
   export(target?: string, kickVote?: boolean, spec?: boolean) {
@@ -1463,7 +1467,7 @@ export class Room {
     } = { room: this.getData() }
     var o
 
-    if (!this.rule) return
+    if (!this.rule) return logger.warn("no this.rule")
     if (target) obj.target = target
     if (kickVote) obj.kickVote = kickVote
     if (spec && this.gaming) {
@@ -1491,27 +1495,27 @@ export class Room {
   }
 
   turnStart(force) {
-    if (!this.gaming) return
+    if (!this.gaming) return logger.warn("turnStart: not gaming")
 
     return this.route("turnStart", force)
   }
 
   readyRobot(robot) {
-    if (!this.gaming) return
+    if (!this.gaming) return logger.warn("readyRobot: not gaming")
 
     return this.route("readyRobot", robot)
   }
 
   turnRobot(robot, text, data) {
-    if (!this.gaming) return
+    if (!this.gaming) return logger.warn("turnRobot: not gaming")
 
     this.submit(robot, text, data)
     //return this.route("turnRobot", robot, text);
   }
 
   turnNext(force) {
-    if (!this.gaming) return
-    if (!this.game.seq) return
+    if (!this.gaming) return logger.warn("turnNext: not gaming")
+    if (!this.game.seq) return logger.warn("turnNext: no seq")
 
     this.game.turn = (this.game.turn + 1) % this.game.seq.length
     this.turnStart(force)
