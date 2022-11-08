@@ -206,7 +206,7 @@ class Classic extends Game {
     )
 
     const si = this.room.game.seq[this.room.game.turn]
-    if (si || si.robot) {
+    if (si && si.robot) {
       si._done = []
       this.room.readyRobot(si)
     }
