@@ -1475,6 +1475,7 @@ export class Room {
     logger.debug("Game End! on Room.roundEnd()")
     this.gaming = false
     this.export()
+    delete this.gameData
     delete this.game.seq
     delete this.game.wordLength
     delete this.game.dic
