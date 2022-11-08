@@ -917,8 +917,8 @@ export class Room {
   practice: number
 
   rule: any
-  private _avTeam: any[]
-  private _teams: any[][]
+  _avTeam: any[]
+  _teams: any[][]
 
   constructor(room: { id: number }, public channel) {
     this.id = room.id || _rid
@@ -1232,7 +1232,7 @@ export class Room {
     } else DIC[this.master].sendError(412)
   }
 
-  start(pracLevel: number = 0) {
+  start(pracLevel?: number) {
     var i,
       j,
       o,
