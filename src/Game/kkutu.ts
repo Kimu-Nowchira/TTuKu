@@ -47,7 +47,9 @@ let ROOM: RoomData = {}
 let CHAN: Record<string, ClusterWorker> = {}
 
 let _rid: number
-const Rule: Record<string, any> = {}
+
+const Rule: Record<string, any> = {} // Record<string, Module>
+
 const guestProfiles = []
 const channel = process.env["CHANNEL"] || 0
 
@@ -694,7 +696,6 @@ export class Client {
 
   kick(target, kickVote) {
     var $room = ROOM[this.place]
-    var i, $c
     var len = $room.players.length
 
     if (target == null) {
@@ -702,7 +703,7 @@ export class Client {
       $room.removeAI(kickVote)
       return
     }
-    for (i in $room.players) {
+    for (const i in $room.players) {
       if ($room.players[i].robot) len--
     }
     if (len < 4) kickVote = { target: target, Y: 1, N: 0 }
@@ -712,12 +713,17 @@ export class Client {
       if (DIC[target]) DIC[target].leave(kickVote)
     } else {
       $room.kickVote = { target: target, Y: 1, N: 0, list: [] }
-      for (i in $room.players) {
-        $c = DIC[$room.players[i]]
+      for (const i in $room.players) {
+        const $c = DIC[$room.players[i]]
         if (!$c) continue
         if ($c.id == $room.master) continue
 
-        $c.kickTimer = setTimeout($c.kickVote, 10000, $c, true)
+        // TODO: 임시 Promise (나중에 수정 필요)
+        const kickVoteAfter10Sec = async () => {
+          await new Promise((resolve) => setTimeout(resolve, 10000))
+          $c.kickVote($c, true)
+        }
+        kickVoteAfter10Sec().then()
       }
       this.publish("kickVote", $room.kickVote, true)
     }
@@ -1237,7 +1243,7 @@ export class Room {
     } else DIC[this.master].sendError(412)
   }
 
-  start(pracLevel?: number) {
+  async start(pracLevel?: number) {
     var i,
       j,
       o,
@@ -1300,7 +1306,13 @@ export class Room {
       this.game.title = title
       this.export()
       logger.debug("DEBUG3", this.gaming)
-      setTimeout(this.roundReady, 2000)
+
+      // TODO: 임시 Promise (나중에 수정 필요)
+      const roundReadyAfter2Sec = async () => {
+        await new Promise((resolve) => setTimeout(resolve, 2000))
+        this.roundReady()
+      }
+      roundReadyAfter2Sec().then()
     })
     logger.debug("DEBUG2", this.gaming)
     this.byMaster("starting", { target: this.id })
@@ -1560,26 +1572,37 @@ export class Room {
   }
 
   route(func, ...args) {
-    var cf
+    const cf = this.checkRoute(func)
+    if (!cf) return logger.warn("route: no func")
 
-    if (!(cf = this.checkRoute(func))) return logger.warn("route: no func")
     return cf.apply(this, args)
   }
 
-  routeSync(func, ...args) {
-    var cf
+  routeSync(func: string, ...args) {
+    const cf = this.checkRoute(func)
+    if (!cf) return logger.warn("routeSync: no func")
 
-    if (!(cf = this.checkRoute(func))) return logger.warn("no route")
     return cf.apply(this, args)
   }
 
-  checkRoute(func) {
-    var c
+  checkRoute(func: string) {
+    // c는 해당 게임의 js (결국은 Object이긴 한데...)
+    const c = Rule[this.rule.rule]
 
-    if (!this.rule) return logger.warn("Unknown mode: " + this.mode), false
-    if (!(c = Rule[this.rule.rule]))
-      return logger.warn("Unknown rule: " + this.rule.rule), false
-    if (!c[func]) return logger.warn("Unknown function: " + func), false
+    if (!this.rule) {
+      logger.warn("Unknown mode: " + this.mode)
+      return false
+    }
+    if (!c) {
+      logger.warn("Unknown rule: " + this.rule.rule)
+      return false
+    }
+    if (!c[func]) {
+      logger.warn("Unknown function: " + func)
+      return false
+    }
+
+    // 각 게임의 오브젝트(js파일 자체)에서 불러옴
     return c[func]
   }
 }
