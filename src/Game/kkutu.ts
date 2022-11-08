@@ -1098,6 +1098,8 @@ export class Room {
       if (this.gaming) {
         this.interrupt()
         this.game.late = true
+
+        logger.debug("Game End! on Room.go()")
         this.gaming = false
         this.game = {}
       }
@@ -1242,6 +1244,7 @@ export class Room {
       hum = 0
     var now = new Date().getTime()
 
+    logger.debug("Game Start")
     this.gaming = true
     this.game.late = true
     this.game.round = 0
@@ -1436,6 +1439,7 @@ export class Room {
         )
       })
     })
+    logger.debug("Game End! on Room.roundEnd()")
     this.gaming = false
     this.export()
     delete this.game.seq
