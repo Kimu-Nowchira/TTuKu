@@ -363,7 +363,7 @@ class Classic extends Game {
 
           if (!client.robot) {
             client.invokeWordPiece(text, 1)
-            DB.kkutu[l]
+            this.DB.kkutu[l]
               .update(["_id", text])
               .set(["hit", $doc.hit + 1])
               .on()
@@ -413,7 +413,7 @@ class Classic extends Game {
       }
     }
 
-    DB.kkutu[l]
+    this.DB.kkutu[l]
       .findOne(["_id", text], l == "ko" ? ["type", KOR_GROUP] : ["_id", ENG_ID])
       .on(onDB)
   }
@@ -619,7 +619,7 @@ function getAuto(char, subc, type) {
         }
         break
     }
-    DB.kkutu[this.room.rule.lang].find
+    this.DB.kkutu[this.room.rule.lang].find
       .apply(this, aqs)
       .limit(bool ? 1 : 123)
       .on(function ($md) {
