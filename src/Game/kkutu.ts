@@ -133,6 +133,9 @@ export class Robot {
   data: Record<string, any> = {}
   equip: Record<string, any> = { robot: true }
 
+  // classic.js에서 사용함
+  _done: any[] = []
+
   constructor(
     public target: string | null,
     public place: number,

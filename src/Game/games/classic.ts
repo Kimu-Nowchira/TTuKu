@@ -44,9 +44,9 @@ const NIEUN_TO_IEUNG = [4455, 4461, 4466, 4469]
 class Classic extends Game {
   getTitle() {
     const R = new Tail()
-    var l = this.room.rule
-    var EXAMPLE
-    var eng, ja
+    const l = this.room.rule
+    let eng: string
+    let ja: number
 
     if (!l) {
       R.go("undefinedd")
@@ -56,7 +56,8 @@ class Classic extends Game {
       R.go("undefinedd")
       return R
     }
-    EXAMPLE = EXAMPLE_TITLE[l.lang]
+
+    const EXAMPLE = EXAMPLE_TITLE[l.lang]
     this.room.game.dic = {}
 
     switch (GAME_TYPE[this.room.mode]) {
@@ -78,16 +79,14 @@ class Classic extends Game {
     }
 
     const checkTitle = (title: null | string) => {
-      var R = new Tail()
-      var i,
-        list = []
-      var len
+      const R = new Tail()
+      const list = []
 
       if (title == null) {
         R.go(EXAMPLE)
       } else {
-        len = title.length
-        for (i = 0; i < len; i++)
+        const len = title.length
+        for (let i = 0; i < len; i++)
           list.push(
             getAuto.call(
               this,
@@ -98,15 +97,14 @@ class Classic extends Game {
           )
 
         all(list).then((res) => {
-          for (i in res) if (!res[i]) return R.go(EXAMPLE)
-
+          for (const i in res) if (!res[i]) return R.go(EXAMPLE)
           return R.go(title)
         })
       }
       return R
     }
 
-    const tryTitle = (h) => {
+    const tryTitle = (h: number) => {
       if (h > 50) {
         R.go(EXAMPLE)
         return
@@ -122,18 +120,16 @@ class Classic extends Game {
           // '$where', eng+"this._id.length == " + Math.max(2, this.room.round) + " && this.hit <= " + h
         )
         .limit(20)
-        .on(function ($md) {
-          var list
-
+        .on(($md) => {
           if ($md.length) {
-            list = shuffle($md)
-            checkTitle(list.shift()._id).then(onChecked)
-
-            function onChecked(v) {
+            const onChecked = (v) => {
               if (v) R.go(v)
               else if (list.length) checkTitle(list.shift()._id).then(onChecked)
               else R.go(EXAMPLE)
             }
+
+            const list = shuffle($md)
+            checkTitle(list.shift()._id).then(onChecked)
           } else {
             tryTitle(h + 10)
           }
@@ -179,15 +175,12 @@ class Classic extends Game {
   }
 
   async turnStart(force) {
-    var speed
-    var si
-
     if (!this.room.game.chain) return
     this.room.game.roundTime = Math.min(
       this.room.game.roundTime,
       Math.max(10000, 150000 - this.room.game.chain.length * 1500)
     )
-    speed = this.room.getTurnSpeed(this.room.game.roundTime)
+    const speed = this.room.getTurnSpeed(this.room.game.roundTime)
     clearTimeout(this.room.game.turnTimer)
     clearTimeout(this.room.game.robotTimer)
     this.room.game.late = false
@@ -211,11 +204,12 @@ class Classic extends Game {
       },
       true
     )
-    if ((si = this.room.game.seq[this.room.game.turn]))
-      if (si.robot) {
-        si._done = []
-        this.room.readyRobot(si)
-      }
+
+    const si = this.room.game.seq[this.room.game.turn]
+    if (si || si.robot) {
+      si._done = []
+      this.room.readyRobot(si)
+    }
 
     await new Promise(
       (resolve) =>
@@ -228,11 +222,10 @@ class Classic extends Game {
   }
 
   async turnEnd() {
-    var target
-    var score
+    let score: number
 
     if (!this.room.game.seq) return
-    target =
+    const target =
       this.DIC[this.room.game.seq[this.room.game.turn]] ||
       this.room.game.seq[this.room.game.turn]
 
@@ -276,19 +269,18 @@ class Classic extends Game {
   }
 
   async submit(client: Client, text: string) {
-    var score, l, t
     const tv = new Date().getTime()
-    var mgt = this.room.game.seq[this.room.game.turn]
+    const mgt = this.room.game.seq[this.room.game.turn]
 
     if (!mgt) return
     if (!mgt.robot) if (mgt != client.id) return
     if (!this.room.game.char) return
 
     const isChainable = () => {
-      var type = GAME_TYPE[this.room.mode]
-      var char = this.room.game.char,
-        subChar = this.room.game.subChar
-      var l = char.length
+      const type = GAME_TYPE[this.room.mode]
+      const char = this.room.game.char
+      const subChar = this.room.game.subChar
+      const l = char.length
 
       if (!text) return false
       if (text.length <= l) return false
@@ -303,7 +295,8 @@ class Classic extends Game {
           return text.substring(0, 2) == char
         case 3:
           return (
-            text.substring(0, 3) == char || text.substr(0, 2) == char.slice(1)
+            text.substring(0, 3) == char ||
+            text.substring(0, 2) == char.slice(1)
           )
         default:
           return false
@@ -313,10 +306,10 @@ class Classic extends Game {
     if (!isChainable())
       // text, this.room.mode, this.room.game.char, this.room.game.subChar
       return client.chat(text)
-    if (this.room.game.chain.indexOf(text) != -1)
+    if (this.room.game.chain.indexOf(text) !== -1)
       return client.publish("turnError", { code: 409, value: text }, true)
 
-    l = this.room.rule.lang
+    const l = this.room.rule.lang
     this.room.game.loading = true
 
     const onDB = async ($doc) => {
@@ -334,8 +327,8 @@ class Classic extends Game {
           this.room.game.loading = false
           this.room.game.late = true
           clearTimeout(this.room.game.turnTimer)
-          t = tv - this.room.game.turnAt
-          score = this.room.getScore(text, t)
+          const t = tv - this.room.game.turnAt
+          const score = this.room.getScore(text, t)
           this.room.game.dic[text] = (this.room.game.dic[text] || 0) + 1
           this.room.game.chain.push(text)
           this.room.game.roundTime -= t
@@ -436,11 +429,12 @@ class Classic extends Game {
     return Math.round(score)
   }
 
-  async readyRobot(robot) {
+  async readyRobot(robot: Robot) {
     var level = robot.level
     var delay = ROBOT_START_DELAY[level]
     var ended = {}
-    var w, text, i
+    var w
+    let text: string
     var lmax
     var isRev = GAME_TYPE[this.room.mode] == "KAP"
 
@@ -448,7 +442,7 @@ class Classic extends Game {
       .call(this, this.room.game.char, this.room.game.subChar, 2)
       .then((list) => {
         if (list.length) {
-          list.sort(function (a, b) {
+          list.sort((a, b) => {
             return b.hit - a.hit
           })
           if (ROBOT_HIT_LIMIT[level] > list[0].hit) denied()
@@ -459,14 +453,13 @@ class Classic extends Game {
                   return b._id.length - a._id.length
                 })
               if (list[0]._id.length < 8 && this.room.game.turnTime >= 2300) {
-                for (i in list) {
+                for (const i in list) {
                   w = list[i]._id.charAt(isRev ? 0 : list[i]._id.length - 1)
                   if (!ended.hasOwnProperty(w)) ended[w] = []
                   ended[w].push(list[i])
                 }
-                getWishList(Object.keys(ended)).then(function (key) {
-                  var v = ended[key]
-
+                getWishList(Object.keys(ended)).then((key: string) => {
+                  const v = ended[key]
                   if (!v) denied()
                   else pickList(v)
                 })
@@ -515,7 +508,7 @@ class Classic extends Game {
       var wz = []
       var res
 
-      for (i in list) wz.push(getWish(list[i]))
+      for (const i in list) wz.push(getWish(list[i]))
 
       all(wz).then(($res) => {
         if (!this.room.game.chain) return
@@ -552,19 +545,19 @@ function getMission(l) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function getAuto(char, subc, type) {
+function getAuto(char: string, subc: string, type: 0 | 1 | 2) {
   /* type
     0 무작위 단어 하나
     1 존재 여부
     2 단어 목록
   */
 
-  var R = new Tail()
-  var gameType = GAME_TYPE[this.room.mode]
+  const R = new Tail()
+  const gameType = GAME_TYPE[this.room.mode]
   var adv, adc
-  var key = gameType + "_" + keyByOptions(this.room.opts)
+  const key = gameType + "_" + keyByOptions(this.room.opts)
   var MAN = this.DB.kkutu_manner[this.room.rule.lang]
-  var bool = type == 1
+  const bool = type === 1
 
   adc = char + (subc ? "|" + subc : "")
   switch (gameType) {
@@ -679,7 +672,7 @@ function shuffle(arr) {
   return r
 }
 
-function getChar(text) {
+function getChar(text: string) {
   var my = this
 
   switch (GAME_TYPE[my.mode]) {
@@ -694,10 +687,11 @@ function getChar(text) {
   }
 }
 
-function getSubChar(char) {
+function getSubChar(char: string) {
   var my = this
-  var r
-  var c = char.charCodeAt()
+  let r: string | undefined
+  // 임시로 0을 붙였습니다
+  const c = char.charCodeAt(0)
   var k
   var ca, cb, cc
 
