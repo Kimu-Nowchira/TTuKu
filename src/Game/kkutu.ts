@@ -34,9 +34,8 @@ import {
 } from "../const"
 import { logger } from "../sub/jjlog"
 import { WebSocket } from "ws"
-import { Game } from "./games"
+import { Crossword, Daneo, Game } from "./games"
 import Classic from "./games/classic"
-import { Crossword } from "./games/crossword"
 
 export type IRooms = Record<number, Room>
 export type DICData = Record<string, Client>
@@ -55,6 +54,7 @@ let _rid: number
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
   Crossword: Crossword,
+  Daneo: Daneo,
 }
 
 // const guestProfiles = []
