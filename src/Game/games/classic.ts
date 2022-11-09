@@ -421,13 +421,13 @@ class Classic extends Game {
     score = getPreScore(text, this.room.game.chain, tr)
 
     if (this.room.game.dic[text]) score *= 15 / (this.room.game.dic[text] + 15)
-    if (!ignoreMission)
-      if (
-        (arr = text.match(new RegExp(this.room.game.mission.toString(), "g")))
-      ) {
+    if (!ignoreMission) {
+      // @ts-ignore
+      if ((arr = text.match(new RegExp(this.room.game.mission, "g")))) {
         score += score * 0.5 * arr.length
         this.room.game.mission = true
       }
+    }
     return Math.round(score)
   }
 

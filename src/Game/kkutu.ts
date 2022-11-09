@@ -272,7 +272,7 @@ interface GameData {
 
   title?: string
   // TODO: 이게 뭐여
-  mission?: string | boolean
+  mission?: string | boolean | null
 
   loading?: boolean
   hum?: number
