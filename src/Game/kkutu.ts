@@ -315,6 +315,8 @@ export class Client {
 
   robot = false
 
+  playAt: number
+
   constructor(
     public socket: WebSocket,
     public profile: any,
@@ -698,8 +700,8 @@ export class Client {
     }
   }
 
-  leave(kickVote) {
-    var $room = ROOM[this.place]
+  leave(kickVote?: boolean) {
+    const $room = ROOM[this.place]
 
     if (this.subPlace) {
       this.pracRoom.go(this)
@@ -905,7 +907,7 @@ export class Client {
     rw.money = Math.round(rw.money)
   }
 
-  obtain(k, q, flush) {
+  obtain(k, q, flush?: boolean) {
     if (this.guest) return
     if (this.box[k]) this.box[k] += q
     else this.box[k] = q
@@ -978,7 +980,41 @@ export class Room {
   kickVote = null
 
   gaming = false
-  game = {} as any
+  game: {
+    ready?: boolean
+    form?: string
+    team?: number
+    practice?: number
+    score?: number
+    item?: any[]
+
+    late?: boolean
+    round?: number
+    turn?: number
+    seq?: any[]
+    robots?: Robot[]
+
+    title?: string
+    mission?: string
+
+    loading?: boolean
+    hum?: number
+
+    wordLength?: number
+    dic?: any
+    chain?: any
+    theme?: any
+    conso?: any
+    prisoners?: any
+    boards?: any
+    means?: any
+
+    _rrt?: NodeJS.Timeout
+    turnTimer?: NodeJS.Timeout
+    hintTimer?: NodeJS.Timeout
+    hintTimer2?: NodeJS.Timeout
+    qTimer?: NodeJS.Timeout
+  } = {}
 
   title: string
   password: string
@@ -1312,10 +1348,7 @@ export class Room {
   }
 
   async start(pracLevel?: number) {
-    var i,
-      j,
-      o,
-      hum = 0
+    var hum = 0
     var now = new Date().getTime()
 
     logger.debug("Game Start")
@@ -1331,36 +1364,41 @@ export class Room {
     this.game.robots = []
 
     if (this.practice) {
-      this.game.robots.push((o = new Robot(this.master, this.id, pracLevel)))
+      const o = new Robot(this.master, this.id, pracLevel)
+      this.game.robots.push(o)
       this.game.seq.push(o, this.master)
     } else {
-      for (i in this.players) {
+      for (const i in this.players) {
         if (this.players[i].robot) {
           this.game.robots.push(this.players[i])
         } else {
-          if (!(o = DIC[this.players[i]])) continue
+          const o = DIC[this.players[i]]
+          if (!o) continue
           if (o.form != "J") continue
           hum++
         }
         if (this.players[i]) this.game.seq.push(this.players[i])
       }
-      if (this._avTeam) {
-        o = this.game.seq.length
-        j = this._avTeam.length
-        this.game.seq = []
-        for (i = 0; i < o; i++) {
-          var v = this._teams[this._avTeam[i % j]].shift()
 
+      if (this._avTeam) {
+        const o: number = this.game.seq.length
+        const j = this._avTeam.length
+        this.game.seq = []
+        for (let i = 0; i < o; i++) {
+          const v = this._teams[this._avTeam[i % j]].shift()
           if (!v) continue
+
           this.game.seq[i] = v
         }
       } else {
         this.game.seq = shuffle(this.game.seq)
       }
     }
+
     this.game.mission = null
-    for (i in this.game.seq) {
-      o = DIC[this.game.seq[i]] || this.game.seq[i]
+
+    for (const i in this.game.seq) {
+      const o = DIC[this.game.seq[i]] || this.game.seq[i]
       if (!o) continue
       if (!o.game) continue
 
@@ -1409,7 +1447,7 @@ export class Room {
   }
 
   roundEnd(data?: any) {
-    let o, rw
+    let rw
     const res: {
       id: string
       score: number
@@ -1427,7 +1465,7 @@ export class Room {
 
     this.interrupt()
     for (const i in this.players) {
-      o = DIC[this.players[i]]
+      const o = DIC[this.players[i]]
       if (!o) continue
       if (o.cameWhenGaming) {
         o.cameWhenGaming = false
@@ -1439,23 +1477,28 @@ export class Room {
         o.setForm("J")
       }
     }
+
     for (const i in this.game.seq) {
-      o = DIC[this.game.seq[i]] || this.game.seq[i]
+      const o = DIC[this.game.seq[i]] || this.game.seq[i]
       if (!o) continue
       if (o.robot) {
         if (o.game.team) teams[o.game.team].push(o.game.score)
       } else if (o.team) teams[o.team].push(o.game.score)
     }
-    for (let i = 1; i < 5; i++)
-      if ((o = teams[i].length))
+
+    for (let i = 1; i < 5; i++) {
+      const o = teams[i].length
+      if (o)
         teams[i] = [
           o,
           teams[i].reduce(function (p, item) {
             return p + item
           }, 0),
         ]
+    }
+
     for (const i in this.game.seq) {
-      o = DIC[this.game.seq[i]]
+      const o = DIC[this.game.seq[i]]
       if (!o) continue
       sumScore += o.game.score
       res.push({
@@ -1464,13 +1507,13 @@ export class Room {
         dim: o.team ? teams[o.team][0] : 1,
       })
     }
-    res.sort(function (a, b) {
-      return b.score - a.score
-    })
+
+    res.sort((a, b) => b.score - a.score)
+
     rl = res.length
 
     for (const i in res) {
-      o = DIC[res[i].id]
+      const o = DIC[res[i].id]
       if (pv == res[i].score) {
         res[i].rank = res[Number(i) - 1].rank
       } else {
@@ -1508,17 +1551,17 @@ export class Room {
       suv.push(o.flush(true))
     }
     all(suv).then((uds) => {
-      var o = {}
+      const o = {}
 
       suv = []
       for (const i in uds) {
         o[uds[i].id] = { prev: uds[i].prev }
         suv.push(DB.redis.getSurround(uds[i].id))
       }
+
       all(suv).then((ranks) => {
         for (const i in ranks) {
           if (!o[ranks[i].target]) continue
-
           o[ranks[i].target].list = ranks[i].data
         }
         this.byMaster(
@@ -1528,10 +1571,13 @@ export class Room {
         )
       })
     })
+
     logger.debug("Game End! on Room.roundEnd()")
+
     this.gaming = false
-    this.export()
     delete this.gameData
+
+    this.export()
     delete this.game.seq
     delete this.game.wordLength
     delete this.game.dic
