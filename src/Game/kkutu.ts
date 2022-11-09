@@ -1409,7 +1409,7 @@ export class Room {
   }
 
   roundEnd(data?: any) {
-    var o, rw
+    let o, rw
     const res: {
       id: string
       score: number
@@ -1417,13 +1417,13 @@ export class Room {
       rank?: number
       reward?: any
     }[] = []
-    var users = {}
-    var rl
-    var pv = -1
-    var suv = []
-    var teams = [null, [], [], [], []]
-    var sumScore = 0
-    var now = new Date().getTime()
+    const users = {}
+    let rl
+    let pv = -1
+    let suv = []
+    const teams = [null, [], [], [], []]
+    let sumScore = 0
+    const now = new Date().getTime()
 
     this.interrupt()
     for (const i in this.players) {
