@@ -16,8 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-export const all = (tails: any[]) => {
-  const R = new exports.Tail([])
+export const all = (tails: Tail[]) => {
+  const R = new Tail([])
   let left: number = tails.length
 
   const onEnded = (data: Object, __i: number) => {
@@ -36,18 +36,22 @@ export const all = (tails: any[]) => {
 }
 
 export class Tail {
-  callback: Function | undefined
+  callback?: (data: any, i: number) => any
   _i: number = 0
-  value: Object | undefined
+  value?: any
 
   constructor(public returns?: any[]) {}
 
-  go(data: Object) {
+  // 데이터를 지정된 콜백 메서드에 넣고 실행함
+  // data는 this.value에 저장함
+  go(data: any) {
     if (this.callback) this.callback(data, this._i)
     else this.value = data
   }
 
-  then(cb: Function, __i?: number) {
+  // 만약 value가 지정되지 않은 경우 this.callback은 실행되지 않고, this.callback을 해당 함수로 지정함
+  // 만약 value가 지정된 경우 then에서 지정한 콜백 함수를 실행함
+  then(cb: (data: any, i: number) => any, __i?: number) {
     this._i = __i
 
     if (this.value === undefined) this.callback = cb
