@@ -79,11 +79,11 @@ class Classic extends Game {
     }
 
     const checkTitle = (title: null | string) => {
-      const R = new Tail()
-      const list = []
+      const _R = new Tail()
+      const list: Tail[] = []
 
       if (title == null) {
-        R.go(EXAMPLE)
+        _R.go(EXAMPLE)
       } else {
         const len = title.length
         for (let i = 0; i < len; i++)
@@ -97,11 +97,11 @@ class Classic extends Game {
           )
 
         all(list).then((res) => {
-          for (const i in res) if (!res[i]) return R.go(EXAMPLE)
-          return R.go(title)
+          for (const i in res) if (!res[i]) return _R.go(EXAMPLE)
+          return _R.go(title)
         })
       }
-      return R
+      return _R
     }
 
     const tryTitle = (h: number) => {
@@ -545,7 +545,7 @@ function getMission(l) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function getAuto(char: string, subc: string, type: 0 | 1 | 2) {
+function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
   /* type
     0 무작위 단어 하나
     1 존재 여부

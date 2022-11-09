@@ -124,9 +124,9 @@ export const publish = (type: string, data, _room) => {
 }
 
 export class Robot {
-  id: string
+  id: number
   robot: boolean = true
-  game: Record<string, any> = {}
+  game: any = {} // GameData
   data: Record<string, any> = {}
   equip: Record<string, any> = { robot: true }
 
@@ -134,7 +134,7 @@ export class Robot {
   _done: any[] = []
 
   constructor(
-    public target: string | null,
+    public target: number | null,
     public place: number,
     public level: number
   ) {
@@ -143,9 +143,10 @@ export class Robot {
     this.setTeam(0)
   }
 
-  getData() {
+  getData(): UserData {
     return {
       id: this.id,
+      guest: false,
       robot: true,
       game: this.game,
       data: this.data,
@@ -253,6 +254,30 @@ export class WebServer {
     if (this.socket.readyState === 1)
       this.socket.send(JSON.stringify({ ...(data || {}), type }))
   }
+}
+
+interface GameData {
+  ready: boolean
+  form: any
+  team: number
+  practice: any
+  score: number
+  item: number
+}
+
+interface UserData {
+  id: number
+  robot: boolean
+  guest: boolean
+  game: GameData
+  target: number
+  level: number
+  ready: boolean
+
+  data?: any
+  place?: number
+  equip?: any
+  exordial?: any
 }
 
 export class Client {
@@ -945,7 +970,8 @@ export class Room {
 
   opts = {} as any
 
-  master: string = null
+  // TODO: master: string
+  master = null
   tail = []
   players: any[] = [] // Array<number | Robot>
   kicked = []
@@ -975,7 +1001,7 @@ export class Room {
 
   getData() {
     var readies = {}
-    var pls = []
+    const pls: number[] = []
     var seq = this.game.seq ? this.game.seq.map(filterRobot) : []
 
     for (const i in this.players) {
@@ -1303,6 +1329,7 @@ export class Room {
     this.game.turn = 0
     this.game.seq = []
     this.game.robots = []
+
     if (this.practice) {
       this.game.robots.push((o = new Robot(this.master, this.id, pracLevel)))
       this.game.seq.push(o, this.master)
@@ -1726,7 +1753,8 @@ function getRewards(mode, score, bonus, rank, all, ss) {
   // applyEquipOptions에서 반올림한다.
   return rw
 }
-function filterRobot(item) {
+// item: number | Robot
+function filterRobot(item: any) {
   if (!item) return {}
   return item.robot && item.getData ? item.getData() : item
 }

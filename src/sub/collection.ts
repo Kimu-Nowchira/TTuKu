@@ -19,6 +19,7 @@
 import escape from "pg-escape"
 import { logger } from "./jjlog"
 import { Tail } from "./lizard"
+import { PoolClient } from "pg"
 
 const DEBUG = true
 
@@ -238,7 +239,7 @@ function isDataAvailable(data, chk) {
   return true
 }
 
-export const Agent = function (type, origin) {
+export const Agent = function (type: string, origin: PoolClient) {
   var my = this
 
   this.RedisTable = function (key) {
@@ -347,7 +348,7 @@ export const Agent = function (type, origin) {
             doc.toArray(callback);
           }else callback(err, doc);*/
         }
-        function callback(err, doc) {
+        function callback(err: Error, doc) {
           if (f) {
             if (chk) {
               if (isDataAvailable(doc, chk)) f(doc)
