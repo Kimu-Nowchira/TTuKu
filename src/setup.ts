@@ -16,10 +16,39 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Spawn = require("child_process").spawn
-const FS = require("fs")
+import { spawn } from "child_process"
+import { unlink } from "fs"
 
-let step = [
+const doStep = () => {
+  const next = step.shift()
+
+  if (next) next()
+  else {
+    console.log("Completed.")
+    process.exit()
+  }
+}
+
+const removeCmd = (cmd: string) => {
+  const f1 = `./${cmd}`
+  const f2 = `./${cmd}.cmd`
+
+  unlink(f1, () => unlink(f2, doStep))
+}
+
+const summon = (cmd: string) => {
+  console.log(cmd)
+
+  const args = cmd.split(" ")
+  const proc = spawn(args[0], args.slice(1), { shell: true })
+
+  proc.stdout.on("data", (msg: string) => {
+    console.log(msg.toString())
+  })
+  proc.on("close", doStep)
+}
+
+const step: (() => void)[] = [
   () => {
     console.log("Please wait... This may take several minutes.")
     doStep()
@@ -45,30 +74,4 @@ let step = [
   () => removeCmd("which"),
 ]
 
-function summon(cmd: string) {
-  console.log(cmd)
-
-  let args = cmd.split(" ")
-  let proc = Spawn(args[0], args.slice(1), { shell: true })
-
-  proc.stdout.on("data", (msg: string) => {
-    console.log(msg.toString())
-  })
-  proc.on("close", doStep)
-}
-function removeCmd(cmd: string) {
-  let f1 = `./${cmd}`,
-    f2 = `./${cmd}.cmd`
-
-  FS.unlink(f1, () => FS.unlink(f2, doStep))
-}
-function doStep() {
-  let next = step.shift()
-
-  if (next) next()
-  else {
-    console.log("Completed.")
-    process.exit()
-  }
-}
 doStep()
