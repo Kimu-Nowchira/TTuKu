@@ -422,7 +422,9 @@ class Classic extends Game {
 
     if (this.room.game.dic[text]) score *= 15 / (this.room.game.dic[text] + 15)
     if (!ignoreMission)
-      if ((arr = text.match(new RegExp(this.room.game.mission, "g")))) {
+      if (
+        (arr = text.match(new RegExp(this.room.game.mission.toString(), "g")))
+      ) {
         score += score * 0.5 * arr.length
         this.room.game.mission = true
       }
@@ -539,7 +541,7 @@ class Classic extends Game {
 }
 
 function getMission(l) {
-  var arr = l == "ko" ? MISSION_ko : MISSION_en
+  const arr = l == "ko" ? MISSION_ko : MISSION_en
 
   if (!arr) return "-"
   return arr[Math.floor(Math.random() * arr.length)]
