@@ -48,13 +48,9 @@ import { urlencoded } from "body-parser"
 import { logger } from "../sub/jjlog"
 import { config } from "../config"
 import Secure from "../sub/secure"
-
-// import DDDoS from "dddos"
-// var Redission = require("connect-redis")(Exession)
-// var Redis = require("redis")
+import * as WebInit from "../sub/webinit"
 
 const DB = require("./db")
-const WebInit = require("../sub/webinit")
 
 const Server = Express()
 
@@ -65,10 +61,7 @@ const Language = {
   en_US: require("./lang/en_US.json") as LangFile,
 }
 const ROUTES = ["major", "consume", "admin", "login"]
-const page = WebInit.page
 const gameServers: GameClient[] = []
-
-WebInit.MOBILE_AVAILABLE = ["portal", "main", "kkutu"]
 
 require("../sub/checkpub")
 
@@ -238,7 +231,7 @@ MAIN_PORTS.forEach((v: number, i: number) => {
   )
 })
 
-ROUTES.forEach(function (v) {
+ROUTES.forEach((v) => {
   require(`./routes/${v}`).run(Server, WebInit.page)
 })
 
@@ -255,7 +248,7 @@ Server.get("/", (req, res) => {
     } else {
       delete req.session.profile
     }
-    page(req, res, MAIN_PORTS[server] ? "kkutu" : "portal", {
+    WebInit.page(req, res, MAIN_PORTS[server] ? "kkutu" : "portal", {
       _page: "kkutu",
       _id: id,
       PORT: MAIN_PORTS[server],
@@ -303,5 +296,5 @@ Server.get("/servers", (_req, res) => {
 })
 
 Server.get("/legal/:page", (req, res) => {
-  page(req, res, "legal/" + req.params.page)
+  WebInit.page(req, res, "legal/" + req.params.page)
 })

@@ -26,6 +26,8 @@ const Language = {
   en_US: require("../Web/lang/en_US.json") as LangFile,
 }
 
+export const MOBILE_AVAILABLE = ["portal", "main", "kkutu"]
+
 const updateLanguage = () => {
   for (const i in Language) {
     const src = `../Web/lang/${i}.json`
@@ -51,7 +53,7 @@ const getLanguage = (
   return R
 }
 
-export const page = (req: any, res: Response, file: string, data: any) => {
+export const page = (req: any, res: Response, file: string, data?: any) => {
   if (!data) data = {}
   if (req.session.createdAt) {
     if (Date.now() - req.session.createdAt > 3600000) {
@@ -85,10 +87,7 @@ export const page = (req: any, res: Response, file: string, data: any) => {
     if (req.query.pc) {
       data.as_pc = true
       data.page = file
-    } else if (
-      exports.MOBILE_AVAILABLE &&
-      exports.MOBILE_AVAILABLE.includes(file)
-    ) {
+    } else if (MOBILE_AVAILABLE.includes(file)) {
       data.page = "m_" + file
     } else {
       data.mobile = false
