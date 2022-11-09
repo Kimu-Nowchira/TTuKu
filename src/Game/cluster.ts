@@ -19,6 +19,7 @@
 import cluster, { Worker as ClusterWorker } from "node:cluster"
 import { logger } from "../sub/jjlog"
 import { MAIN_PORTS } from "../const"
+import { init as masterInit } from "./master"
 
 const SID = Number(process.argv[2])
 let CPU = Number(process.argv[3]) //require("os").cpus().length;
@@ -38,7 +39,9 @@ if (isNaN(CPU)) {
   process.exit(1)
 }
 
-if (cluster.isPrimary) {
+const run = async () => {
+  if (!cluster.isPrimary) return require("./slave.js")
+
   const channels: Record<number, ClusterWorker> = {}
   let chan: number
 
@@ -68,7 +71,8 @@ if (cluster.isPrimary) {
   })
 
   process.env["KKUTU_PORT"] = MAIN_PORTS[SID].toString()
-  require("./master.js").init(SID.toString(), channels)
-} else {
-  require("./slave.js")
+
+  masterInit(SID.toString(), channels).then()
 }
+
+run().then()

@@ -399,7 +399,10 @@ cluster.on("message", (worker, msg) => {
   }
 })
 
-export const init = (_SID: string, CHAN: Record<string, ClusterWorker>) => {
+export const init = async (
+  _SID: string,
+  CHAN: Record<string, ClusterWorker>
+) => {
   SID = _SID
   MainDB = require("../Web/db")
   MainDB.ready = function () {
