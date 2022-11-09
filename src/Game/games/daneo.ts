@@ -132,7 +132,7 @@ export class Daneo extends Game {
         target.game.score += score
       }
 
-    getAuto.call(this.room, this.room.game.theme, 0).then((w) => {
+    getAuto.call(this, this.room.game.theme, 0).then((w) => {
       this.room.byMaster(
         "turnEnd",
         {
@@ -269,7 +269,7 @@ export class Daneo extends Game {
       } else denied()
     }
 
-    getAuto.call(this.room, this.room.game.theme, 2).then((list) => {
+    getAuto.call(this, this.room.game.theme, 2).then((list) => {
       if (list.length) {
         list.sort((a, b) => b.hit - a.hit)
         if (ROBOT_HIT_LIMIT[level] > list[0].hit) denied()
@@ -341,26 +341,23 @@ function getMission(l) {
 //   return R
 // }
 
-function getAuto(theme: string, type: number) {
+function getAuto(theme: string, type: 0 | 1 | 2) {
   /* type
 		0 무작위 단어 하나
 		1 존재 여부
 		2 단어 목록
 	*/
 
-  var my = this
+  const my = this as Daneo
   const R = new Tail()
-  var bool = type === 1
 
   const aqs: [string, any][] = [["theme", toRegex(theme)]]
-  var aft
-  var raiser
-  var lst = false
+  let aft
 
-  if (my.game.chain) aqs.push(["_id", { $nin: my.game.chain }])
-  raiser = this.DB.kkutu[my.rule.lang].find
+  if (my.room.game.chain) aqs.push(["_id", { $nin: my.room.game.chain }])
+  const raiser = this.DB.kkutu[my.room.rule.lang].find
     .apply(this.room, aqs)
-    .limit(bool ? 1 : 123)
+    .limit(type === 1 ? 1 : 123)
 
   switch (type) {
     case 0:
