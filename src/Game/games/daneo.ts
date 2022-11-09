@@ -86,10 +86,19 @@ export class Daneo extends Game {
       },
       true
     )
-    this.room.game.turnTimer = setTimeout(
-      this.room.turnEnd,
-      Math.min(this.room.game.roundTime, this.room.game.turnTime + 100)
-    )
+
+    const turnEndAfterDelay = async () => {
+      await new Promise(
+        (resolve) =>
+          (this.room.game.turnTimer = setTimeout(
+            resolve,
+            Math.min(this.room.game.roundTime, this.room.game.turnTime + 100)
+          ))
+      )
+      this.room.turnEnd()
+    }
+
+    turnEndAfterDelay().then()
 
     const si = this.room.game.seq[this.room.game.turn]
     if (si)
