@@ -1572,9 +1572,10 @@ export class Room {
           if (!o[ranks[i].target]) continue
           o[ranks[i].target].list = ranks[i].data
         }
+        // ranks 패킷 없애 둠
         this.byMaster(
           "roundEnd",
-          { result: res, users: users, ranks: o, data: data },
+          { result: res, users: users, data: data },
           true
         )
       })
