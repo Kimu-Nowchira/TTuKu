@@ -239,74 +239,76 @@ function isDataAvailable(data, chk) {
   return true
 }
 
+export class RedisTable {
+  constructor(public redis: any, public key: string) {}
+
+  putGlobal = (id: string, score: number) => {
+    const R = new Tail()
+
+    this.redis.zadd([this.key, score, id], (err, res) => {
+      R.go(id)
+    })
+    return R
+  }
+
+  getGlobal = (id: string) => {
+    const R = new Tail()
+
+    this.redis.zrevrank([this.key, id], (err, res) => {
+      R.go(res)
+    })
+    return R
+  }
+
+  getPage = (pg: number, lpp: number) => {
+    const R = new Tail()
+
+    this.redis.zrevrange(
+      [this.key, pg * lpp, (pg + 1) * lpp - 1, "WITHSCORES"],
+      (err, res) => {
+        const A = []
+        const len = res.length
+        let rank = pg * lpp
+
+        for (let i = 0; i < len; i += 2) {
+          A.push({ id: res[i], rank: rank++, score: res[i + 1] })
+        }
+        R.go({ page: pg, data: A })
+      }
+    )
+    return R
+  }
+
+  getSurround = (id: string, rv: number) => {
+    const R = new Tail()
+
+    rv = rv || 8
+    this.redis.zrevrank([this.key, id], (err, res) => {
+      const range = [Math.max(0, res - Math.round(rv / 2 + 1)), 0]
+
+      range[1] = range[0] + rv - 1
+      this.redis.zrevrange(
+        [this.key, range[0], range[1], "WITHSCORES"],
+        (err, res) => {
+          if (!res) return R.go({ target: id, data: [] })
+
+          const A = []
+          const len = res.length
+
+          for (let i = 0; i < len; i += 2) {
+            A.push({ id: res[i], rank: range[0]++, score: res[i + 1] })
+          }
+          R.go({ target: id, data: A })
+        }
+      )
+    })
+    return R
+  }
+}
+
 export const Agent = function (type: string, origin: PoolClient) {
   var my = this
 
-  this.RedisTable = function (key) {
-    var my = this
-
-    my.putGlobal = function (id, score) {
-      var R = new Tail()
-
-      origin.zadd([key, score, id], function (err, res) {
-        R.go(id)
-      })
-      return R
-    }
-    my.getGlobal = function (id) {
-      var R = new Tail()
-
-      origin.zrevrank([key, id], function (err, res) {
-        R.go(res)
-      })
-      return R
-    }
-    my.getPage = function (pg, lpp) {
-      var R = new Tail()
-
-      origin.zrevrange(
-        [key, pg * lpp, (pg + 1) * lpp - 1, "WITHSCORES"],
-        function (err, res) {
-          var A = []
-          var rank = pg * lpp
-          var i,
-            len = res.length
-
-          for (i = 0; i < len; i += 2) {
-            A.push({ id: res[i], rank: rank++, score: res[i + 1] })
-          }
-          R.go({ page: pg, data: A })
-        }
-      )
-      return R
-    }
-    my.getSurround = function (id, rv) {
-      var R = new Tail()
-      var i
-
-      rv = rv || 8
-      origin.zrevrank([key, id], function (err, res) {
-        var range = [Math.max(0, res - Math.round(rv / 2 + 1)), 0]
-
-        range[1] = range[0] + rv - 1
-        origin.zrevrange(
-          [key, range[0], range[1], "WITHSCORES"],
-          function (err, res) {
-            if (!res) return R.go({ target: id, data: [] })
-
-            var A = [],
-              len = res.length
-
-            for (i = 0; i < len; i += 2) {
-              A.push({ id: res[i], rank: range[0]++, score: res[i + 1] })
-            }
-            R.go({ target: id, data: A })
-          }
-        )
-      })
-      return R
-    }
-  }
   this.PostgresTable = function (col) {
     var my = this
     var pointer = function (mode, q) {
@@ -501,5 +503,5 @@ export const Agent = function (type: string, origin: PoolClient) {
       origin.query(q, f)
     }
   }
-  this.Table = this[`${type}Table`]
+  this.Table = this.PostgresTable
 }

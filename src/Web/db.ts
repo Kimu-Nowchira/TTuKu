@@ -21,7 +21,7 @@ import { Pool } from "pg"
 import { logger } from "../sub/jjlog"
 import { Tail } from "../sub/lizard"
 import { config } from "../config"
-import { Agent } from "../sub/collection"
+import { Agent, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
 const Pub = require("../sub/checkpub")
@@ -66,16 +66,14 @@ Pub.ready = () => {
           "Error when connect to PostgresSQL server: " + err.toString()
         )
 
-      const redisAgent = noRedis ? null : new Agent("Redis", Redis)
       const mainAgent = new Agent("Postgres", pgMain)
-
       const DB = exports
 
       DB.kkutu = {}
       DB.kkutu_cw = {}
       DB.kkutu_manner = {}
 
-      DB.redis = noRedis ? FAKE_REDIS : new redisAgent.Table("KKuTu_Score")
+      DB.redis = noRedis ? FAKE_REDIS : new RedisTable(Redis, "KKuTu_Score")
       for (const i in LANG) {
         DB.kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
         DB.kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
