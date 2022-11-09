@@ -111,25 +111,6 @@ Server.use((req, res, next) => {
   }
 })
 
-/* use this if you want
-
-DDDoS = new DDDoS({
-	maxWeight: 6,
-	checkInterval: 10000,
-	rules: [{
-		regexp: "^/(cf|dict|gwalli)",
-		maxWeight: 20,
-		errorData: "429 Too Many Requests"
-	}, {
-		regexp: ".*",
-		errorData: "429 Too Many Requests"
-	}]
-});
-DDDoS.rules[0].logFunction = DDDoS.rules[1].logFunction = function(ip, path){
-	logger.warn(`DoS from IP ${ip} on ${path}`);
-};
-Server.use(DDDoS.express());*/
-
 WebInit.init(Server, true)
 
 class GameClient {
