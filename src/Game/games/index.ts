@@ -21,11 +21,7 @@ import { Tail } from "../../sub/lizard"
 
 export class Game {
   // TODO: DB는 import 하는 걸로 변경해야 함
-  constructor(
-    protected room: Room,
-    protected DB: any,
-    protected DIC: DICData
-  ) {}
+  constructor(public room: Room, public DB: any, protected DIC: DICData) {}
 
   getTitle() {
     return new Tail()

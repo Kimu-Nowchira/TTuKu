@@ -55,7 +55,11 @@ export class Daneo extends Game {
         },
         true
       )
-      this.room.game.turnTimer = setTimeout(this.room.turnStart, 2400)
+
+      await new Promise(
+        (resolve) => (this.room.game.turnTimer = setTimeout(resolve, 2400))
+      )
+      this.room.turnStart()
     } else {
       this.room.roundEnd()
     }
@@ -108,15 +112,17 @@ export class Daneo extends Game {
   }
 
   async turnEnd() {
-    var target =
+    const target =
       this.DIC[this.room.game.seq[this.room.game.turn]] ||
       this.room.game.seq[this.room.game.turn]
-    var score
+    let score
 
     if (this.room.game.loading) {
-      this.room.game.turnTimer = setTimeout(this.room.turnEnd, 100)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+      this.room.turnEnd()
       return
     }
+
     if (!this.room.game.chain) return
 
     this.room.game.late = true
@@ -125,7 +131,8 @@ export class Daneo extends Game {
         score = getPenalty(this.room.game.chain, target.game.score)
         target.game.score += score
       }
-    getAuto.call(this.room, this.room.game.theme, 0).then(function (w) {
+
+    getAuto.call(this.room, this.room.game.theme, 0).then((w) => {
       this.room.byMaster(
         "turnEnd",
         {
@@ -136,7 +143,15 @@ export class Daneo extends Game {
         },
         true
       )
-      this.room.game._rrt = setTimeout(this.room.roundReady, 3000)
+
+      const roundReadyAfterDelay = async () => {
+        await new Promise(
+          (resolve) => (this.room.game._rrt = setTimeout(resolve, 3000))
+        )
+        this.room.roundReady()
+      }
+
+      roundReadyAfterDelay().then()
     })
     clearTimeout(this.room.game.robotTimer)
   }
@@ -186,7 +201,16 @@ export class Daneo extends Game {
           if (this.room.game.mission === true) {
             this.room.game.mission = getMission(this.room.rule.lang)
           }
-          setTimeout(this.room.turnNext, this.room.game.turnTime / 6)
+
+          const turnNextAfterDelay = async () => {
+            await new Promise((resolve) =>
+              setTimeout(resolve, this.room.game.turnTime / 6)
+            )
+            this.room.turnNext()
+          }
+
+          turnNextAfterDelay().then()
+
           if (!client.robot) {
             client.invokeWordPiece(text, 1)
             DB.kkutu[l]
@@ -195,6 +219,7 @@ export class Daneo extends Game {
               .on()
           }
         }
+
         const denied = (code = 404) => {
           this.room.game.loading = false
           client.publish("turnError", { code: code, value: text }, true)
@@ -218,17 +243,16 @@ export class Daneo extends Game {
     var delay = ROBOT_START_DELAY[level]
     var w, text
 
-    getAuto.call(this.room, this.room.game.theme, 2).then((list) => {
-      if (list.length) {
-        list.sort((a, b) => b.hit - a.hit)
-        if (ROBOT_HIT_LIMIT[level] > list[0].hit) denied()
-        else pickList(list)
-      } else denied()
-    })
+    const after = async () => {
+      delay += text.length * ROBOT_TYPE_COEF[level]
+
+      await new Promise((resolve) => setTimeout(resolve, delay))
+      this.room.turnRobot(robot, text)
+    }
 
     const denied = () => {
       text = "... T.T"
-      after()
+      after().then()
     }
 
     const pickList = (list) => {
@@ -241,14 +265,17 @@ export class Daneo extends Game {
         delay +=
           (500 * ROBOT_THINK_COEF[level] * Math.random()) /
           Math.log(1.1 + w.hit)
-        after()
+        after().then()
       } else denied()
     }
 
-    const after = () => {
-      delay += text.length * ROBOT_TYPE_COEF[level]
-      setTimeout(this.room.turnRobot, delay, robot, text)
-    }
+    getAuto.call(this.room, this.room.game.theme, 2).then((list) => {
+      if (list.length) {
+        list.sort((a, b) => b.hit - a.hit)
+        if (ROBOT_HIT_LIMIT[level] > list[0].hit) denied()
+        else pickList(list)
+      } else denied()
+    })
   }
 
   getScore(text: string, delay: number, ignoreMission: boolean) {
@@ -268,7 +295,7 @@ export class Daneo extends Game {
   }
 }
 
-function toRegex(theme) {
+function toRegex(theme: string) {
   return new RegExp(`(^|,)${theme}($|,)`)
 }
 
@@ -279,15 +306,51 @@ function getMission(l) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function getAuto(theme, type) {
+// const getAutoAsync = async (game: Daneo, theme: string, type: 0 | 1 | 2) => {
+//   const bool = type === 1
+//   const aqs: [string, any][] = [["theme", toRegex(theme)]]
+//   var aft
+//   var lst = false
+//
+//   if (game.room.game.chain) aqs.push(["_id", { $nin: game.room.game.chain }])
+//
+//   const raiser = game.DB.kkutu[game.room.rule.lang].find
+//     .apply(this, aqs)
+//     .limit(bool ? 1 : 123)
+//
+//   switch (type) {
+//     case 0:
+//     default:
+//       aft = ($md) => {
+//         R.go($md[Math.floor(Math.random() * $md.length)])
+//       }
+//       break
+//     case 1:
+//       aft = function ($md) {
+//         R.go(!!$md.length)
+//       }
+//       break
+//     case 2:
+//       aft = function ($md) {
+//         R.go($md)
+//       }
+//       break
+//   }
+//   raiser.on(aft)
+//
+//   return R
+// }
+
+function getAuto(theme: string, type: number) {
   /* type
 		0 무작위 단어 하나
 		1 존재 여부
 		2 단어 목록
 	*/
+
   var my = this
-  var R = new Lizard.Tail()
-  var bool = type == 1
+  const R = new Tail()
+  var bool = type === 1
 
   const aqs: [string, any][] = [["theme", toRegex(theme)]]
   var aft
@@ -296,6 +359,7 @@ function getAuto(theme, type) {
 
   if (my.game.chain) aqs.push(["_id", { $nin: my.game.chain }])
   raiser = DB.kkutu[my.rule.lang].find.apply(this, aqs).limit(bool ? 1 : 123)
+
   switch (type) {
     case 0:
     default:
