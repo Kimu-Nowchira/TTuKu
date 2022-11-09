@@ -213,7 +213,7 @@ export class Daneo extends Game {
 
           if (!client.robot) {
             client.invokeWordPiece(text, 1)
-            DB.kkutu[l]
+            this.DB.kkutu[l]
               .update(["_id", text])
               .set(["hit", $doc.hit + 1])
               .on()
@@ -232,7 +232,7 @@ export class Daneo extends Game {
           denied()
         }
       }
-      DB.kkutu[l].findOne(["_id", text]).on(onDB)
+      this.DB.kkutu[l].findOne(["_id", text]).on(onDB)
     } else {
       client.publish("turnError", { code: 409, value: text }, true)
     }
@@ -358,7 +358,9 @@ function getAuto(theme: string, type: number) {
   var lst = false
 
   if (my.game.chain) aqs.push(["_id", { $nin: my.game.chain }])
-  raiser = DB.kkutu[my.rule.lang].find.apply(this, aqs).limit(bool ? 1 : 123)
+  raiser = this.DB.kkutu[my.rule.lang].find
+    .apply(this.room, aqs)
+    .limit(bool ? 1 : 123)
 
   switch (type) {
     case 0:
