@@ -309,12 +309,9 @@ export class Client {
     }
   }
 
-  send(type: string, data?: any) {
-    var r = data || {}
-
-    r.type = type
-
-    if (this.socket.readyState == 1) this.socket.send(JSON.stringify(r))
+  send(type: string, data: any = {}) {
+    if (this.socket.readyState == 1)
+      this.socket.send(JSON.stringify({ ...data, type }))
   }
 
   sendError(code: number, msg?: string) {
@@ -363,8 +360,7 @@ export class Client {
     const d = new Date().getDate()
     const now = new Date().getTime() * 0.001
 
-    var expired = []
-    var gr
+    const expired: string[] = []
 
     if (d != this.data.connectDate) {
       this.data.connectDate = d
@@ -377,10 +373,10 @@ export class Client {
       }
       if (!this.box[i].expire) continue
       if (this.box[i].expire < now) {
-        gr = SHOP[i].group
+        let gr = SHOP[i].group
 
-        if (gr.substring(0, 3) == "BDG") gr = "BDG"
-        if (this.equip[gr] == i) delete this.equip[gr]
+        if (gr.substring(0, 3) === "BDG") gr = "BDG"
+        if (this.equip[gr] === i) delete this.equip[gr]
         delete this.box[i]
         expired.push(i)
       }
@@ -392,7 +388,7 @@ export class Client {
   }
 
   refresh() {
-    var R = new Tail()
+    const R = new Tail()
 
     if (this.guest) {
       this.equip = {}
