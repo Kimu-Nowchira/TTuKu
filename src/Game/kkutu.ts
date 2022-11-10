@@ -460,7 +460,7 @@ export class Client {
       )
       .on((__res) => {
         DB.redis.getGlobal(this.id).then((_res) => {
-          DB.redis.putGlobal(this.id, this.data.score).then((res) => {
+          DB.redis.putGlobal(this.id, this.data.score).then(() => {
             logger.info(
               `FLUSHED [${this.id}] PTS=${this.data.score} MNY=${this.money}`
             )
@@ -483,7 +483,7 @@ export class Client {
   }
 
   enter(room, spec, pass) {
-    var $room, i
+    let $room: Room | undefined
 
     if (this.place) {
       this.send("roomStuck")
@@ -497,7 +497,8 @@ export class Client {
 
       if (!$room) {
         if (cluster.isPrimary) {
-          for (i in CHAN) CHAN[i].send({ type: "room-invalid", room: room })
+          for (const i in CHAN)
+            CHAN[i].send({ type: "room-invalid", room: room })
         } else {
           process.send({ type: "room-invalid", room: room })
         }
@@ -537,10 +538,9 @@ export class Client {
           if ($room.kicked.indexOf(this.id) != -1) {
             return this.sendError(406)
           }
-          if ($room.password != room.password && $room.password) {
-            $room = undefined
+
+          if ($room.password !== room.password && $room.password)
             return this.sendError(403)
-          }
         }
       }
     } else if (this.guest && !GUEST_PERMISSION.enter) {
@@ -589,9 +589,11 @@ export class Client {
         spec = false
       }
     }
+
     if ($room) {
       if (spec) $room.spectate(this, room.password)
-      else $room.come(this, room.password, pass)
+      // 원래는 $room.come(this, room.password, pass) 인데 뒷 값을 안 받는 것 같아 뺌
+      else $room.come(this)
     }
   }
 

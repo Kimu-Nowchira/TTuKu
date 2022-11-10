@@ -4,12 +4,21 @@ import { DIC } from "../kkutu"
 export default class Robot {
   id: number
   robot: boolean = true
-  game: any = {} // GameData
+  game: {
+    team?: number
+    score?: number
+    bonus?: number
+    item?: any[]
+    wpc?: any[]
+  } = {} // GameData
   data: Record<string, any> = {}
   equip: Record<string, any> = { robot: true }
 
   // classic.js에서 사용함
   _done: any[] = []
+
+  playAt: number
+  ready: boolean
 
   constructor(
     public target: number | null,
