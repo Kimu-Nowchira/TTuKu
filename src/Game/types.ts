@@ -1,4 +1,4 @@
-import { Robot } from "./kkutu"
+import Robot from "./classes/Robot"
 
 export interface GameData {
   ready?: boolean

@@ -30,7 +30,8 @@ import {
   MISSION_ko,
 } from "../../const"
 import { all, Tail } from "../../sub/lizard"
-import { Client, Robot } from "../kkutu"
+import Robot from "../classes/Robot"
+import { Client } from "../kkutu"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]
