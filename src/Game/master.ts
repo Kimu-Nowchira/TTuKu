@@ -26,6 +26,7 @@ import { verifyRecaptcha } from "../sub/recaptcha"
 import { logger } from "../sub/jjlog"
 import Secure from "../sub/secure"
 import { config } from "../config"
+import Room from "./classes/Room"
 
 let HTTPS_Server
 
@@ -330,7 +331,7 @@ cluster.on("message", (worker, msg) => {
         // 이미 그런 ID의 방이 있다... 그 방은 없던 걸로 해라.
         worker.send({ type: "room-invalid", room: msg.room })
       } else {
-        ROOM[msg.room.id] = new KKuTu.Room(msg.room, msg.room.channel)
+        ROOM[msg.room.id] = new Room(msg.room, msg.room.channel)
       }
       break
     case "room-come":

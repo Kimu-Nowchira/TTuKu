@@ -16,8 +16,9 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Client, DICData, Robot, Room } from "../kkutu"
+import { Client, DICData, Robot } from "../kkutu"
 import { Tail } from "../../sub/lizard"
+import Room from "../classes/Room"
 
 export class Game {
   // TODO: DB는 import 하는 걸로 변경해야 함
