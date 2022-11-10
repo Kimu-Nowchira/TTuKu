@@ -10,7 +10,7 @@ import { Crossword, Daneo, Game } from "../games"
 import cluster from "node:cluster"
 import { logger } from "../../sub/jjlog"
 import { all } from "../../sub/lizard"
-import { Client, DIC, Robot, ROOM, _rid } from "../kkutu"
+import { Client, DIC, Robot, ROOM, _rid, publish } from "../kkutu"
 import { GameData, RoomData } from "../types"
 import Classic from "../games/classic"
 
@@ -650,7 +650,7 @@ export default class Room {
       if (DIC[this.master || target])
         DIC[this.master || target].send("room", obj)
     } else {
-      exports.publish("room", obj, this.password)
+      publish("room", obj, this.password)
     }
   }
 

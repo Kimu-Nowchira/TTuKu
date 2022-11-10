@@ -230,7 +230,7 @@ export class WebServer {
           this.send("seek", { value: Object.keys(DIC).length })
           break
         case "narrate-friend":
-          exports.narrate(msg.list, "friend", {
+          narrate(msg.list, "friend", {
             id: msg.id,
             s: msg.s,
             stat: msg.stat,
@@ -506,7 +506,7 @@ export class Client {
         } else if (cluster.isPrimary && $user.server)
           /* Enhanced User Block System [E] */
           R.go({ result: 409, black: $user.server })
-        else if (exports.NIGHT && this.isAjae === false) R.go({ result: 440 })
+        else if (NIGHT && this.isAjae === false) R.go({ result: 440 })
         else R.go({ result: 200 })
       })
     return R
@@ -823,7 +823,7 @@ export class Client {
       if (!$room.gaming) {
         if ($room.master == this.id) {
           $room.set(room)
-          exports.publish(
+          publish(
             "room",
             { target: this.id, room: $room.getData(), modify: true },
             room.password
