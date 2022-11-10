@@ -67,28 +67,30 @@ Pub.ready = () => {
         )
 
       const mainAgent = new Agent("Postgres", pgMain)
-      const DB = exports
 
-      DB.kkutu = {}
-      DB.kkutu_cw = {}
-      DB.kkutu_manner = {}
+      exports.kkutu = {}
+      exports.kkutu_cw = {}
+      exports.kkutu_manner = {}
 
-      DB.redis = noRedis ? FAKE_REDIS : new RedisTable(Redis, "KKuTu_Score")
+      exports.redis = noRedis
+        ? FAKE_REDIS
+        : new RedisTable(Redis, "KKuTu_Score")
+
       for (const i in LANG) {
-        DB.kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
-        DB.kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
-        DB.kkutu_manner[LANG[i]] = new mainAgent.Table(
+        exports.kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
+        exports.kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
+        exports.kkutu_manner[LANG[i]] = new mainAgent.Table(
           "kkutu_manner_" + LANG[i]
         )
       }
-      DB.kkutu_injeong = new mainAgent.Table("kkutu_injeong")
-      DB.kkutu_shop = new mainAgent.Table("kkutu_shop")
-      DB.kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
 
-      DB.session = new mainAgent.Table("session")
-      DB.users = new mainAgent.Table("users")
-      DB.ip_block = new mainAgent.Table("ip_block")
-      /* Enhanced User Block System [E] */
+      exports.kkutu_injeong = new mainAgent.Table("kkutu_injeong")
+      exports.kkutu_shop = new mainAgent.Table("kkutu_shop")
+      exports.kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
+
+      exports.session = new mainAgent.Table("session")
+      exports.users = new mainAgent.Table("users")
+      exports.ip_block = new mainAgent.Table("ip_block")
 
       if (exports.ready) exports.ready(Redis, Pg)
       else logger.warn("DB.onReady was not defined yet.")

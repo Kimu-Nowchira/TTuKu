@@ -37,7 +37,7 @@ export type DICData = Record<string, Client>
 
 let GUEST_PERMISSION: Record<string, boolean> = {}
 
-let DB
+export let DB
 let SHOP
 
 export let DIC: DICData = {}

@@ -10,7 +10,7 @@ import { Crossword, Daneo, Game } from "../games"
 import cluster from "node:cluster"
 import { logger } from "../../sub/jjlog"
 import { all } from "../../sub/lizard"
-import { Client, DIC, Robot, ROOM, _rid, publish } from "../kkutu"
+import { Client, DIC, Robot, ROOM, _rid, publish, DB } from "../kkutu"
 import { GameData, RoomData } from "../types"
 import Classic from "../games/classic"
 
@@ -55,9 +55,9 @@ export default class Room {
   }
 
   getData() {
-    var readies = {}
+    const readies = {}
     const pls: number[] = []
-    var seq = this.game.seq ? this.game.seq.map(filterRobot) : []
+    const seq = this.game.seq ? this.game.seq.map(filterRobot) : []
 
     for (const i in this.players) {
       const o = DIC[this.players[i]]
@@ -160,7 +160,7 @@ export default class Room {
 
   spectate(client, password) {
     if (!this.practice) client.place = this.id
-    var len = this.players.push(client.id)
+    const len = this.players.push(client.id)
 
     if (cluster.isWorker) {
       client.ready = false
@@ -179,8 +179,7 @@ export default class Room {
   }
 
   go(client: Client, kickVote?) {
-    var x = this.players.indexOf(client.id)
-    var me
+    let x = this.players.indexOf(client.id)
 
     if (x == -1) {
       client.place = 0
@@ -189,11 +188,14 @@ export default class Room {
     }
     this.players.splice(x, 1)
     client.game = {}
-    if (client.id == this.master) {
+
+    if (client.id === this.master) {
       // TODO: 원래는 target이 false이었는데, 타입의 일관성을 위해 0으로 바꿈. (비직관적이므로 개선 필요)
-      while (this.removeAI(0, true));
+      // 의미가 없는 while문을 제거함
+      this.removeAI(0, true)
       this.master = this.players[0]
     }
+
     if (DIC[this.master]) {
       DIC[this.master].ready = false
       if (this.gaming) {
@@ -203,7 +205,7 @@ export default class Room {
             this.game.seq.splice(x, 1)
             this.roundEnd()
           } else {
-            me = this.game.turn == x
+            const me = this.game.turn == x
             if (me && this.rule.ewq) {
               clearTimeout(this.game._rrt)
               this.game.loading = false
@@ -249,8 +251,6 @@ export default class Room {
   }
 
   set(room) {
-    var ijc, ij
-
     this.title = room.title
     this.password = room.password
     this.limit = Math.max(
@@ -266,8 +266,8 @@ export default class Room {
         const k = OPTIONS[i].name.toLowerCase()
         this.opts[k] = room.opts[k] && this.rule.opts.includes(i as CustomRule)
       }
-      if ((ijc = this.rule.opts.includes("ijp"))) {
-        ij = require("../const")[`${this.rule.lang.toUpperCase()}_IJP`]
+      if (this.rule.opts.includes("ijp")) {
+        const ij = require("../const")[`${this.rule.lang.toUpperCase()}_IJP`]
         this.opts.injpick = (room.opts.injpick || []).filter(function (item) {
           return ij.includes(item)
         })
@@ -275,7 +275,8 @@ export default class Room {
     }
     if (!this.rule.ai) {
       // TODO: false -> 0 (임시조치)
-      while (this.removeAI(0, true));
+      // while문이 의미가 없는 것 같아서 제거함
+      this.removeAI(0, true)
     }
     for (const i in this.players) {
       if (DIC[this.players[i]]) DIC[this.players[i]].ready = false
@@ -283,11 +284,9 @@ export default class Room {
   }
 
   preReady(teams?) {
-    var i,
-      j,
-      t = 0,
-      l = 0
-    var avTeam = []
+    let t = 0
+    let l = 0
+    const avTeam = []
 
     // 팀 검사
     if (teams) {
@@ -300,8 +299,9 @@ export default class Room {
         )
           return 418
       } else {
-        for (i = 1; i < 5; i++) {
-          if ((j = teams[i].length)) {
+        for (let i = 1; i < 5; i++) {
+          const j = teams[i].length
+          if (j) {
             if (t) {
               if (t != j) return 418
             } else t = j
@@ -329,12 +329,11 @@ export default class Room {
   }
 
   ready() {
-    var i,
-      all = true
-    var len = 0
-    var teams = [[], [], [], [], []]
+    let all = true
+    let len = 0
+    const teams = [[], [], [], [], []]
 
-    for (i in this.players) {
+    for (const i in this.players) {
       if (this.players[i].robot) {
         len++
         teams[this.players[i].game.team].push(this.players[i])
@@ -354,10 +353,13 @@ export default class Room {
     }
     if (!DIC[this.master]) return logger.error("DIC[this.master] is undefined")
     if (len < 2) return DIC[this.master].sendError(411)
-    if ((i = this.preReady(teams))) return DIC[this.master].sendError(i)
+
+    const errCode = this.preReady(teams)
+    if (errCode !== false) return DIC[this.master].sendError(errCode)
+
     if (all) {
       this._teams = teams
-      this.start()
+      this.start().then()
     } else DIC[this.master].sendError(412)
   }
 
@@ -367,8 +369,8 @@ export default class Room {
   }
 
   async start(pracLevel?: number) {
-    var hum = 0
-    var now = new Date().getTime()
+    let hum = 0
+    const now = new Date().getTime()
 
     logger.debug("Game Start")
 
@@ -613,7 +615,7 @@ export default class Room {
   }
 
   export(target?: string, kickVote?: boolean, spec?: boolean) {
-    var obj: {
+    const obj: {
       room: any
       target?: any
       kickVote?: any
@@ -625,7 +627,6 @@ export default class Room {
       means?: any
       spec?: any
     } = { room: this.getData() }
-    var o
 
     if (!this.rule) return logger.warn("no this.rule")
     if (target) obj.target = target
@@ -643,7 +644,8 @@ export default class Room {
       }
       obj.spec = {}
       for (const i in this.game.seq) {
-        if ((o = DIC[this.game.seq[i]])) obj.spec[o.id] = o.game.score
+        const o = DIC[this.game.seq[i]]
+        if (o) obj.spec[o.id] = o.game.score
       }
     }
     if (this.practice) {
@@ -726,8 +728,8 @@ const shuffle = (arr) => {
 }
 
 function getRewards(mode, score, bonus, rank, all, ss) {
-  var rw = { score: 0, money: 0, together: false }
-  var sr = score / ss
+  const rw = { score: 0, money: 0, together: false }
+  const sr = score / ss
 
   // all은 1~8
   // rank는 0~7
