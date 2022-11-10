@@ -73,6 +73,7 @@ export default class Room {
       }
       pls.push(filterRobot(this.players[i]))
     }
+    logger.debug("Room.getData()에서 this 상태", this)
     return {
       id: this.id,
       channel: this.channel,
