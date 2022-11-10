@@ -1,9 +1,11 @@
 import {
   CustomRule,
+  EN_IJP,
   GAME_TYPE,
   getRule,
   IGameRule,
   IJP_EXCEPT,
+  KO_IJP,
   OPTIONS,
 } from "../../const"
 import { Crossword, Daneo, Game } from "../games"
@@ -261,18 +263,31 @@ export default class Room {
     this.rule = getRule(room.mode)
     this.round = Math.round(room.round)
     this.time = room.time * this.rule.time
+
     if (room.opts && this.opts) {
       for (const i in OPTIONS) {
         const k = OPTIONS[i].name.toLowerCase()
         this.opts[k] = room.opts[k] && this.rule.opts.includes(i as CustomRule)
       }
+
+      // 어인정 규칙이 켜져있는 경우
       if (this.rule.opts.includes("ijp")) {
-        const ij = require("../const")[`${this.rule.lang.toUpperCase()}_IJP`]
+        const ij: string[] = []
+
+        switch (this.rule.lang.toUpperCase()) {
+          case "KO":
+            ij.push(...KO_IJP)
+            break
+          case "EN":
+            ij.push(...EN_IJP)
+        }
+
         this.opts.injpick = (room.opts.injpick || []).filter(function (item) {
           return ij.includes(item)
         })
       } else this.opts.injpick = []
     }
+
     if (!this.rule.ai) {
       // TODO: false -> 0 (임시조치)
       // while문이 의미가 없는 것 같아서 제거함
@@ -452,10 +467,7 @@ export default class Room {
   }
 
   roundReady() {
-    // TODO: if (this.gaming) return this.route("roundReady")
-    logger.debug("DEBUG4", this.gaming)
     if (!this.gaming) return logger.warn("roundReady: this.gaming is false")
-    // return 없앴는데 괜찮겠지?
     this.gameData.roundReady().then()
   }
 
