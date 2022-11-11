@@ -71,6 +71,8 @@ DBInit().then()
 
 logger.info("<< KKuTu Web >>")
 
+if (!config.isPublic) logger.info("Disable public mode.")
+
 Server.set("views", __dirname + "/views")
 Server.set("view engine", "pug")
 Server.use(Express.static(__dirname + "/public"))
