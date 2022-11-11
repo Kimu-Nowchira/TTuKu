@@ -74,7 +74,6 @@ export default class Room {
       }
       pls.push(filterRobot(this.players[i]))
     }
-    logger.debug("Room.getData()에서 this 상태", this)
     return {
       id: this.id,
       channel: this.channel,
@@ -622,8 +621,6 @@ export default class Room {
   }
 
   byMaster(type, data, noBlock?: boolean) {
-    logger.debug("byMaster", type, data)
-
     if (!DIC[this.master])
       logger.warn("Master가 아닌 클라이언트의 byMaster 호출")
 
