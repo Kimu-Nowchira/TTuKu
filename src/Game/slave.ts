@@ -40,7 +40,7 @@ import { init as DBInit } from "../Web/db"
 let Server: WebSocket.Server
 let HTTPS_Server
 
-let MainDB
+const MainDB = require("../Web/db")
 
 const DIC: Record<string, Client> = {}
 const DNAME: Record<string, string> = {}
@@ -60,7 +60,6 @@ const CHAN = Number(process.env["CHANNEL"])
 
 const run = async () => {
   await DBInit()
-  MainDB = require("../Web/db")
 
   if (IS_SECURED) {
     const options = Secure()
