@@ -176,8 +176,8 @@ const sqlWhere = (q: any[]) => {
         c.map((i) => Escape("%V", i)).join(",")
       )
     }
-    if (item[1] instanceof RegExp)
-      return Escape("%K ~ %L", item[0], item[1].source)
+    if (item[1] instanceof RegExp) logger.debug("escape", item)
+    return Escape("%K ~ %L", item[0], item[1].source)
     return Escape("%K=%V", item[0], item[1])
   }
 
