@@ -51,23 +51,26 @@ import Secure from "../sub/secure"
 import * as WebInit from "../sub/webinit"
 import { init as DBInit } from "./db"
 
-const DB = require("./db")
-
-const Server = Express()
-
 type LangFile = Record<string, Record<string, string>>
-
 const Language = {
   ko_KR: require("./lang/ko_KR.json") as LangFile,
   en_US: require("./lang/en_US.json") as LangFile,
 }
+
 const ROUTES = ["major", "consume", "admin", "login"]
 const gameServers: GameClient[] = []
+
+const DB = require("./db")
+
+const Server = Express()
 
 // TODO: 임시 코드 - 추후 삭제 필요
 global.isPublic = config.isPublic
 
+DBInit().then()
+
 logger.info("<< KKuTu Web >>")
+
 Server.set("views", __dirname + "/views")
 Server.set("view engine", "pug")
 Server.use(Express.static(__dirname + "/public"))
@@ -281,10 +284,3 @@ Server.get("/servers", (_req, res) => {
 Server.get("/legal/:page", (req, res) => {
   WebInit.page(req, res, "legal/" + req.params.page)
 })
-
-const run = async () => {
-  console.info("Connecting to database...")
-  await DBInit()
-}
-
-run().then()
