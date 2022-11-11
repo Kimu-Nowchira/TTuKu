@@ -18,7 +18,6 @@ import {
   DIC,
   ROOM,
   SHOP,
-  Data,
   publish,
   GUEST_PERMISSION,
   _rid,
@@ -29,6 +28,7 @@ import {
   onClientClosed,
 } from "../kkutu"
 import { ClientExportData } from "../types"
+import Data from "./Data"
 
 const channel = Number(process.env["CHANNEL"]) || 0
 
