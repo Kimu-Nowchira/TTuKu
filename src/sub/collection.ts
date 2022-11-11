@@ -305,6 +305,7 @@ export class RedisTable {
 }
 
 const Pointer = function (mode, q, col: string, origin: PoolClient) {
+  if (!origin) throw new Error("The origin of the query is not defined.")
   var _my = this
   /* on: 입력받은 쿼리를 실행시킨다.
     @f		콜백 함수
@@ -343,6 +344,7 @@ const Pointer = function (mode, q, col: string, origin: PoolClient) {
         doc.toArray(callback);
       }else callback(err, doc);*/
     }
+
     function callback(err: Error, doc) {
       if (f) {
         if (chk) {
@@ -429,7 +431,7 @@ const Pointer = function (mode, q, col: string, origin: PoolClient) {
     return sql
   }
   // limit: find 쿼리에 걸린 문서를 필터링하는 지침을 정의한다.
-  this.limit = function (_data) {
+  this.limit = (_data) => {
     if (global.getType(_data) == "Number") {
       _my.findLimit = _data
     } else {
@@ -438,25 +440,25 @@ const Pointer = function (mode, q, col: string, origin: PoolClient) {
     }
     return this
   }
-  this.sort = function (_data) {
+  this.sort = (_data) => {
     _my.sorts =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }
   // set: update 쿼리에 걸린 문서를 수정하는 지침을 정의한다.
-  this.set = function (_data) {
+  this.set = (_data) => {
     _my.second["$set"] =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }
   // soi: upsert 쿼리에 걸린 문서에서, insert될 경우의 값을 정한다. (setOnInsert)
-  this.soi = function (_data) {
+  this.soi = (_data) => {
     _my.second["$setOnInsert"] =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }
   // inc: update 쿼리에 걸린 문서의 특정 값을 늘인다.
-  this.inc = function (_data) {
+  this.inc = (_data) => {
     _my.second["$inc"] =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
