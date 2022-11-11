@@ -48,8 +48,8 @@ let T_USER = {}
 let SID: string
 let WDIC = {}
 
-const DEVELOP = (exports.DEVELOP = global.test || false)
-const GUEST_PERMISSION = (exports.GUEST_PERMISSION = {
+export const DEVELOP = global.test || false
+export const GUEST_PERMISSION = {
   create: true,
   enter: true,
   talk: true,
@@ -61,11 +61,11 @@ const GUEST_PERMISSION = (exports.GUEST_PERMISSION = {
   kick: true,
   kickVote: true,
   wp: true,
-})
+}
 
 // const ENABLE_FORM = ["S", "J"]
-const ENABLE_ROUND_TIME = [10, 30, 60, 90, 120, 150]
-const MODE_LENGTH = GAME_TYPE.length
+export const ENABLE_ROUND_TIME = [10, 30, 60, 90, 120, 150]
+export const MODE_LENGTH = GAME_TYPE.length
 const PORT = Number(process.env["KKUTU_PORT"])
 
 process.on("uncaughtException", (err: Error) => {
