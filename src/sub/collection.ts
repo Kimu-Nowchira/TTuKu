@@ -306,6 +306,7 @@ export class RedisTable {
   }
 }
 
+// 버그가 있어 사용하지 않음
 class Pointer {
   second = {} as any
   sorts = null as any
@@ -486,6 +487,7 @@ class Pointer {
   }
 }
 
+// 버그가 있어 사용하지 않음
 export class PgTable {
   // TODO 중복 변수 제거
   source: string
