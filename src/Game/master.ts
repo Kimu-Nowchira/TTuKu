@@ -27,10 +27,18 @@ import { logger } from "../sub/jjlog"
 import Secure from "../sub/secure"
 import { config } from "../config"
 import Room from "./classes/Room"
+import {
+  getRoomList,
+  getUserList,
+  narrate,
+  NIGHT,
+  publish,
+  WebServer,
+} from "./kkutu"
+import Client from "./classes/Client"
+import { init as KKuTuInit } from "./kkutu"
 
 let HTTPS_Server
-
-let KKuTu = require("./kkutu")
 
 let MainDB
 
@@ -66,6 +74,8 @@ const ENABLE_FORM = (exports.ENABLE_FORM = ["S", "J"])
 const MODE_LENGTH = (exports.MODE_LENGTH = GAME_TYPE.length)
 const PORT = process.env["KKUTU_PORT"]
 
+const KKuTu = require("./kkutu")
+
 process.on("uncaughtException", function (err) {
   let text = `:${PORT} [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${
     err.stack
@@ -88,7 +98,7 @@ function processAdmin(id: string, value: string) {
 
   switch (cmd) {
     case "yell":
-      KKuTu.publish("yell", { value: value })
+      publish("yell", { value: value })
       return null
     case "kill":
       if ((temp = DIC[value])) {
@@ -270,7 +280,7 @@ function narrateFriends(id, friends, stat) {
       if (DIC[id]) DIC[id].send("friends", { list: sf })
 
       if (sf[SID]) {
-        KKuTu.narrate(sf[SID], "friend", { id: id, s: SID, stat: stat })
+        narrate(sf[SID], "friend", { id: id, s: SID, stat: stat })
         delete sf[SID]
       }
       for (i in WDIC) {
@@ -380,7 +390,7 @@ cluster.on("message", (worker, msg) => {
         }
         temp.password = msg.password
       }
-      KKuTu.publish("room", msg.data)
+      publish("room", msg.data)
       break
     case "room-expired":
       if (msg.create && ROOM[msg.id]) {
@@ -434,7 +444,7 @@ export const init = async (
       // 웹 서버
       if (info.headers.host.startsWith(config.GAME_SERVER_HOST + ":")) {
         if (WDIC[key]) WDIC[key].socket.close()
-        WDIC[key] = new KKuTu.WebServer(socket)
+        WDIC[key] = new WebServer(socket)
         logger.info(`New web server #${key}`)
         WDIC[key].socket.on("close", function () {
           logger.info(`Exit web server #${key}`)
@@ -451,7 +461,7 @@ export const init = async (
         .findOne(["_id", key])
         .limit(["profile", true])
         .on(function ($body) {
-          $c = new KKuTu.Client(socket, $body ? $body.profile : null, key)
+          $c = new Client(socket, $body ? $body.profile : null, key)
           $c.admin = config.ADMIN.indexOf($c.id) != -1
           /* Enhanced User Block System [S] */
           $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
@@ -474,7 +484,7 @@ export const init = async (
               $c.socket.close()
               return
             }
-            if (KKuTu.NIGHT) {
+            if (NIGHT) {
               $c.sendError(440)
               $c.socket.close()
               return
@@ -586,7 +596,7 @@ export const init = async (
     Server.on("error", function (err) {
       logger.warn("Error on ws: " + err.toString())
     })
-    KKuTu.init(MainDB, DIC, ROOM, GUEST_PERMISSION, CHAN)
+    KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, CHAN)
   }
 }
 
@@ -597,15 +607,15 @@ function joinNewUser($c) {
     box: $c.box,
     playTime: $c.data.playTime,
     okg: $c.okgCount,
-    users: KKuTu.getUserList(),
-    rooms: KKuTu.getRoomList(),
+    users: getUserList(),
+    rooms: getRoomList(),
     friends: $c.friends,
     admin: $c.admin,
     test: global.test,
     caj: !!$c._checkAjae,
   })
   narrateFriends($c.id, $c.friends, "on")
-  KKuTu.publish("conn", { user: $c.getData() })
+  publish("conn", { user: $c.getData() })
 
   logger.info("New user #" + $c.id)
 }
@@ -774,7 +784,7 @@ function processClientRequest($c, msg) {
 			if(!$c._checkAjae) return;
 			clearTimeout($c._checkAjae);
 			if(msg.answer == "yes") $c.confirmAjae(msg.input);
-			else if(KKuTu.NIGHT){
+			else if(NIGHT){
 				$c.sendError(440);
 				$c.socket.close();
 			}
@@ -795,7 +805,7 @@ KKuTu.onClientClosed = function ($c, code) {
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]
   if ($c.socket) $c.socket.removeAllListeners()
   if ($c.friends) narrateFriends($c.id, $c.friends, "off")
-  KKuTu.publish("disconn", { id: $c.id })
+  publish("disconn", { id: $c.id })
 
   logger.info("Exit #" + $c.id)
 }

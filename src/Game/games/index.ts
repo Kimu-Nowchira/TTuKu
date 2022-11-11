@@ -16,10 +16,11 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Client, DICData } from "../kkutu"
+import { DICData } from "../kkutu"
 import { Tail } from "../../sub/lizard"
 import Room from "../classes/Room"
 import Robot from "../classes/Robot"
+import Client from "../classes/Client"
 
 export class Game {
   // TODO: DB는 import 하는 걸로 변경해야 함

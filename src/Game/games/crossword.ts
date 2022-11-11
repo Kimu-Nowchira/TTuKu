@@ -18,7 +18,7 @@
 
 import { all, Tail } from "../../sub/lizard"
 import { Game } from "./index"
-import { Client } from "../kkutu"
+import Client from "../classes/Client"
 
 // const ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
 // const ROBOT_CATCH_RATE = [0.05, 0.2, 0.4, 0.6, 0.99]

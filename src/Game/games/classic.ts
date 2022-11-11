@@ -31,7 +31,7 @@ import {
 } from "../../const"
 import { all, Tail } from "../../sub/lizard"
 import Robot from "../classes/Robot"
-import { Client } from "../kkutu"
+import Client from "../classes/Client"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]

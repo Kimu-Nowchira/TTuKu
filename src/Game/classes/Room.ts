@@ -12,10 +12,11 @@ import { Crossword, Daneo, Game } from "../games"
 import cluster from "node:cluster"
 import { logger } from "../../sub/jjlog"
 import { all } from "../../sub/lizard"
-import { Client, DIC, ROOM, _rid, publish, DB } from "../kkutu"
+import { DIC, ROOM, _rid, publish, DB } from "../kkutu"
 import { GameData, RoomData } from "../types"
 import Classic from "../games/classic"
 import Robot from "./Robot"
+import Client from "./Client"
 
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
