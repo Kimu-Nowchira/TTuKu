@@ -28,6 +28,7 @@ import {
   onClientMessage,
   onClientClosed,
 } from "../kkutu"
+import { ClientExportData } from "../types"
 
 const channel = Number(process.env["CHANNEL"]) || 0
 
@@ -57,7 +58,7 @@ export default class Client {
   data: Data
 
   okgCount: number
-  form: any
+  form: string
   money: number
   equip: any
   exordial: string
@@ -150,7 +151,7 @@ export default class Client {
     // process.send({ type: 'okg', id: my.id, time: time });
   }
 
-  getData(gaming?: boolean) {
+  getData(gaming: boolean = false): ClientExportData {
     return {
       id: this.id,
       guest: this.guest,
@@ -557,11 +558,11 @@ export default class Client {
   }
 
   toggle() {
-    var $room = ROOM[this.place]
+    const $room = ROOM[this.place]
 
     if (!$room) return
     if ($room.master == this.id) return
-    if (this.form != "J") return
+    if (this.form !== "J") return
 
     this.ready = !this.ready
     this.publish("user", this.getData())

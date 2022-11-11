@@ -22,6 +22,7 @@ import { logger } from "../sub/jjlog"
 import { WebSocket } from "ws"
 import Room from "./classes/Room"
 import Client from "./classes/Client"
+import { ClientExportData, RoomExportData } from "./types"
 
 export let GUEST_PERMISSION: Record<string, boolean> = {}
 
@@ -73,29 +74,24 @@ export const init = (
 }
 
 export const getUserList = () => {
-  const res = {}
+  const res: Record<string, ClientExportData> = {}
   for (const i in DIC) res[i] = DIC[i].getData()
   return res
 }
 
 export const getRoomList = () => {
-  const res = {}
+  const res: Record<string, RoomExportData> = {}
   for (const i in ROOM) res[i] = ROOM[i].getData()
   return res
 }
 
-export const narrate = (list, type, data) => {
-  list.forEach((v) => {
-    if (DIC[v]) DIC[v].send(type, data)
-  })
-}
+export const narrate = (list, type: string, data) =>
+  list.forEach((v) => DIC[v]?.send(type, data))
 
 export const publish = (type: string, data, _room?: string) => {
   if (cluster.isPrimary) {
-    for (const i in DIC) {
-      DIC[i].send(type, data)
-    }
-  } else if (cluster.isWorker) {
+    for (const i in DIC) DIC[i].send(type, data)
+  } else {
     if (type == "room")
       process.send({ type: "room-publish", data: data, password: _room })
     else

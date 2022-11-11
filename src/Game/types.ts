@@ -24,7 +24,7 @@ export interface GameData {
   // classic
   wordLength?: number
   dic?: any
-  chain?: any
+  chain?: string[]
   theme?: any
   conso?: any
   prisoners?: any
@@ -88,4 +88,41 @@ export interface RoomData {
   game: GameData
   practice: string | boolean
   opts: any
+}
+
+export interface ClientExportData {
+  id: string
+  guest: boolean
+  game: {
+    ready: boolean
+    form: string
+    team: number
+    practice: number
+    score: number
+    item: any[]
+  }
+  profile: string | null
+  place: number | null
+  data: any | null
+  money: number | null
+  equip: any | null
+  exordial: string | null
+}
+
+export interface RoomExportData {
+  id: number
+  channel: number
+  title: string
+  password: boolean
+  limit: number
+  mode: number
+  round: number
+  time: number
+  master: string
+  players: number[]
+  readies: any
+  gaming: boolean
+  game: GameData
+  practice: boolean
+  opts: string[]
 }
