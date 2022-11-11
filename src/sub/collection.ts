@@ -304,20 +304,26 @@ export class RedisTable {
   }
 }
 
-const Pointer = function (mode, q, col: string, origin: PoolClient) {
-  if (!origin) throw new Error("The origin of the query is not defined.")
-  var _my = this
+class Pointer {
+  second = {} as any
+  sorts = null as any
+  findLimit: number
+
+  constructor(
+    public mode,
+    public q,
+    public col: string,
+    public origin: PoolClient
+  ) {}
   /* on: 입력받은 쿼리를 실행시킨다.
     @f		콜백 함수
     @chk	정보가 유효할 조건
     @onFail	유효하지 않은 정보일 경우에 대한 콜백 함수
   */
-  _my.second = {}
-  _my.sorts = null
 
-  this.on = function (f, chk, onFail) {
+  on(f?: Function, chk?, onFail?) {
     var sql
-    var sq = _my.second["$set"]
+    var sq = this.second["$set"]
     var uq
 
     function preCB(err, res) {
@@ -331,7 +337,7 @@ const Pointer = function (mode, q, col: string, origin: PoolClient) {
         return
       }
       if (res) {
-        if (mode == "findOne") {
+        if (this.mode == "findOne") {
           if (res.rows) res = res.rows[0]
         } else if (res.rows) res = res.rows
       }
@@ -354,74 +360,87 @@ const Pointer = function (mode, q, col: string, origin: PoolClient) {
             else if (DEBUG)
               throw new Error(
                 "The data from " +
-                  mode +
+                  this.mode +
                   "[" +
-                  JSON.stringify(q) +
+                  JSON.stringify(this.q) +
                   "] was not available."
               )
             else
               logger.warn(
                 "The data from [" +
-                  JSON.stringify(q) +
+                  JSON.stringify(this.q) +
                   "] was not available. Callback has been canceled."
               )
           }
         } else f(doc)
       }
     }
-    switch (mode) {
+
+    switch (this.mode) {
       case "findOne":
-        _my.findLimit = 1
+        this.findLimit = 1
       case "find":
-        sql = Escape("SELECT %s FROM %I", sqlSelect(_my.second), col)
-        if (q) sql += Escape(" WHERE %s", sqlWhere(q))
-        if (_my.sorts)
+        sql = Escape("SELECT %s FROM %I", sqlSelect(this.second), this.col)
+        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
+        if (this.sorts)
           sql += Escape(
             " ORDER BY %s",
-            _my.sorts
+            this.sorts
               .map(function (item) {
                 return item[0] + (item[1] == 1 ? " ASC" : " DESC")
               })
               .join(",")
           )
-        if (_my.findLimit) sql += Escape(" LIMIT %V", _my.findLimit)
+        if (this.findLimit) sql += Escape(" LIMIT %V", String(this.findLimit))
         break
       case "insert":
-        sql = Escape("INSERT INTO %I (%s) VALUES (%s)", col, sqlIK(q), sqlIV(q))
+        sql = Escape(
+          "INSERT INTO %I (%s) VALUES (%s)",
+          this.col,
+          sqlIK(this.q),
+          sqlIV(this.q)
+        )
         break
       case "update":
-        if (_my.second["$inc"]) {
-          sq = sqlSet(_my.second["$inc"], true)
+        if (this.second["$inc"]) {
+          sq = sqlSet(this.second["$inc"], true)
         } else {
           sq = sqlSet(sq)
         }
-        sql = Escape("UPDATE %I SET %s", col, sq)
-        if (q) sql += Escape(" WHERE %s", sqlWhere(q))
+        sql = Escape("UPDATE %I SET %s", this.col, sq)
+        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
         break
       case "upsert":
         // 업데이트 대상을 항상 _id(q의 가장 앞 값)로 가리키는 것으로 가정한다.
-        uq = uQuery(sq, q[0][1])
+        uq = uQuery(sq, this.q[0][1])
         sql = Escape(
           "INSERT INTO %I (%s) VALUES (%s)",
-          col,
+          this.col,
           sqlIK(uq),
           sqlIV(uq)
         )
         sql += Escape(" ON CONFLICT (_id) DO UPDATE SET %s", sqlSet(sq))
         break
       case "remove":
-        sql = Escape("DELETE FROM %I", col)
-        if (q) sql += Escape(" WHERE %s", sqlWhere(q))
+        sql = Escape("DELETE FROM %I", this.col)
+        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
         break
       case "createColumn":
-        sql = Escape("ALTER TABLE %I ADD COLUMN %K %I", col, q[0], q[1])
+        sql = Escape(
+          "ALTER TABLE %I ADD COLUMN %K %I",
+          this.col,
+          this.q[0],
+          this.q[1]
+        )
         break
       default:
-        logger.warn("Unhandled mode: " + mode)
+        logger.warn("Unhandled mode: " + this.mode)
     }
+
     if (!sql) return logger.warn("SQL is undefined. This call will be ignored.")
+    if (!this.origin) throw new Error("The origin of the query is not defined.")
     // logger.log("Query: " + sql.slice(0, 100));
-    origin.query(sql, preCB)
+    this.origin.query(sql, preCB)
     /*if(_my.findLimit){
 
       c = my.source[mode](q, flag, { limit: _my.findLimit }, preCB);
@@ -431,35 +450,35 @@ const Pointer = function (mode, q, col: string, origin: PoolClient) {
     return sql
   }
   // limit: find 쿼리에 걸린 문서를 필터링하는 지침을 정의한다.
-  this.limit = (_data) => {
+  limit(_data) {
     if (global.getType(_data) == "Number") {
-      _my.findLimit = _data
+      this.findLimit = _data
     } else {
-      _my.second = query(arguments)
-      _my.second.push(["_id", true])
+      this.second = query(arguments)
+      this.second.push(["_id", true])
     }
     return this
   }
-  this.sort = (_data) => {
-    _my.sorts =
+  sort(_data) {
+    this.sorts =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }
   // set: update 쿼리에 걸린 문서를 수정하는 지침을 정의한다.
-  this.set = (_data) => {
-    _my.second["$set"] =
+  set(_data) {
+    this.second["$set"] =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }
   // soi: upsert 쿼리에 걸린 문서에서, insert될 경우의 값을 정한다. (setOnInsert)
-  this.soi = (_data) => {
-    _my.second["$setOnInsert"] =
+  soi(_data) {
+    this.second["$setOnInsert"] =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }
   // inc: update 쿼리에 걸린 문서의 특정 값을 늘인다.
-  this.inc = (_data) => {
-    _my.second["$inc"] =
+  inc(_data) {
+    this.second["$inc"] =
       global.getType(_data) == "Array" ? query(arguments) : oQuery(_data)
     return this
   }

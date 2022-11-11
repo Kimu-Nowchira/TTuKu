@@ -45,12 +45,12 @@ export const kkutu = {}
 export const kkutu_cw = {}
 export const kkutu_manner = {}
 
-export let kkutu_injeong
-export let kkutu_shop
-export let kkutu_shop_desc
-export let session
-export let users
-export let ip_block
+export let kkutu_injeong: PgTable
+export let kkutu_shop: PgTable
+export let kkutu_shop_desc: PgTable
+export let session: PgTable
+export let users: PgTable
+export let ip_block: PgTable
 
 export const init = async () => {
   // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
