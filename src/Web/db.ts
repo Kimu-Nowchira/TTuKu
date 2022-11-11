@@ -32,6 +32,7 @@ const FAKE_REDIS_FUNC = () => {
   R.go({})
   return R
 }
+
 const FAKE_REDIS = {
   putGlobal: FAKE_REDIS_FUNC,
   getGlobal: FAKE_REDIS_FUNC,
