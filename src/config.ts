@@ -34,6 +34,7 @@ interface IConfig {
   }
   SEASON?: string
   SEASON_PRE?: string
+  isPublic: boolean
 }
 
 interface IAuthConfig {

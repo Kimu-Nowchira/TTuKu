@@ -24,7 +24,6 @@ import { config } from "../config"
 import { Agent, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
-const Pub = require("../sub/checkpub")
 
 const FAKE_REDIS_FUNC = () => {
   const R = new Tail()
@@ -40,7 +39,7 @@ const FAKE_REDIS = {
   getSurround: FAKE_REDIS_FUNC,
 }
 
-Pub.ready = () => {
+export const init = async () => {
   // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
   const Redis = createClient({ host: "redis", port: 6379 }) // 구형 레디스 기준
   const Pg = new Pool({

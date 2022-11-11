@@ -66,7 +66,7 @@ export const page = (req: any, res: Response, file: string, data?: any) => {
   const addr: string = req.ip || ""
   const sid: string = req.session.id || ""
 
-  data.published = global.isPublic
+  data.published = config.isPublic
   data.lang = req.query.locale || "ko_KR"
   if (!Language[data.lang as keyof typeof Language]) data.lang = "ko_KR"
   // URL ...?locale=en_US will show the page in English

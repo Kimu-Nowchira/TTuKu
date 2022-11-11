@@ -49,6 +49,7 @@ import { logger } from "../sub/jjlog"
 import { config } from "../config"
 import Secure from "../sub/secure"
 import * as WebInit from "../sub/webinit"
+import { init as DBInit } from "./db"
 
 const DB = require("./db")
 
@@ -63,7 +64,10 @@ const Language = {
 const ROUTES = ["major", "consume", "admin", "login"]
 const gameServers: GameClient[] = []
 
-require("../sub/checkpub")
+// TODO: 임시 코드 - 추후 삭제 필요
+global.isPublic = config.isPublic
+
+DBInit().then()
 
 logger.info("<< KKuTu Web >>")
 Server.set("views", __dirname + "/views")
@@ -257,7 +261,7 @@ Server.get("/", (req, res) => {
 
   DB.session.findOne(["_id", req.session.id]).on(($ses) => {
     // var sid = (($ses || {}).profile || {}).sid || "NULL";
-    if (global.isPublic) {
+    if (config.isPublic) {
       onFinish($ses)
       // DB.jjo_session.findOne([ '_id', sid ]).limit([ 'profile', true ]).on(onFinish);
     } else {
