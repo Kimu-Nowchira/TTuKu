@@ -35,24 +35,12 @@ import {
   ENABLE_FORM,
 } from "./master"
 import { config } from "../config"
+import { init as DBInit } from "../Web/db"
 
 let Server: WebSocket.Server
 let HTTPS_Server
 
-if (IS_SECURED) {
-  const options = Secure()
-  HTTPS_Server = https
-    .createServer(options)
-    .listen(global.test ? TEST_PORT + 416 : process.env["KKUTU_PORT"])
-  Server = new WebSocket.Server({ server: HTTPS_Server })
-} else {
-  Server = new WebSocket.Server({
-    port: global.test ? TEST_PORT + 416 : Number(process.env["KKUTU_PORT"]),
-    perMessageDeflate: false,
-  })
-}
-
-const MainDB = require("../Web/db")
+let MainDB
 
 const DIC: Record<string, Client> = {}
 const DNAME: Record<string, string> = {}
@@ -70,7 +58,25 @@ const RESERVED: Record<
 
 const CHAN = Number(process.env["CHANNEL"])
 
-logger.info(`<< KKuTu Server:${Server.options.port} >>`)
+const run = async () => {
+  await DBInit()
+  MainDB = require("../Web/db")
+
+  if (IS_SECURED) {
+    const options = Secure()
+    HTTPS_Server = https
+      .createServer(options)
+      .listen(global.test ? TEST_PORT + 416 : process.env["KKUTU_PORT"])
+    Server = new WebSocket.Server({ server: HTTPS_Server })
+  } else {
+    Server = new WebSocket.Server({
+      port: global.test ? TEST_PORT + 416 : Number(process.env["KKUTU_PORT"]),
+      perMessageDeflate: false,
+    })
+  }
+
+  logger.info(`<< KKuTu Server:${Server.options.port} >>`)
+}
 
 process.on("uncaughtException", function (err) {
   const text = `:${
@@ -486,9 +492,11 @@ const onClientClosedOnSlave = ($c) => {
 }
 
 MainDB.ready = function () {
-  logger.info("DB is ready.")
+  logger.info("DB is ready (SLAVE)")
   KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, undefined, {
     onClientClosed: onClientClosedOnSlave,
     onClientMessage: onClientMessageOnSlave,
   })
 }
+
+run().then()

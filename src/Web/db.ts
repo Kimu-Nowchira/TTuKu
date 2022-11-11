@@ -45,6 +45,13 @@ export const kkutu = {}
 export const kkutu_cw = {}
 export const kkutu_manner = {}
 
+export let kkutu_injeong
+export let kkutu_shop
+export let kkutu_shop_desc
+export let session
+export let users
+export let ip_block
+
 export const init = async () => {
   // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
   const Redis = createClient({ host: "redis", port: 6379 }) // 구형 레디스 기준
@@ -75,12 +82,6 @@ export const init = async () => {
     })
   )
 
-  // Pg.connect((err, pgMain) => {
-  //   if (err)
-  //     return logger.error(
-  //       "Error when connect to PostgresSQL server: " + err.toString()
-  //     )
-
   const mainAgent = new Agent("Postgres", pgMain)
 
   redis = noRedis ? FAKE_REDIS : new RedisTable(Redis, "KKuTu_Score")
@@ -91,13 +92,13 @@ export const init = async () => {
     kkutu_manner[LANG[i]] = new mainAgent.Table("kkutu_manner_" + LANG[i])
   }
 
-  exports.kkutu_injeong = new mainAgent.Table("kkutu_injeong")
-  exports.kkutu_shop = new mainAgent.Table("kkutu_shop")
-  exports.kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
+  kkutu_injeong = new mainAgent.Table("kkutu_injeong")
+  kkutu_shop = new mainAgent.Table("kkutu_shop")
+  kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
 
-  exports.session = new mainAgent.Table("session")
-  exports.users = new mainAgent.Table("users")
-  exports.ip_block = new mainAgent.Table("ip_block")
+  session = new mainAgent.Table("session")
+  users = new mainAgent.Table("users")
+  ip_block = new mainAgent.Table("ip_block")
 
   if (exports.ready) exports.ready(Redis, Pg)
   else logger.warn("DB.onReady was not defined yet.")
