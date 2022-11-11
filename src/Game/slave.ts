@@ -25,6 +25,7 @@ import process from "node:process"
 
 import WebSocket from "ws"
 import { appendFile } from "fs"
+import { logger } from "../sub/jjlog"
 
 let Server
 let HTTPS_Server
@@ -43,10 +44,7 @@ if (IS_SECURED) {
 }
 
 var Master = require("./master")
-var KKuTu = require("./kkutu")
-var Lizard = require("../sub/lizard")
 var MainDB = require("../Web/db")
-var JLog = require("../sub/jjlog")
 var GLOBAL = require("../sub/global.json")
 
 var DIC = {}
@@ -61,7 +59,7 @@ const ENABLE_ROUND_TIME = Master.ENABLE_ROUND_TIME
 const ENABLE_FORM = Master.ENABLE_FORM
 const MODE_LENGTH = Master.MODE_LENGTH
 
-JLog.info(`<< KKuTu Server:${Server.options.port} >>`)
+logger.info(`<< KKuTu Server:${Server.options.port} >>`)
 
 process.on("uncaughtException", function (err) {
   var text = `:${
@@ -71,10 +69,11 @@ process.on("uncaughtException", function (err) {
   for (var i in DIC) {
     DIC[i].send("dying")
   }
-  appendFile("../KKUTU_ERROR.log", text, function (res) {
-    JLog.error(`ERROR OCCURRED! This worker will die in 10 seconds.`)
+  appendFile("../KKUTU_ERROR.log", text, () => {
+    logger.error(`ERROR OCCURRED! This worker will die in 10 seconds.`)
     console.log(text)
   })
+
   setTimeout(function () {
     process.exit()
   }, 10000)
@@ -114,7 +113,7 @@ process.on("message", function (msg: any) {
       delete ROOM[msg.room.id]
       break
     default:
-      JLog.warn(`Unhandled IPC message type: ${msg.type}`)
+      logger.warn(`Unhandled IPC message type: ${msg.type}`)
   }
 })
 
@@ -126,10 +125,10 @@ Server.on("connection", function (socket, info) {
   var $c
 
   socket.on("error", function (err) {
-    JLog.warn("Error on #" + key + " on ws: " + err.toString())
+    logger.warn("Error on #" + key + " on ws: " + err.toString())
   })
   if (CHAN !== Number(chunk[1])) {
-    JLog.warn(`Wrong channel value ${chunk[1]} on @${CHAN}`)
+    logger.warn(`Wrong channel value ${chunk[1]} on @${CHAN}`)
     socket.close()
     return
   }
@@ -142,7 +141,7 @@ Server.on("connection", function (socket, info) {
     delete reserve._expiration
     delete RESERVED[key]
   } else {
-    JLog.warn(`Not reserved from ${key} on @${CHAN}`)
+    logger.warn(`Not reserved from ${key} on @${CHAN}`)
     socket.close()
     return
   }
@@ -204,7 +203,7 @@ Server.on("connection", function (socket, info) {
             // 입장 실패
             $c.socket.close()
           }
-          JLog.info(`Chan @${CHAN} New #${$c.id}`)
+          logger.info(`Chan @${CHAN} New #${$c.id}`)
         } else {
           $c.send("error", {
             code: ref.result,
@@ -217,13 +216,12 @@ Server.on("connection", function (socket, info) {
     })
 })
 Server.on("error", function (err) {
-  JLog.warn("Error on ws: " + err.toString())
+  logger.warn("Error on ws: " + err.toString())
 })
 
 export const onClientMessageOnSlave = ($c, msg) => {
-  var stable = true
+  let stable = true
   var temp
-  var now = new Date().getTime()
 
   if (!msg) return
 
@@ -239,13 +237,13 @@ export const onClientMessageOnSlave = ($c, msg) => {
       break
     case "talk":
       if (!msg.value) return
-      if (!msg.value.substr) return
+      if (typeof msg.value !== "string") return
       if (!GUEST_PERMISSION.talk)
         if ($c.guest) {
           $c.send("error", { code: 401 })
           return
         }
-      msg.value = msg.value.substr(0, 200)
+      msg.value = msg.value.substring(0, 200)
       if (msg.relay) {
         if ($c.subPlace) temp = $c.pracRoom
         else if (!(temp = ROOM[$c.place])) return
@@ -439,7 +437,7 @@ export const onClientMessageOnSlave = ($c, msg) => {
           return
         }
 
-      msg.value = msg.value.substr(0, 200)
+      msg.value = msg.value.substring(0, 200)
       msg.value = msg.value.replace(/[^a-z가-힣]/g, "")
       if (msg.value.length < 2) return
       break
@@ -464,17 +462,17 @@ export const onClientMessageOnSlave = ($c, msg) => {
   }
 }
 
-const onClientClosedOnSlave = ($c, code) => {
+const onClientClosedOnSlave = ($c) => {
   delete DIC[$c.id]
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]
   if ($c.socket) $c.socket.removeAllListeners()
   publish("disconnRoom", { id: $c.id })
 
-  JLog.alert(`Chan @${CHAN} Exit #${$c.id}`)
+  logger.info(`Chan @${CHAN} Exit #${$c.id}`)
 }
 
 MainDB.ready = function () {
-  JLog.success("DB is ready.")
+  logger.info("DB is ready.")
   KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, undefined, {
     onClientClosed: onClientClosedOnSlave,
     onClientMessage: onClientMessageOnSlave,
