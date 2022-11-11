@@ -326,32 +326,7 @@ class Pointer {
     var sq = this.second["$set"]
     var uq
 
-    function preCB(err, res) {
-      if (err) {
-        logger.error("Error when querying: " + sql)
-        logger.error("Context: " + err.toString())
-        if (onFail) {
-          logger.info("onFail calling...")
-          onFail(err)
-        }
-        return
-      }
-      if (res) {
-        if (this.mode == "findOne") {
-          if (res.rows) res = res.rows[0]
-        } else if (res.rows) res = res.rows
-      }
-      callback(err, res)
-      /*
-      if(mode == "find"){
-        if(_my.sorts){
-          doc = doc.sort(_my.sorts);
-        }
-        doc.toArray(callback);
-      }else callback(err, doc);*/
-    }
-
-    function callback(err: Error, doc) {
+    const callback = (err: Error, doc) => {
       if (f) {
         if (chk) {
           if (isDataAvailable(doc, chk)) f(doc)
@@ -374,6 +349,31 @@ class Pointer {
           }
         } else f(doc)
       }
+    }
+
+    const preCB = (err, res) => {
+      if (err) {
+        logger.error("Error when querying: " + sql)
+        logger.error("Context: " + err.toString())
+        if (onFail) {
+          logger.info("onFail calling...")
+          onFail(err)
+        }
+        return
+      }
+      if (res) {
+        if (this.mode == "findOne") {
+          if (res.rows) res = res.rows[0]
+        } else if (res.rows) res = res.rows
+      }
+      callback(err, res)
+      /*
+      if(mode == "find"){
+        if(_my.sorts){
+          doc = doc.sort(_my.sorts);
+        }
+        doc.toArray(callback);
+      }else callback(err, doc);*/
     }
 
     switch (this.mode) {
@@ -522,6 +522,7 @@ export class PgTable {
 
   direct(q, f) {
     logger.warn("Direct query: " + q)
-    this.origin.query(q, f)
+    // this.origin.query(q, f)
+    this.origin.query(q).then(f)
   }
 }
