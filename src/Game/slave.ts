@@ -75,6 +75,111 @@ const run = async () => {
     })
   }
 
+  Server.on("connection", (socket, info) => {
+    const chunk = info.url.slice(1).split("&")
+    const key = chunk[0]
+    const reserve = RESERVED[key] || {}
+
+    socket.on("error", (err) => {
+      logger.warn("Error on #" + key + " on ws: " + err.toString())
+    })
+
+    if (CHAN !== Number(chunk[1])) {
+      logger.warn(`Wrong channel value ${chunk[1]} on @${CHAN}`)
+      socket.close()
+      return
+    }
+
+    const room = reserve.room
+    if (room) {
+      if (room._create) {
+        room._id = room.id
+        delete room.id
+      }
+      clearTimeout(reserve._expiration)
+      delete reserve._expiration
+      delete RESERVED[key]
+    } else {
+      logger.warn(`Not reserved from ${key} on @${CHAN}`)
+      socket.close()
+      return
+    }
+    MainDB.session
+      .findOne(["_id", key])
+      .limit(["profile", true])
+      .on(($body) => {
+        const $c = new Client(socket, $body ? $body.profile : null, key)
+        $c.admin = config.ADMIN.indexOf($c.id) != -1
+
+        /* Enhanced User Block System [S] */
+        $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
+          ? info.connection.remoteAddress
+          : info.headers["x-forwarded-for"] || info.connection.remoteAddress
+        if (
+          config.USER_BLOCK_OPTIONS.USE_MODULE &&
+          ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
+            !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
+        ) {
+          MainDB.ip_block
+            .findOne(["_id", $c.remoteAddress])
+            .on(function ($body) {
+              if ($body.reasonBlocked) {
+                $c.socket.send(
+                  JSON.stringify({
+                    type: "error",
+                    code: 446,
+                    reasonBlocked: !$body.reasonBlocked
+                      ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+                      : $body.reasonBlocked,
+                    ipBlockedUntil: !$body.ipBlockedUntil
+                      ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+                      : $body.ipBlockedUntil,
+                  })
+                )
+                $c.socket.close()
+                return
+              }
+            })
+        }
+        /* Enhanced User Block System [E] */
+        if (DIC[$c.id]) {
+          DIC[$c.id].send("error", { code: 408 })
+          DIC[$c.id].socket.close()
+        }
+        if (DEVELOP && !TESTER.includes($c.id)) {
+          $c.send("error", { code: 500 })
+          $c.socket.close()
+          return
+        }
+        $c.refresh().then(function (ref) {
+          if (ref.result == 200) {
+            DIC[$c.id] = $c
+            DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] =
+              $c.id
+
+            $c.enter(room, reserve.spec, reserve.pass)
+            if ($c.place == room.id) {
+              $c.publish("connRoom", { user: $c.getData() })
+            } else {
+              // 입장 실패
+              $c.socket.close()
+            }
+            logger.info(`Chan @${CHAN} New #${$c.id}`)
+          } else {
+            $c.send("error", {
+              code: ref.result,
+              message: ref.black,
+            })
+            $c._error = ref.result
+            $c.socket.close()
+          }
+        })
+      })
+  })
+  Server.on("error", function (err) {
+    logger.warn("Error on ws: " + err.toString())
+  })
+
   logger.info(`<< KKuTu Server:${Server.options.port} >>`)
 }
 
@@ -134,109 +239,6 @@ process.on("message", (msg: any) => {
     default:
       logger.warn(`Unhandled IPC message type: ${msg.type}`)
   }
-})
-
-Server.on("connection", (socket, info) => {
-  const chunk = info.url.slice(1).split("&")
-  const key = chunk[0]
-  const reserve = RESERVED[key] || {}
-
-  socket.on("error", (err) => {
-    logger.warn("Error on #" + key + " on ws: " + err.toString())
-  })
-
-  if (CHAN !== Number(chunk[1])) {
-    logger.warn(`Wrong channel value ${chunk[1]} on @${CHAN}`)
-    socket.close()
-    return
-  }
-
-  const room = reserve.room
-  if (room) {
-    if (room._create) {
-      room._id = room.id
-      delete room.id
-    }
-    clearTimeout(reserve._expiration)
-    delete reserve._expiration
-    delete RESERVED[key]
-  } else {
-    logger.warn(`Not reserved from ${key} on @${CHAN}`)
-    socket.close()
-    return
-  }
-  MainDB.session
-    .findOne(["_id", key])
-    .limit(["profile", true])
-    .on(($body) => {
-      const $c = new Client(socket, $body ? $body.profile : null, key)
-      $c.admin = config.ADMIN.indexOf($c.id) != -1
-
-      /* Enhanced User Block System [S] */
-      $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
-        ? info.connection.remoteAddress
-        : info.headers["x-forwarded-for"] || info.connection.remoteAddress
-      if (
-        config.USER_BLOCK_OPTIONS.USE_MODULE &&
-        ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
-          !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
-      ) {
-        MainDB.ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
-          if ($body.reasonBlocked) {
-            $c.socket.send(
-              JSON.stringify({
-                type: "error",
-                code: 446,
-                reasonBlocked: !$body.reasonBlocked
-                  ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
-                  : $body.reasonBlocked,
-                ipBlockedUntil: !$body.ipBlockedUntil
-                  ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
-                  : $body.ipBlockedUntil,
-              })
-            )
-            $c.socket.close()
-            return
-          }
-        })
-      }
-      /* Enhanced User Block System [E] */
-      if (DIC[$c.id]) {
-        DIC[$c.id].send("error", { code: 408 })
-        DIC[$c.id].socket.close()
-      }
-      if (DEVELOP && !TESTER.includes($c.id)) {
-        $c.send("error", { code: 500 })
-        $c.socket.close()
-        return
-      }
-      $c.refresh().then(function (ref) {
-        if (ref.result == 200) {
-          DIC[$c.id] = $c
-          DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] =
-            $c.id
-
-          $c.enter(room, reserve.spec, reserve.pass)
-          if ($c.place == room.id) {
-            $c.publish("connRoom", { user: $c.getData() })
-          } else {
-            // 입장 실패
-            $c.socket.close()
-          }
-          logger.info(`Chan @${CHAN} New #${$c.id}`)
-        } else {
-          $c.send("error", {
-            code: ref.result,
-            message: ref.black,
-          })
-          $c._error = ref.result
-          $c.socket.close()
-        }
-      })
-    })
-})
-Server.on("error", function (err) {
-  logger.warn("Error on ws: " + err.toString())
 })
 
 export const onClientMessageOnSlave = ($c, msg) => {
