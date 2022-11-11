@@ -27,6 +27,14 @@ import WebSocket from "ws"
 import { appendFile } from "fs"
 import { logger } from "../sub/jjlog"
 import Room from "./classes/Room"
+import {
+  DEVELOP,
+  ENABLE_ROUND_TIME,
+  MODE_LENGTH,
+  GUEST_PERMISSION,
+  ENABLE_FORM,
+} from "./master"
+import { config } from "../config"
 
 let Server: WebSocket.Server
 let HTTPS_Server
@@ -44,9 +52,7 @@ if (IS_SECURED) {
   })
 }
 
-var Master = require("./master")
-var MainDB = require("../Web/db")
-var GLOBAL = require("../sub/global.json")
+const MainDB = require("../Web/db")
 
 const DIC: Record<string, Client> = {}
 const DNAME: Record<string, string> = {}
@@ -54,20 +60,15 @@ const ROOM: Record<string, Room> = {}
 const RESERVED: Record<
   string,
   {
-    profile: string
-    room: any
-    spec: string
-    pass: string
-    _expiration: NodeJS.Timeout
+    profile?: string
+    room?: any
+    spec?: string
+    pass?: string
+    _expiration?: NodeJS.Timeout
   }
 > = {}
 
 const CHAN = Number(process.env["CHANNEL"])
-const DEVELOP = Master.DEVELOP
-const GUEST_PERMISSION = Master.GUEST_PERMISSION
-const ENABLE_ROUND_TIME = Master.ENABLE_ROUND_TIME
-const ENABLE_FORM = Master.ENABLE_FORM
-const MODE_LENGTH = Master.MODE_LENGTH
 
 logger.info(`<< KKuTu Server:${Server.options.port} >>`)
 
@@ -133,7 +134,6 @@ Server.on("connection", (socket, info) => {
   const chunk = info.url.slice(1).split("&")
   const key = chunk[0]
   const reserve = RESERVED[key] || {}
-  var $c
 
   socket.on("error", (err) => {
     logger.warn("Error on #" + key + " on ws: " + err.toString())
@@ -164,16 +164,16 @@ Server.on("connection", (socket, info) => {
     .limit(["profile", true])
     .on(($body) => {
       const $c = new Client(socket, $body ? $body.profile : null, key)
-      $c.admin = GLOBAL.ADMIN.indexOf($c.id) != -1
+      $c.admin = config.ADMIN.indexOf($c.id) != -1
 
       /* Enhanced User Block System [S] */
-      $c.remoteAddress = GLOBAL.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
+      $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
         ? info.connection.remoteAddress
         : info.headers["x-forwarded-for"] || info.connection.remoteAddress
       if (
-        GLOBAL.USER_BLOCK_OPTIONS.USE_MODULE &&
-        ((GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
-          !GLOBAL.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
+        config.USER_BLOCK_OPTIONS.USE_MODULE &&
+        ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
+          !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
       ) {
         MainDB.ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
           if ($body.reasonBlocked) {
@@ -182,10 +182,10 @@ Server.on("connection", (socket, info) => {
                 type: "error",
                 code: 446,
                 reasonBlocked: !$body.reasonBlocked
-                  ? GLOBAL.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+                  ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
                   : $body.reasonBlocked,
                 ipBlockedUntil: !$body.ipBlockedUntil
-                  ? GLOBAL.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+                  ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
                   : $body.ipBlockedUntil,
               })
             )

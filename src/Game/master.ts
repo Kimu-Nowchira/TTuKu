@@ -64,7 +64,7 @@ export const GUEST_PERMISSION = {
   wp: true,
 }
 
-// const ENABLE_FORM = ["S", "J"]
+export const ENABLE_FORM = ["S", "J"]
 export const ENABLE_ROUND_TIME = [10, 30, 60, 90, 120, 150]
 export const MODE_LENGTH = GAME_TYPE.length
 const PORT = Number(process.env["KKUTU_PORT"])

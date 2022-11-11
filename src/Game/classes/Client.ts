@@ -78,6 +78,7 @@ export default class Client {
   admin: boolean
   remoteAddress: string | string[]
   _error: Error
+  _invited: boolean
 
   constructor(
     public socket: WebSocket,
