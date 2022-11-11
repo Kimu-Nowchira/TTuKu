@@ -18,7 +18,9 @@
 
 import { appendFile } from "fs"
 import cluster, { Worker as ClusterWorker } from "node:cluster"
-import WebSocket from "ws"
+import process from "node:process"
+
+import WebSocket, { Server as WebSocketServer } from "ws"
 import * as https from "https"
 
 import { GAME_TYPE, IS_SECURED, KKUTU_MAX, TEST_PORT, TESTER } from "../const"
@@ -35,7 +37,7 @@ import WebServer from "./classes/WebServer"
 let HTTPS_Server
 let MainDB
 
-let Server
+let Server: WebSocketServer<WebSocket>
 let DIC = {}
 let DNAME = {}
 let ROOM = {}
@@ -66,8 +68,8 @@ const ENABLE_ROUND_TIME = [10, 30, 60, 90, 120, 150]
 const MODE_LENGTH = GAME_TYPE.length
 const PORT = Number(process.env["KKUTU_PORT"])
 
-process.on("uncaughtException", function (err) {
-  let text = `:${PORT} [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${
+process.on("uncaughtException", (err: Error) => {
+  const text = `:${PORT} [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${
     err.stack
   }\n`
 
@@ -76,6 +78,7 @@ process.on("uncaughtException", function (err) {
     console.log(text)
   })
 })
+
 function processAdmin(id: string, value: string) {
   let cmd: string = ""
   let temp
@@ -225,6 +228,7 @@ function processAdmin(id: string, value: string) {
   }
   return value
 }
+
 /* Enhanced User Block System [S] */
 function addDate(num) {
   if (isNaN(num)) return
@@ -237,6 +241,7 @@ function processAdminErrorCallback(error, id) {
   })
   logger.warn(`[Block] 명령을 처리하는 도중 오류가 발생하였습니다: ${error}`)
 }
+
 /* Enhanced User Block System [E] */
 function checkTailUser(id, place, msg) {
   let temp
@@ -249,6 +254,7 @@ function checkTailUser(id, place, msg) {
     DIC[temp].send("tail", { a: "user", rid: place, id: id, msg: msg })
   }
 }
+
 function narrateFriends(id, friends, stat) {
   if (!friends) return
   let fl = Object.keys(friends)
@@ -635,9 +641,9 @@ export const init = async (
         perMessageDeflate: false,
       })
     }
-    Server.on("connection", function (socket, info) {
-      let key = info.url.slice(1)
-      let $c
+
+    Server.on("connection", (socket, info) => {
+      const key = info.url.slice(1)
 
       socket.on("error", function (err) {
         logger.warn("Error on #" + key + " on ws: " + err.toString())
@@ -662,7 +668,7 @@ export const init = async (
         .findOne(["_id", key])
         .limit(["profile", true])
         .on(function ($body) {
-          $c = new Client(socket, $body ? $body.profile : null, key)
+          const $c = new Client(socket, $body ? $body.profile : null, key)
           $c.admin = config.ADMIN.indexOf($c.id) != -1
           /* Enhanced User Block System [S] */
           $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
@@ -794,9 +800,11 @@ export const init = async (
           })
         })
     })
-    Server.on("error", function (err) {
+
+    Server.on("error", (err: Error) => {
       logger.warn("Error on ws: " + err.toString())
     })
+
     KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, CHAN, {
       onClientMessage: onClientMessageOnMaster,
       onClientClosed: onClientClosedOnMaster,

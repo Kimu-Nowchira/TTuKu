@@ -21,6 +21,7 @@ import { init as KKuTuInit, publish } from "./kkutu"
 import { IS_SECURED, TEST_PORT, TESTER } from "../const"
 import Secure from "../sub/secure"
 import * as https from "https"
+import process from "node:process"
 
 import WebSocket from "ws"
 import { appendFile } from "fs"

@@ -74,6 +74,11 @@ export default class Client {
 
   playAt: number
 
+  passRecaptcha: boolean
+  admin: boolean
+  remoteAddress: string | string[]
+  _error: Error
+
   constructor(
     public socket: WebSocket,
     public profile: any,
