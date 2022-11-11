@@ -67,8 +67,6 @@ const gameServers: GameClient[] = []
 // TODO: 임시 코드 - 추후 삭제 필요
 global.isPublic = config.isPublic
 
-DBInit().then()
-
 logger.info("<< KKuTu Web >>")
 Server.set("views", __dirname + "/views")
 Server.set("view engine", "pug")
@@ -114,8 +112,6 @@ Server.use((req, res, next) => {
     next()
   }
 })
-
-WebInit.init(Server, true)
 
 class GameClient {
   socket: WS
@@ -170,6 +166,14 @@ class GameClient {
     this.socket.send(JSON.stringify(data))
   }
 }
+
+const run = async () => {
+  console.info("Connecting to database...")
+  await DBInit()
+  WebInit.init(Server, true)
+}
+
+run().then()
 
 DB.ready = function () {
   setInterval(function () {
