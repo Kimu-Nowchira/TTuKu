@@ -627,7 +627,6 @@ export const init = async (
 ) => {
   SID = _SID
 
-  await DBInit()
   MainDB = require("../Web/db")
   MainDB.ready = function () {
     logger.info("Master DB is ready.")
@@ -816,4 +815,6 @@ export const init = async (
       onClientClosed: onClientClosedOnMaster,
     })
   }
+
+  await DBInit()
 }
