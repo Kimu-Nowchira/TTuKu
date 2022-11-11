@@ -262,8 +262,8 @@ export default class Client {
       R.go({ result: 200 })
     } else
       DB.users.findOne(["_id", this.id]).on(($user) => {
-        var first = !$user
-        var black = first ? "" : $user.black
+        const first = !$user
+        let black = first ? "" : $user.black
         /* Enhanced User Block System [S] */
         const blockedUntil =
           first || !$user.blockedUntil ? null : $user.blockedUntil
@@ -302,7 +302,7 @@ export default class Client {
   }
 
   flush(box?: boolean, equip?: boolean, friends?: boolean) {
-    var R = new Tail()
+    const R = new Tail()
 
     if (this.guest) {
       R.go({ id: this.id, prev: 0 })
@@ -332,7 +332,7 @@ export default class Client {
 
   invokeWordPiece(text, coef) {
     if (!this.game.wpc) return
-    var v
+    let v
 
     if (Math.random() <= 0.04 * coef) {
       v = text.charAt(Math.floor(Math.random() * text.length))
@@ -470,7 +470,7 @@ export default class Client {
   }
 
   setForm(mode) {
-    var $room = ROOM[this.place]
+    const $room = ROOM[this.place]
 
     if (!$room) return
 
@@ -527,12 +527,10 @@ export default class Client {
   }
 
   kickVote(client, agree) {
-    var $room = ROOM[client.place]
-    var $m
-
+    const $room = ROOM[client.place]
     if (!$room) return
 
-    $m = DIC[$room.master]
+    const $m = DIC[$room.master]
     if ($room.kickVote) {
       $room.kickVote[agree ? "Y" : "N"]++
       if ($room.kickVote.list.push(client.id) >= $room.players.length - 2) {
@@ -582,9 +580,7 @@ export default class Client {
   }
 
   practice(level) {
-    var $room = ROOM[this.place]
-    var ud
-    var pr
+    const $room = ROOM[this.place]
 
     if (!$room) return
     if (this.subPlace) return
@@ -592,12 +588,16 @@ export default class Client {
 
     this.team = 0
     this.ready = false
-    ud = this.getData()
+
+    const userData = this.getData()
     this.pracRoom = new Room($room.getData())
     this.pracRoom.id = $room.id + 1000
-    ud.game.practice = this.pracRoom.id
-    if ((pr = $room.preReady())) return this.sendError(pr)
-    this.publish("user", ud)
+    userData.game.practice = this.pracRoom.id
+
+    const pr = $room.preReady()
+    if (pr) return this.sendError(pr)
+
+    this.publish("user", userData)
     this.pracRoom.time /= this.pracRoom.rule.time
     this.pracRoom.limit = 1
     this.pracRoom.password = ""
@@ -609,7 +609,7 @@ export default class Client {
   }
 
   setRoom(room) {
-    var $room = ROOM[this.place]
+    const $room = ROOM[this.place]
 
     if ($room) {
       if (!$room.gaming) {
@@ -630,19 +630,18 @@ export default class Client {
   }
 
   applyEquipOptions(rw) {
-    var $obj
-    var i, j
-    var pm = rw.playTime / 60000
+    const pm = rw.playTime / 60000
 
     rw._score = Math.round(rw.score)
     rw._money = Math.round(rw.money)
     rw._blog = []
     this.checkExpire()
-    for (i in this.equip) {
-      $obj = SHOP[this.equip[i]]
+    for (const i in this.equip) {
+      const $obj = SHOP[this.equip[i]]
       if (!$obj) continue
       if (!$obj.options) continue
-      for (j in $obj.options) {
+
+      for (const j in $obj.options) {
         if (j == "gEXP") rw.score += rw._score * $obj.options[j]
         else if (j == "hEXP") rw.score += $obj.options[j] * pm
         else if (j == "gMNY") rw.money += rw._money * $obj.options[j]
@@ -651,15 +650,17 @@ export default class Client {
         rw._blog.push("q" + j + $obj.options[j])
       }
     }
+
     if (rw.together && this.okgCount > 0) {
-      i = 0.05 * this.okgCount
-      j = 0.05 * this.okgCount
+      const i = 0.05 * this.okgCount
+      const j = 0.05 * this.okgCount
 
       rw.score += rw._score * i
       rw.money += rw._money * j
       rw._blog.push("kgEXP" + i)
       rw._blog.push("kgMNY" + j)
     }
+
     rw.score = Math.round(rw.score)
     rw.money = Math.round(rw.money)
   }
@@ -674,7 +675,7 @@ export default class Client {
   }
 
   addFriend(id) {
-    var fd = DIC[id]
+    const fd = DIC[id]
 
     if (!fd) return
     this.friends[id] = fd.profile.title || fd.profile.name
@@ -689,7 +690,7 @@ export default class Client {
       .on(($doc) => {
         if (!$doc) return
 
-        var f = $doc.friends
+        const f = $doc.friends
 
         delete f[this.id]
         DB.users.update(["_id", id]).set(["friends", f]).on()

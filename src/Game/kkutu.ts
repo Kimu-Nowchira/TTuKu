@@ -17,9 +17,6 @@
  */
 
 import cluster, { Worker as ClusterWorker } from "node:cluster"
-import { GAME_TYPE } from "../const"
-import { logger } from "../sub/jjlog"
-import { WebSocket } from "ws"
 import Room from "./classes/Room"
 import Client from "./classes/Client"
 import { ClientExportData, RoomExportData } from "./types"
@@ -27,7 +24,7 @@ import { ClientExportData, RoomExportData } from "./types"
 export let GUEST_PERMISSION: Record<string, boolean> = {}
 
 export let DB
-export let SHOP
+export const SHOP: Record<string, any> = {}
 
 export type IRooms = Record<number, Room>
 export type DICData = Record<string, Client>
@@ -65,11 +62,7 @@ export const init = (
   onClientClosed = events.onClientClosed
 
   DB.kkutu_shop.find().on(($shop) => {
-    SHOP = {}
-
-    $shop.forEach((item) => {
-      SHOP[item._id] = item
-    })
+    $shop.forEach((item) => (SHOP[item._id] = item))
   })
 }
 
@@ -98,35 +91,6 @@ export const publish = (type: string, data, _room?: string) => {
       for (const i in DIC) {
         DIC[i].send(type, data)
       }
-  }
-}
-
-export class WebServer {
-  constructor(public socket: WebSocket) {
-    socket.on("message", (msg: any) => {
-      try {
-        msg = JSON.parse(msg)
-      } catch (e) {
-        return logger.error("JSON.parse() failed: " + msg)
-      }
-
-      switch (msg.type) {
-        case "seek":
-          this.send("seek", { value: Object.keys(DIC).length })
-          break
-        case "narrate-friend":
-          narrate(msg.list, "friend", {
-            id: msg.id,
-            s: msg.s,
-            stat: msg.stat,
-          })
-      }
-    })
-  }
-
-  send(type: string, data: any) {
-    if (this.socket.readyState === 1)
-      this.socket.send(JSON.stringify({ ...(data || {}), type }))
   }
 }
 

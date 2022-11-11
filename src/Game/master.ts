@@ -27,21 +27,12 @@ import { logger } from "../sub/jjlog"
 import Secure from "../sub/secure"
 import { config } from "../config"
 import Room from "./classes/Room"
-import {
-  getRoomList,
-  getUserList,
-  narrate,
-  NIGHT,
-  publish,
-  WebServer,
-} from "./kkutu"
+import { getRoomList, getUserList, narrate, NIGHT, publish } from "./kkutu"
 import Client from "./classes/Client"
 import { init as KKuTuInit } from "./kkutu"
+import WebServer from "./classes/WebServer"
 
 let HTTPS_Server
-
-const KKuTu = require("./kkutu")
-
 let MainDB
 
 let Server
@@ -69,19 +60,18 @@ const GUEST_PERMISSION = (exports.GUEST_PERMISSION = {
   kickVote: true,
   wp: true,
 })
-const ENABLE_ROUND_TIME = (exports.ENABLE_ROUND_TIME = [
-  10, 30, 60, 90, 120, 150,
-])
-const ENABLE_FORM = (exports.ENABLE_FORM = ["S", "J"])
-const MODE_LENGTH = (exports.MODE_LENGTH = GAME_TYPE.length)
-const PORT = process.env["KKUTU_PORT"]
+
+// const ENABLE_FORM = ["S", "J"]
+const ENABLE_ROUND_TIME = [10, 30, 60, 90, 120, 150]
+const MODE_LENGTH = GAME_TYPE.length
+const PORT = Number(process.env["KKUTU_PORT"])
 
 process.on("uncaughtException", function (err) {
   let text = `:${PORT} [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${
     err.stack
   }\n`
 
-  appendFile("/jjolol/KKUTU_ERROR.log", text, function (res) {
+  appendFile("/jjolol/KKUTU_ERROR.log", text, () => {
     logger.error(`ERROR OCCURRED ON THE MASTER!`)
     console.log(text)
   })
@@ -458,7 +448,6 @@ export const onClientMessageOnMaster = ($c, msg) => {
 function processClientRequest($c, msg) {
   let stable = true
   let temp
-  let now = new Date().getTime()
 
   switch (msg.type) {
     case "yell":
@@ -472,13 +461,14 @@ function processClientRequest($c, msg) {
       break
     case "talk":
       if (!msg.value) return
-      if (!msg.value.substr) return
+      // 원래는 if (!msg.value.substr) 이었는데... 이걸 말하려던 거였겠지?
+      if (typeof !msg.value !== "string") return
       if (!GUEST_PERMISSION.talk)
         if ($c.guest) {
           $c.send("error", { code: 401 })
           return
         }
-      msg.value = msg.value.substr(0, 200)
+      msg.value = msg.value.substring(0, 200)
       if ($c.admin) {
         if (!processAdmin($c.id, msg.value)) break
       }
@@ -608,7 +598,8 @@ function processClientRequest($c, msg) {
   }
 }
 
-const onClientClosedOnMaster = ($c, code) => {
+// $c, code를 받았지만, code를 사용하지 않아서 없애 둠
+const onClientClosedOnMaster = ($c) => {
   delete DIC[$c.id]
   if ($c._error != 409)
     MainDB.users.update(["_id", $c.id]).set(["server", ""]).on()
