@@ -196,8 +196,9 @@ export default class Room {
 
     if (client.id === this.master) {
       // TODO: 원래는 target이 false이었는데, 타입의 일관성을 위해 0으로 바꿈. (비직관적이므로 개선 필요)
-      // 의미가 없는 while문을 제거함
-      this.removeAI(0, true)
+      while (true) {
+        if (!this.removeAI(0, true)) break
+      }
       this.master = this.players[0]
     }
 
