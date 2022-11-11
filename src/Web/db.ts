@@ -21,7 +21,7 @@ import { Pool, PoolClient } from "pg"
 import { logger } from "../sub/jjlog"
 import { Tail } from "../sub/lizard"
 import { config } from "../config"
-import { Agent, RedisTable } from "../sub/collection"
+import { Agent, PgTable, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
 
@@ -82,23 +82,37 @@ export const init = async () => {
     })
   )
 
-  const mainAgent = new Agent("Postgres", pgMain)
+  // const mainAgent = new Agent("Postgres", pgMain)
 
   redis = noRedis ? FAKE_REDIS : new RedisTable(Redis, "KKuTu_Score")
 
+  // for (const i in LANG) {
+  //   kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
+  //   kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
+  //   kkutu_manner[LANG[i]] = new mainAgent.Table("kkutu_manner_" + LANG[i])
+  // }
+  //
+  // kkutu_injeong = new mainAgent.Table("kkutu_injeong")
+  // kkutu_shop = new mainAgent.Table("kkutu_shop")
+  // kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
+  //
+  // session = new mainAgent.Table("session")
+  // users = new mainAgent.Table("users")
+  // ip_block = new mainAgent.Table("ip_block")
+
   for (const i in LANG) {
-    kkutu[LANG[i]] = new mainAgent.Table("kkutu_" + LANG[i])
-    kkutu_cw[LANG[i]] = new mainAgent.Table("kkutu_cw_" + LANG[i])
-    kkutu_manner[LANG[i]] = new mainAgent.Table("kkutu_manner_" + LANG[i])
+    kkutu[LANG[i]] = new PgTable(pgMain, "kkutu_" + LANG[i])
+    kkutu_cw[LANG[i]] = new PgTable(pgMain, "kkutu_cw_" + LANG[i])
+    kkutu_manner[LANG[i]] = new PgTable(pgMain, "kkutu_manner_" + LANG[i])
   }
 
-  kkutu_injeong = new mainAgent.Table("kkutu_injeong")
-  kkutu_shop = new mainAgent.Table("kkutu_shop")
-  kkutu_shop_desc = new mainAgent.Table("kkutu_shop_desc")
+  kkutu_injeong = new PgTable(pgMain, "kkutu_injeong")
+  kkutu_shop = new PgTable(pgMain, "kkutu_shop")
+  kkutu_shop_desc = new PgTable(pgMain, "kkutu_shop_desc")
 
-  session = new mainAgent.Table("session")
-  users = new mainAgent.Table("users")
-  ip_block = new mainAgent.Table("ip_block")
+  session = new PgTable(pgMain, "session")
+  users = new PgTable(pgMain, "users")
+  ip_block = new PgTable(pgMain, "ip_block")
 
   if (exports.ready) exports.ready(Redis, Pg)
   else logger.warn("DB.onReady was not defined yet.")
