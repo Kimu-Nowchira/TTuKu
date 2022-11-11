@@ -114,10 +114,7 @@ process.on("message", function (msg: any) {
       JLog.warn(`Unhandled IPC message type: ${msg.type}`)
   }
 })
-MainDB.ready = function () {
-  JLog.success("DB is ready.")
-  KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION)
-}
+
 Server.on("connection", function (socket, info) {
   var chunk = info.url.slice(1).split("&")
   var key = chunk[0]
@@ -463,11 +460,20 @@ export const onClientMessageOnSlave = ($c, msg) => {
       break
   }
 }
-export const onClientClosedOnSlave = ($c, code) => {
+
+const onClientClosedOnSlave = ($c, code) => {
   delete DIC[$c.id]
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]
   if ($c.socket) $c.socket.removeAllListeners()
   publish("disconnRoom", { id: $c.id })
 
   JLog.alert(`Chan @${CHAN} Exit #${$c.id}`)
+}
+
+MainDB.ready = function () {
+  JLog.success("DB is ready.")
+  KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, undefined, {
+    onClientClosed: onClientClosedOnSlave,
+    onClientMessage: onClientMessageOnSlave,
+  })
 }

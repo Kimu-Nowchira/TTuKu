@@ -40,18 +40,28 @@ export let _rid: number = 100
 
 export const NIGHT = false
 
+export let onClientMessage: any
+export let onClientClosed: any
+
 export const init = (
   _DB,
   _DIC: DICData,
   _ROOM: IRooms,
   _GUEST_PERMISSION: Record<string, boolean>,
-  _CHAN?: Record<string, ClusterWorker>
+  _CHAN: Record<string, ClusterWorker> | undefined,
+  events: {
+    onClientMessage: any
+    onClientClosed: any
+  }
 ) => {
   DB = _DB
   DIC = _DIC
   ROOM = _ROOM
   GUEST_PERMISSION = _GUEST_PERMISSION
   CHAN = _CHAN
+
+  onClientMessage = events.onClientMessage
+  onClientClosed = events.onClientClosed
 
   DB.kkutu_shop.find().on(($shop) => {
     SHOP = {}
