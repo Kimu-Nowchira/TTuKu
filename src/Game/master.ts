@@ -468,7 +468,7 @@ function processClientRequest($c, msg) {
     case "talk":
       if (!msg.value) return
       // 원래는 if (!msg.value.substr) 이었는데... 이걸 말하려던 거였겠지?
-      if (typeof !msg.value !== "string") return
+      if (typeof msg.value !== "string") return
       if (!GUEST_PERMISSION.talk)
         if ($c.guest) {
           $c.send("error", { code: 401 })
