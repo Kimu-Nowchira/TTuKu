@@ -40,6 +40,8 @@ import { init as KKuTuInit } from "./kkutu"
 
 let HTTPS_Server
 
+const KKuTu = require("./kkutu")
+
 let MainDB
 
 let Server
@@ -73,8 +75,6 @@ const ENABLE_ROUND_TIME = (exports.ENABLE_ROUND_TIME = [
 const ENABLE_FORM = (exports.ENABLE_FORM = ["S", "J"])
 const MODE_LENGTH = (exports.MODE_LENGTH = GAME_TYPE.length)
 const PORT = process.env["KKUTU_PORT"]
-
-const KKuTu = require("./kkutu")
 
 process.on("uncaughtException", function (err) {
   let text = `:${PORT} [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${
@@ -620,7 +620,7 @@ function joinNewUser($c) {
   logger.info("New user #" + $c.id)
 }
 
-KKuTu.onClientMessage = function ($c, msg) {
+export const onClientMessageOnMaster = ($c, msg) => {
   if (!msg) return
 
   if ($c.passRecaptcha) {
@@ -798,7 +798,7 @@ function processClientRequest($c, msg) {
   }
 }
 
-KKuTu.onClientClosed = function ($c, code) {
+export const onClientClosedOnMaster = ($c, code) => {
   delete DIC[$c.id]
   if ($c._error != 409)
     MainDB.users.update(["_id", $c.id]).set(["server", ""]).on()

@@ -26,6 +26,8 @@ import {
   addRId,
   NIGHT,
 } from "../kkutu"
+import { onClientClosedOnMaster, onClientMessageOnMaster } from "../master"
+import { onClientClosedOnSlave, onClientMessageOnSlave } from "../slave"
 
 const channel = Number(process.env["CHANNEL"]) || 0
 
@@ -99,7 +101,9 @@ export default class Client {
     socket.on("close", (code) => {
       if (ROOM[this.place]) ROOM[this.place].go(this)
       if (this.subPlace) this.pracRoom.go(this)
-      exports.onClientClosed(this, code)
+
+      if (cluster.isPrimary) onClientClosedOnMaster(this, code)
+      else onClientClosedOnSlave(this, code)
     })
 
     socket.on("message", (msg: any) => {
@@ -123,7 +127,8 @@ export default class Client {
           msg: data.error ? msg : data,
         })
 
-      exports.onClientMessage(this, data)
+      if (cluster.isPrimary) onClientMessageOnMaster(this, data)
+      else onClientMessageOnSlave(this, data)
     })
   }
 

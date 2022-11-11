@@ -219,7 +219,8 @@ Server.on("connection", function (socket, info) {
 Server.on("error", function (err) {
   JLog.warn("Error on ws: " + err.toString())
 })
-KKuTu.onClientMessage = function ($c, msg) {
+
+export const onClientMessageOnSlave = ($c, msg) => {
   var stable = true
   var temp
   var now = new Date().getTime()
@@ -462,7 +463,7 @@ KKuTu.onClientMessage = function ($c, msg) {
       break
   }
 }
-KKuTu.onClientClosed = function ($c, code) {
+export const onClientClosedOnSlave = ($c, code) => {
   delete DIC[$c.id]
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]
   if ($c.socket) $c.socket.removeAllListeners()
