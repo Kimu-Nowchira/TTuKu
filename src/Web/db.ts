@@ -97,3 +97,5 @@ export const init = async () => {
     })
   }
 }
+
+// init().then()

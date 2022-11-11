@@ -34,6 +34,8 @@ import Client from "./classes/Client"
 import { init as KKuTuInit } from "./kkutu"
 import WebServer from "./classes/WebServer"
 
+import { init as DBInit } from "../Web/db"
+
 let HTTPS_Server
 let MainDB
 
@@ -624,6 +626,8 @@ export const init = async (
   CHAN: Record<string, ClusterWorker>
 ) => {
   SID = _SID
+
+  await DBInit()
   MainDB = require("../Web/db")
   MainDB.ready = function () {
     logger.info("Master DB is ready.")
