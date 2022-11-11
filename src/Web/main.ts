@@ -167,6 +167,8 @@ class GameClient {
   }
 }
 
+WebInit.init(Server, true)
+
 DB.ready = function () {
   setInterval(function () {
     const q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }]
@@ -283,7 +285,6 @@ Server.get("/legal/:page", (req, res) => {
 const run = async () => {
   console.info("Connecting to database...")
   await DBInit()
-  WebInit.init(Server, true)
 }
 
 run().then()
