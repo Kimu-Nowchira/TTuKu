@@ -18,27 +18,29 @@
 
 import Client from "./classes/Client"
 import { init as KKuTuInit, publish } from "./kkutu"
+import { IS_SECURED, TEST_PORT, TESTER } from "../const"
+import Secure from "../sub/secure"
+import * as https from "https"
 
-var WebSocket = require("ws")
-var File = require("fs")
-var Const = require("../const")
-var https = require("https")
-var Secure = require("../sub/secure")
-var Server
-var HTTPS_Server
+import WebSocket from "ws"
+import { appendFile } from "fs"
 
-if (Const.IS_SECURED) {
+let Server
+let HTTPS_Server
+
+if (IS_SECURED) {
   const options = Secure()
   HTTPS_Server = https
     .createServer(options)
-    .listen(global.test ? Const.TEST_PORT + 416 : process.env["KKUTU_PORT"])
+    .listen(global.test ? TEST_PORT + 416 : process.env["KKUTU_PORT"])
   Server = new WebSocket.Server({ server: HTTPS_Server })
 } else {
   Server = new WebSocket.Server({
-    port: global.test ? Const.TEST_PORT + 416 : process.env["KKUTU_PORT"],
+    port: global.test ? TEST_PORT + 416 : Number(process.env["KKUTU_PORT"]),
     perMessageDeflate: false,
   })
 }
+
 var Master = require("./master")
 var KKuTu = require("./kkutu")
 var Lizard = require("../sub/lizard")
@@ -68,7 +70,7 @@ process.on("uncaughtException", function (err) {
   for (var i in DIC) {
     DIC[i].send("dying")
   }
-  File.appendFile("../KKUTU_ERROR.log", text, function (res) {
+  appendFile("../KKUTU_ERROR.log", text, function (res) {
     JLog.error(`ERROR OCCURRED! This worker will die in 10 seconds.`)
     console.log(text)
   })
@@ -183,7 +185,7 @@ Server.on("connection", function (socket, info) {
         DIC[$c.id].send("error", { code: 408 })
         DIC[$c.id].socket.close()
       }
-      if (DEVELOP && !Const.TESTER.includes($c.id)) {
+      if (DEVELOP && !TESTER.includes($c.id)) {
         $c.send("error", { code: 500 })
         $c.socket.close()
         return
