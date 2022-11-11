@@ -26,11 +26,8 @@ export let GUEST_PERMISSION: Record<string, boolean> = {}
 export let DB
 export const SHOP: Record<string, any> = {}
 
-export type IRooms = Record<number, Room>
-export type DICData = Record<string, Client>
-
-export let DIC: DICData = {}
-export let ROOM: IRooms = {}
+export let DIC: Record<string, Client> = {}
+export let ROOM: Record<number, Room> = {}
 export let CHAN: Record<number, ClusterWorker> = {}
 
 // TODO: ID 생성 메서드를 새로 만드는 것이 좋음
@@ -43,8 +40,8 @@ export let onClientClosed: any
 
 export const init = (
   _DB,
-  _DIC: DICData,
-  _ROOM: IRooms,
+  _DIC: Record<string, Client>,
+  _ROOM: Record<number, Room>,
   _GUEST_PERMISSION: Record<string, boolean>,
   _CHAN: Record<string, ClusterWorker> | undefined,
   events: {

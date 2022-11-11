@@ -26,8 +26,9 @@ import process from "node:process"
 import WebSocket from "ws"
 import { appendFile } from "fs"
 import { logger } from "../sub/jjlog"
+import Room from "./classes/Room"
 
-let Server
+let Server: WebSocket.Server
 let HTTPS_Server
 
 if (IS_SECURED) {
@@ -47,10 +48,19 @@ var Master = require("./master")
 var MainDB = require("../Web/db")
 var GLOBAL = require("../sub/global.json")
 
-var DIC = {}
-var DNAME = {}
-var ROOM = {}
-var RESERVED = {}
+const DIC: Record<string, Client> = {}
+const DNAME: Record<string, string> = {}
+const ROOM: Record<string, Room> = {}
+const RESERVED: Record<
+  string,
+  {
+    profile: string
+    room: any
+    spec: string
+    pass: string
+    _expiration: NodeJS.Timeout
+  }
+> = {}
 
 const CHAN = Number(process.env["CHANNEL"])
 const DEVELOP = Master.DEVELOP
@@ -62,23 +72,25 @@ const MODE_LENGTH = Master.MODE_LENGTH
 logger.info(`<< KKuTu Server:${Server.options.port} >>`)
 
 process.on("uncaughtException", function (err) {
-  var text = `:${
+  const text = `:${
     process.env["KKUTU_PORT"]
   } [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${err.stack}`
 
-  for (var i in DIC) {
+  for (const i in DIC) {
     DIC[i].send("dying")
   }
+
   appendFile("../KKUTU_ERROR.log", text, () => {
     logger.error(`ERROR OCCURRED! This worker will die in 10 seconds.`)
     console.log(text)
   })
 
-  setTimeout(function () {
+  setTimeout(() => {
     process.exit()
   }, 10000)
 })
-process.on("message", function (msg: any) {
+
+process.on("message", (msg: any) => {
   switch (msg.type) {
     case "invite-error":
       if (!DIC[msg.target]) break
@@ -117,22 +129,24 @@ process.on("message", function (msg: any) {
   }
 })
 
-Server.on("connection", function (socket, info) {
-  var chunk = info.url.slice(1).split("&")
-  var key = chunk[0]
-  var reserve = RESERVED[key] || {},
-    room
+Server.on("connection", (socket, info) => {
+  const chunk = info.url.slice(1).split("&")
+  const key = chunk[0]
+  const reserve = RESERVED[key] || {}
   var $c
 
-  socket.on("error", function (err) {
+  socket.on("error", (err) => {
     logger.warn("Error on #" + key + " on ws: " + err.toString())
   })
+
   if (CHAN !== Number(chunk[1])) {
     logger.warn(`Wrong channel value ${chunk[1]} on @${CHAN}`)
     socket.close()
     return
   }
-  if ((room = reserve.room)) {
+
+  const room = reserve.room
+  if (room) {
     if (room._create) {
       room._id = room.id
       delete room.id
@@ -148,8 +162,8 @@ Server.on("connection", function (socket, info) {
   MainDB.session
     .findOne(["_id", key])
     .limit(["profile", true])
-    .on(function ($body) {
-      $c = new Client(socket, $body ? $body.profile : null, key)
+    .on(($body) => {
+      const $c = new Client(socket, $body ? $body.profile : null, key)
       $c.admin = GLOBAL.ADMIN.indexOf($c.id) != -1
 
       /* Enhanced User Block System [S] */

@@ -38,9 +38,10 @@ let HTTPS_Server
 let MainDB
 
 let Server: WebSocketServer<WebSocket>
-let DIC = {}
-let DNAME = {}
-let ROOM = {}
+
+const DIC: Record<string, Client> = {}
+const DNAME: Record<string, string> = {}
+const ROOM: Record<string, Room> = {}
 
 let T_ROOM = {}
 let T_USER = {}
@@ -230,12 +231,12 @@ function processAdmin(id: string, value: string) {
 }
 
 /* Enhanced User Block System [S] */
-function addDate(num) {
+function addDate(num: number) {
   if (isNaN(num)) return
   return Date.now() + num * 24 * 60 * 60 * 1000
 }
 
-function processAdminErrorCallback(error, id) {
+function processAdminErrorCallback(error: Error, id: string) {
   DIC[id].send("notice", {
     value: `명령을 처리하는 도중 오류가 발생하였습니다: ${error}`,
   })
@@ -243,7 +244,7 @@ function processAdminErrorCallback(error, id) {
 }
 
 /* Enhanced User Block System [E] */
-function checkTailUser(id, place, msg) {
+function checkTailUser(id: string, place: number, msg) {
   let temp
 
   if ((temp = T_USER[id])) {
@@ -279,6 +280,7 @@ function narrateFriends(id, friends, stat) {
         narrate(sf[SID], "friend", { id: id, s: SID, stat: stat })
         delete sf[SID]
       }
+
       for (i in WDIC) {
         WDIC[i].send("narrate-friend", { id: id, s: SID, stat: stat, list: sf })
         break

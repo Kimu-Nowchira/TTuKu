@@ -15,7 +15,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
 import { Logger } from "tslog"
+import process from "node:process"
 
 export const logger = new Logger()
 
