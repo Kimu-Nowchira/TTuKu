@@ -617,8 +617,9 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
         }
         break
     }
-    this.DB.kkutu[this.room.rule.lang].find
-      .apply(this, aqs)
+    this.DB.kkutu[this.room.rule.lang]
+      // .apply 삭제
+      .find(aqs)
       .limit(bool ? 1 : 123)
       .on(($md) => {
         forManner($md)
