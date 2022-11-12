@@ -96,6 +96,12 @@ global.getType = (obj: any): string => {
   return s.slice(9, s.indexOf("("))
 }
 
+const isObjectQuery = (
+  q: ObjectQuery | Query | QueryElement
+): q is ObjectQuery => {
+  return typeof q === "object" && !Array.isArray(q)
+}
+
 const query = (_q: Query): Query => {
   const res: Query = []
   for (const i of _q) if (i) res.push(i)
@@ -109,8 +115,8 @@ const oQuery = (_q: ObjectQuery) => {
   return res
 }
 
-const uQuery = (q: Query, id: QueryValue): Query => {
-  const res = []
+const uQuery = (q: Query, id: QueryValue) => {
+  const res: Query = []
   let noId = true
 
   for (const i in q) {
@@ -478,27 +484,29 @@ class Pointer {
     }
     return this
   }
-  sort(_data, ...args) {
-    this.sorts =
-      global.getType(_data) == "Array" ? query([_data, ...args]) : oQuery(_data)
+  sort(_data: QueryElement | ObjectQuery, ...args: Query) {
+    this.sorts = isObjectQuery(_data) ? oQuery(_data) : query([_data, ...args])
     return this
   }
   // set: update 쿼리에 걸린 문서를 수정하는 지침을 정의한다.
-  set(_data, ...args) {
-    this.second["$set"] =
-      global.getType(_data) == "Array" ? query([_data, ...args]) : oQuery(_data)
+  set(_data: QueryElement | ObjectQuery, ...args: Query) {
+    this.second["$set"] = isObjectQuery(_data)
+      ? oQuery(_data)
+      : query([_data, ...args])
     return this
   }
   // soi: upsert 쿼리에 걸린 문서에서, insert될 경우의 값을 정한다. (setOnInsert)
-  soi(_data, ...args) {
-    this.second["$setOnInsert"] =
-      global.getType(_data) == "Array" ? query([_data, ...args]) : oQuery(_data)
+  soi(_data: QueryElement | ObjectQuery, ...args: Query) {
+    this.second["$setOnInsert"] = isObjectQuery(_data)
+      ? oQuery(_data)
+      : query([_data, ...args])
     return this
   }
   // inc: update 쿼리에 걸린 문서의 특정 값을 늘인다.
-  inc(_data, ...args) {
-    this.second["$inc"] =
-      global.getType(_data) == "Array" ? query([_data, ...args]) : oQuery(_data)
+  inc(_data: QueryElement | ObjectQuery, ...args: Query) {
+    this.second["$inc"] = isObjectQuery(_data)
+      ? oQuery(_data)
+      : query([_data, ...args])
     return this
   }
 }
