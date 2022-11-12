@@ -22,12 +22,7 @@ import Robot from "../classes/Robot"
 import Client from "../classes/Client"
 
 export class Game {
-  // TODO: DB는 import 하는 걸로 변경해야 함
-  constructor(
-    public room: Room,
-    public DB: any,
-    protected DIC: Record<string, Client>
-  ) {}
+  constructor(public room: Room, protected DIC: Record<string, Client>) {}
 
   getTitle() {
     return new Tail()

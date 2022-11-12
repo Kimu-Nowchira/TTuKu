@@ -298,10 +298,9 @@ export class RedisTable {
     return R
   }
 
-  getSurround = (id: string, rv: number) => {
+  getSurround = (id: string, rv: number = 8) => {
     const R = new Tail()
 
-    rv = rv || 8
     this.redis.zrevrank([this.key, id], (err, res) => {
       const range = [Math.max(0, res - Math.round(rv / 2 + 1)), 0]
 

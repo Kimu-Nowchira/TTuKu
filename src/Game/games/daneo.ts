@@ -18,6 +18,7 @@
 import { Game } from "./index"
 import { getPenalty, getPreScore, MISSION_en, MISSION_ko } from "../../const"
 import { Tail } from "../../sub/lizard"
+import { kkutu } from "../../Web/db"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]
@@ -213,7 +214,7 @@ export class Daneo extends Game {
 
           if (!client.robot) {
             client.invokeWordPiece(text, 1)
-            this.DB.kkutu[l]
+            kkutu[l]
               .update(["_id", text])
               .set(["hit", $doc.hit + 1])
               .on()
@@ -232,7 +233,7 @@ export class Daneo extends Game {
           denied()
         }
       }
-      this.DB.kkutu[l].findOne(["_id", text]).on(onDB)
+      kkutu[l].findOne(["_id", text]).on(onDB)
     } else {
       client.publish("turnError", { code: 409, value: text }, true)
     }
@@ -355,7 +356,7 @@ function getAuto(theme: string, type: 0 | 1 | 2) {
   let aft
 
   if (my.room.game.chain) aqs.push(["_id", { $nin: my.room.game.chain }])
-  const raiser = this.DB.kkutu[my.room.rule.lang]
+  const raiser = kkutu[my.room.rule.lang]
     .find(...aqs)
     .limit(type === 1 ? 1 : 123)
 

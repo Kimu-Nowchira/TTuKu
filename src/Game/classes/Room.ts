@@ -12,11 +12,12 @@ import { Crossword, Daneo, Game } from "../games"
 import cluster from "node:cluster"
 import { logger } from "../../sub/jjlog"
 import { all } from "../../sub/lizard"
-import { DIC, ROOM, _rid, publish, DB } from "../kkutu"
+import { DIC, ROOM, _rid, publish } from "../kkutu"
 import { GameData, RoomData, RoomExportData } from "../types"
 import Classic from "../games/classic"
 import Robot from "./Robot"
 import Client from "./Client"
+import { redis } from "../../Web/db"
 
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
@@ -383,7 +384,7 @@ export default class Room {
 
   loadGame() {
     const _Game = Rule[this.rule.rule]
-    this.gameData = new _Game(this, DB, DIC)
+    this.gameData = new _Game(this, DIC)
   }
 
   async start(pracLevel?: number) {
@@ -592,7 +593,7 @@ export default class Room {
       suv = []
       for (const i in uds) {
         o[uds[i].id] = { prev: uds[i].prev }
-        suv.push(DB.redis.getSurround(uds[i].id))
+        suv.push(redis.getSurround(uds[i].id))
       }
 
       all(suv).then((ranks) => {

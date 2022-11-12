@@ -14,7 +14,6 @@ import { Tail } from "../../sub/lizard"
 import Room from "./Room"
 import {
   CHAN,
-  DB,
   DIC,
   ROOM,
   SHOP,
@@ -29,6 +28,7 @@ import {
 } from "../kkutu"
 import { ClientExportData } from "../types"
 import Data from "./Data"
+import { redis, users } from "../../Web/db"
 
 const channel = Number(process.env["CHANNEL"]) || 0
 
@@ -267,7 +267,7 @@ export default class Client {
 
       R.go({ result: 200 })
     } else
-      DB.users.findOne(["_id", this.id]).on(($user) => {
+      users.findOne(["_id", this.id]).on(($user) => {
         const first = !$user
         let black = first ? "" : $user.black
         /* Enhanced User Block System [S] */
@@ -314,18 +314,19 @@ export default class Client {
       R.go({ id: this.id, prev: 0 })
       return R
     }
-    DB.users
+    users
       .upsert(["_id", this.id])
       .set(
         !isNaN(this.money) ? ["money", this.money] : undefined,
+        // @ts-ignore 임시로 무시 TODO
         this.data && !isNaN(this.data.score) ? ["kkutu", this.data] : undefined,
         box ? ["box", this.box] : undefined,
         equip ? ["equip", this.equip] : undefined,
         friends ? ["friends", this.friends] : undefined
       )
       .on((__res) => {
-        DB.redis.getGlobal(this.id).then((_res) => {
-          DB.redis.putGlobal(this.id, this.data.score).then(() => {
+        redis.getGlobal(this.id).then((_res) => {
+          redis.putGlobal(this.id, this.data.score).then(() => {
             logger.info(
               `FLUSHED [${this.id}] PTS=${this.data.score} MNY=${this.money}`
             )
@@ -690,7 +691,7 @@ export default class Client {
   }
 
   removeFriend(id) {
-    DB.users
+    users
       .findOne(["_id", id])
       .limit(["friends", true])
       .on(($doc) => {
@@ -699,7 +700,7 @@ export default class Client {
         const f = $doc.friends
 
         delete f[this.id]
-        DB.users.update(["_id", id]).set(["friends", f]).on()
+        users.update(["_id", id]).set(["friends", f]).on()
       })
     delete this.friends[id]
     this.flush(false, false, true)

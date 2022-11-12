@@ -19,6 +19,7 @@
 import { all, Tail } from "../../sub/lizard"
 import { Game } from "./index"
 import Client from "../classes/Client"
+import { kkutu, kkutu_cw } from "../../Web/db"
 
 // const ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
 // const ROBOT_CATCH_RATE = [0.05, 0.2, 0.4, 0.6, 0.99]
@@ -31,7 +32,7 @@ export class Crossword extends Game {
     var mdb = []
 
     this.room.game.started = false
-    DB.kkutu_cw[this.room.rule.lang].find().on(($box) => {
+    kkutu_cw[this.room.rule.lang].find().on(($box) => {
       var answers = {}
       var boards = []
       var maps = []
@@ -73,7 +74,7 @@ export class Crossword extends Game {
       var x = Number(bItem[0]),
         y = Number(bItem[1])
 
-      DB.kkutu[this.room.rule.lang].findOne(["_id", word]).on(($doc) => {
+      kkutu[this.room.rule.lang].findOne(["_id", word]).on(($doc) => {
         if (!$doc) return R.go(null)
         var rk = `${x},${y}`
         var i, o

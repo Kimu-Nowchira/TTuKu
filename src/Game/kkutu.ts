@@ -20,10 +20,10 @@ import cluster, { Worker as ClusterWorker } from "node:cluster"
 import Room from "./classes/Room"
 import Client from "./classes/Client"
 import { ClientExportData, RoomExportData } from "./types"
+import { kkutu_shop } from "../Web/db"
 
 export let GUEST_PERMISSION: Record<string, boolean> = {}
 
-export let DB
 export const SHOP: Record<string, any> = {}
 
 export let DIC: Record<string, Client> = {}
@@ -49,7 +49,6 @@ export const init = (
     onClientClosed: any
   }
 ) => {
-  DB = _DB
   DIC = _DIC
   ROOM = _ROOM
   GUEST_PERMISSION = _GUEST_PERMISSION
@@ -58,7 +57,7 @@ export const init = (
   onClientMessage = events.onClientMessage
   onClientClosed = events.onClientClosed
 
-  DB.kkutu_shop.find().on(($shop) => {
+  kkutu_shop.find().on(($shop) => {
     $shop.forEach((item) => (SHOP[item._id] = item))
   })
 }
