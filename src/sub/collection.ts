@@ -164,16 +164,14 @@ const sqlWhere = (q: Query) => {
 
     if (value instanceof RegExp) {
       return Escape("%K ~ %L", item[0], value.source)
-    } else if (typeof value === "object" || Array.isArray(value)) {
-      if ((c = item[1]["$not"]) !== undefined)
+    } else if (typeof value === "object") {
+      if ((c = value["$not"]) !== undefined)
         return Escape("NOT (%s)", wSearch([item[0], c]))
-      if ((c = item[1]["$nand"]) !== undefined)
+      if ((c = value["$nand"]) !== undefined)
         return Escape("%K & %V = 0", item[0], c)
-      if ((c = item[1]["$lte"]) !== undefined)
-        return Escape("%K<=%V", item[0], c)
-      if ((c = item[1]["$gte"]) !== undefined)
-        return Escape("%K>=%V", item[0], c)
-      if ((c = item[1]["$in"]) !== undefined) {
+      if ((c = value["$lte"]) !== undefined) return Escape("%K<=%V", item[0], c)
+      if ((c = value["$gte"]) !== undefined) return Escape("%K>=%V", item[0], c)
+      if ((c = value["$in"]) !== undefined) {
         if (!c.length) return "FALSE"
         return Escape(
           "%I IN (%s)",
@@ -192,6 +190,8 @@ const sqlWhere = (q: Query) => {
     } else {
       return Escape("%K=%V", item[0], String(value))
     }
+
+    throw new Error("Unknown query: " + JSON.stringify(item))
   }
 
   return q.map(wSearch).join(" AND ")
