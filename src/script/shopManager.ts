@@ -15,37 +15,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
+
+// 지정한 경로의 파일 내용을 토대로 상점의 아이템을 업데이트하는 스크립트
+
 import { readFile } from "fs"
 import { logger } from "../sub/jjlog"
 
-const DB = require("../Web/db")
+import { init as dbInit, kkutu_shop } from "../Web/db"
 
 /* 상품 group 명세: NIK	이름 스킨; 이름의 색상을 변경합니다. */
-logger.info("KKuTu Goods Manager")
+const run = async () => {
+  logger.info("KKuTu Goods Manager")
 
-DB.ready = () => {
+  await dbInit()
+
   const data = {
     type: process.argv[2],
     url: process.argv[3],
     list: [],
   }
 
-  readFile(data.url, (err, _file) => {
-    if (err) {
-      logger.error("URL not found: " + data.url)
-      process.exit()
-    } else {
-      const dv = JSON.parse(_file.toString())
-      data.list = dv.list
-
-      run(data)
-    }
+  data.list = await new Promise((res, rej) => {
+    readFile(data.url, (err, _file) => {
+      if (err) {
+        logger.error("URL not found: " + data.url)
+        rej(err)
+      } else {
+        const dv = JSON.parse(_file.toString())
+        res(dv)
+      }
+    })
   })
-  logger.info("DB is ready.")
-}
 
-const run = (data) => {
-  let o
+  logger.info("DB is ready.")
 
   switch (data.type) {
     case "A":
@@ -59,11 +61,10 @@ const run = (data) => {
 			"desc":		설명
 		}
 			*/
-      for (const i in data.list) {
-        o = data.list[i]
+      for (const o of data.list) {
+        logger.info(o)
 
-        logger.info(i)
-        DB.kkutu_shop
+        kkutu_shop
           .upsert(["_id", Number(o.id)])
           .set(
             ["group", o.group],
@@ -84,3 +85,5 @@ const run = (data) => {
       process.exit()
   }
 }
+
+run().then()

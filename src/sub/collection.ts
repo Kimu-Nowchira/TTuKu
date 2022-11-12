@@ -532,7 +532,7 @@ interface AdvancedQuery {
   $nin?: number[] | string[]
 }
 
-type QueryValue = string | number | boolean | RegExp | AdvancedQuery
+type QueryValue = string | number | boolean | RegExp | AdvancedQuery | Date
 
 type ObjectQuery = Record<string, QueryValue>
 
