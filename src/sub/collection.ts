@@ -158,7 +158,15 @@ const sqlSelect = (q: Query) => {
 const sqlWhere = (q: Query) => {
   if (!Object.keys(q).length) return "TRUE"
 
-  const wSearch = (item) => {
+  const wSearch = (item: QueryElement): string => {
+    // 타입 가드
+    if (
+      typeof item[1] !== "object" ||
+      item[1] instanceof RegExp ||
+      Array.isArray(item[1])
+    )
+      throw new Error("Invalid query")
+
     let c
 
     if ((c = item[1]["$not"]) !== undefined)
@@ -194,8 +202,9 @@ const sqlWhere = (q: Query) => {
 
 const sqlSet = (q: Query, inc?: boolean) => {
   if (!q) {
-    logger.warn("[sqlSet] Invalid query.")
-    return null
+    // warn -> error로 상향
+    throw new Error("[sqlSet] Invalid query.")
+    // return null
   }
   const doN = inc
       ? (k, v) => Escape("%K=%K+%V", k, k, v)
@@ -340,7 +349,7 @@ class Pointer {
     @onFail	유효하지 않은 정보일 경우에 대한 콜백 함수
   */
 
-  on(f?: Function, chk: boolean = false, onFail?) {
+  on(f?: Function, chk: boolean = false, onFail?: (doc: any) => void) {
     let sql = ""
     const sq = this.second["$set"]
 
@@ -349,6 +358,7 @@ class Pointer {
         if (chk) {
           if (isDataAvailable(doc, chk)) f(doc)
           else {
+            // isDataAvailable 하지 않은 경우
             if (onFail) onFail(doc)
             else if (DEBUG)
               throw new Error(
