@@ -8,23 +8,22 @@ import {
   KO_IJP,
   OPTIONS,
 } from "../../const"
-import { Crossword, Daneo, Game } from "../games"
+import { Crossword, Daneo, Game, Typing, Hunmin, Classic } from "../games"
 import cluster from "node:cluster"
 import { logger } from "../../sub/jjlog"
 import { all } from "../../sub/lizard"
 import { DIC, ROOM, _rid, publish } from "../kkutu"
 import { GameData, RoomData, RoomExportData } from "../../types"
-import Classic from "../games/classic"
 import Robot from "./Robot"
 import Client from "./Client"
 import { redis } from "../../Web/db"
-import Hunmin from "../games/hunmin"
 
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
   Crossword: Crossword,
   Daneo: Daneo,
   Hunmin: Hunmin,
+  Typing: Typing,
 }
 
 export default class Room {

@@ -38,7 +38,7 @@ const HUNMIN_LIST = [
   4352, 4354, 4355, 4358, 4359, 4361, 4363, 4364, 4366, 4368, 4369, 4370,
 ]
 
-export default class Hunmin extends Game {
+export class Hunmin extends Game {
   getTitle() {
     const R = new Tail()
 

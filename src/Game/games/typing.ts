@@ -25,7 +25,7 @@ const LIST_LENGTH = 200
 const DOUBLE_VOWELS = [9, 10, 11, 14, 15, 16, 19]
 const DOUBLE_TAILS = [3, 5, 6, 9, 10, 11, 12, 13, 14, 15, 18]
 
-export default class Typing extends Game {
+export class Typing extends Game {
   getTitle() {
     const R = new Tail()
     var i, j
