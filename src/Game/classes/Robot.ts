@@ -1,4 +1,4 @@
-import { UserData } from "../types"
+import { UserData } from "../../types"
 import { DIC } from "../kkutu"
 
 export default class Robot {

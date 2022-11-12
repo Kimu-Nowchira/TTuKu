@@ -26,7 +26,7 @@ import {
   onClientMessage,
   onClientClosed,
 } from "../kkutu"
-import { ClientExportData } from "../types"
+import { ClientExportData } from "../../types"
 import Data from "./Data"
 import { redis, users } from "../../Web/db"
 
