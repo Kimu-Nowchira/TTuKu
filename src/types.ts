@@ -14,7 +14,7 @@ export interface IUser {
   equip?: any
   exordial?: string
   black?: string
-  blockeduntil?: string
+  blockedUntil?: string // TODO: 테이블에는 blockeduntil로 되어 있어서 확인 필요
   server: string
   password?: string
   friends: Record<string, string>
@@ -123,6 +123,10 @@ export interface GameData {
 
   // hunmin.ts
   done?: any[]
+
+  // typing.ts
+  clist?: any
+  lists?: any[]
 
   _rrt?: NodeJS.Timeout
   turnTimer?: NodeJS.Timeout
