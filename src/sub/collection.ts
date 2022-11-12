@@ -668,6 +668,7 @@ export const Agent = function (type: string, origin: PoolClient) {
           return logger.warn("SQL is undefined. This call will be ignored.")
 
         logger.debug("Point this", this)
+        logger.debug("Point my", _my)
         logger.debug("Point my", my)
 
         logger.debug("Query: " + sql)
