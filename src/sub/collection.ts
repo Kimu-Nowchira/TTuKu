@@ -225,7 +225,7 @@ const sqlSet = (q: Query, inc?: boolean) => {
       if (c.length === 1) return doN(item[0], item[1])
 
       /* JSON 값 내부를 수정하기
-      1. UPSERT 할 수 없다. 
+      1. UPSERT 할 수 없다.
       2. 한 쿼리에 여러 값을 수정할 수 없다.
     */
 
@@ -237,9 +237,6 @@ const sqlSet = (q: Query, inc?: boolean) => {
 }
 
 const sqlIK = (q: Query) => q.map((item) => Escape("%K", item[0])).join(", ")
-
-// 임시조치
-// @ts-ignore
 const sqlIV = (q: Query) => q.map((item) => Escape("%V", item[1])).join(", ")
 
 const isDataAvailable = (data: any, chk) => {
