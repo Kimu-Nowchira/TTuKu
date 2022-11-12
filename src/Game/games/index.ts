@@ -42,3 +42,4 @@ export class Game {
 export * from "./classic"
 export * from "./crossword"
 export * from "./daneo"
+export * from "./hunmin"

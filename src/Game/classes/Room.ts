@@ -18,11 +18,13 @@ import Classic from "../games/classic"
 import Robot from "./Robot"
 import Client from "./Client"
 import { redis } from "../../Web/db"
+import Hunmin from "../games/hunmin"
 
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
   Crossword: Crossword,
   Daneo: Daneo,
+  Hunmin: Hunmin,
 }
 
 export default class Room {

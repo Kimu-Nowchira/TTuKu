@@ -121,6 +121,9 @@ export interface GameData {
   meaned?: number
   hint?: any[]
 
+  // hunmin.ts
+  done?: any[]
+
   _rrt?: NodeJS.Timeout
   turnTimer?: NodeJS.Timeout
   hintTimer?: NodeJS.Timeout
