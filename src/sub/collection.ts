@@ -442,12 +442,10 @@ class Pointer {
         logger.warn("Unhandled mode: " + this.mode)
     }
 
-    logger.debug("Point this", this)
-    logger.debug("Query: " + sql)
     if (!sql) return logger.warn("SQL is undefined. This call will be ignored.")
     if (!this.origin) throw new Error("The origin of the query is not defined.")
 
-    // logger.debug("Query: " + sql.slice(0, 100));
+    logger.debug("Query: " + sql.slice(0, 100))
     this.origin.query(sql, preCB)
     /*if(_my.findLimit){
 
