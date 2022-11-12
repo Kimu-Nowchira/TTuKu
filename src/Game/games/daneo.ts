@@ -314,8 +314,8 @@ function getMission(l) {
 //
 //   if (game.room.game.chain) aqs.push(["_id", { $nin: game.room.game.chain }])
 //
-//   const raiser = game.DB.kkutu[game.room.rule.lang].find
-//     .apply(this, aqs)
+//   const raiser = game.DB.kkutu[game.room.rule.lang]
+//     .find(...aqs)
 //     .limit(bool ? 1 : 123)
 //
 //   switch (type) {
@@ -355,8 +355,8 @@ function getAuto(theme: string, type: 0 | 1 | 2) {
   let aft
 
   if (my.room.game.chain) aqs.push(["_id", { $nin: my.room.game.chain }])
-  const raiser = this.DB.kkutu[my.room.rule.lang].find
-    .apply(this.room, aqs)
+  const raiser = this.DB.kkutu[my.room.rule.lang]
+    .find(...aqs)
     .limit(type === 1 ? 1 : 123)
 
   switch (type) {
