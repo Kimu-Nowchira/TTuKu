@@ -42,15 +42,15 @@ const FAKE_REDIS = {
 export let redis: typeof FAKE_REDIS | RedisTable
 
 export const kkutu: Record<string, PgTable> = {}
-export const kkutu_cw = {}
-export const kkutu_manner = {}
+export const kkutu_cw: Record<string, PgTable> = {}
+export const kkutu_manner: Record<string, PgTable> = {}
 
 export let kkutu_injeong: PgTable
-export let kkutu_shop
-export let kkutu_shop_desc
-export let session
-export let users
-export let ip_block
+export let kkutu_shop: PgTable
+export let kkutu_shop_desc: PgTable
+export let session: PgTable
+export let users: PgTable
+export let ip_block: PgTable
 
 export const init = async () => {
   // const Redis = createClient({ socket: { host: "redis" } }) // 신형 레디스 기준
@@ -84,10 +84,10 @@ export const init = async () => {
 
   redis = noRedis ? FAKE_REDIS : new RedisTable(Redis, "KKuTu_Score")
 
-  for (const i in LANG) {
-    kkutu[LANG[i]] = new PgTable(pgMain, "kkutu_" + LANG[i])
-    kkutu_cw[LANG[i]] = new PgTable(pgMain, "kkutu_cw_" + LANG[i])
-    kkutu_manner[LANG[i]] = new PgTable(pgMain, "kkutu_manner_" + LANG[i])
+  for (const l of LANG) {
+    kkutu[l] = new PgTable(pgMain, "kkutu_" + l)
+    kkutu_cw[l] = new PgTable(pgMain, "kkutu_cw_" + l)
+    kkutu_manner[l] = new PgTable(pgMain, "kkutu_manner_" + l)
   }
 
   kkutu_injeong = new PgTable(pgMain, "kkutu_injeong")
