@@ -176,10 +176,9 @@ const sqlWhere = (q: any[]) => {
         c.map((i) => Escape("%V", i)).join(",")
       )
     }
-    if (item[1] instanceof RegExp) {
-      logger.debug("escape", item)
+    if (item[1] instanceof RegExp)
       return Escape("%K ~ %L", item[0], item[1].source)
-    }
+
     return Escape("%K=%V", item[0], item[1])
   }
 
@@ -324,7 +323,7 @@ class Pointer {
     @onFail	유효하지 않은 정보일 경우에 대한 콜백 함수
   */
 
-  on(f?: Function, chk?, onFail?) {
+  on(f?: Function, chk: boolean = false, onFail?) {
     var sql
     var sq = this.second["$set"]
     var uq
@@ -382,6 +381,7 @@ class Pointer {
     switch (this.mode) {
       case "findOne":
         this.findLimit = 1
+      // fall-through
       case "find":
         sql = Escape("SELECT %s FROM %I", sqlSelect(this.second), this.col)
         if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
@@ -440,6 +440,8 @@ class Pointer {
         logger.warn("Unhandled mode: " + this.mode)
     }
 
+    logger.debug("Point this", this)
+    logger.debug("Query: " + sql)
     if (!sql) return logger.warn("SQL is undefined. This call will be ignored.")
     if (!this.origin) throw new Error("The origin of the query is not defined.")
     // logger.log("Query: " + sql.slice(0, 100));
@@ -452,6 +454,14 @@ class Pointer {
     }*/
     return sql
   }
+
+  // on을 Promise로 처리합니다.
+  async onAsync(check: boolean = false) {
+    return new Promise((resolve, reject) => {
+      this.on(resolve, check, reject)
+    })
+  }
+
   // limit: find 쿼리에 걸린 문서를 필터링하는 지침을 정의한다.
   limit(_data) {
     if (global.getType(_data) == "Number") {
@@ -656,7 +666,11 @@ export const Agent = function (type: string, origin: PoolClient) {
         }
         if (!sql)
           return logger.warn("SQL is undefined. This call will be ignored.")
-        // logger.log("Query: " + sql.slice(0, 100));
+
+        logger.debug("Point this", this)
+        logger.debug("Point my", my)
+
+        logger.debug("Query: " + sql)
         origin.query(sql, preCB)
         /*if(_my.findLimit){
           c = my.source[mode](q, flag, { limit: _my.findLimit }, preCB);
@@ -665,6 +679,14 @@ export const Agent = function (type: string, origin: PoolClient) {
         }*/
         return sql
       }
+
+      // on을 Promise로 처리합니다.
+      this.onAsync = async (check: boolean = false) => {
+        return new Promise((resolve, reject) => {
+          this.on(resolve, check, reject)
+        })
+      }
+
       // limit: find 쿼리에 걸린 문서를 필터링하는 지침을 정의한다.
       this.limit = function (_data) {
         if (global.getType(_data) == "Number") {
