@@ -264,12 +264,11 @@ export default class Hunmin extends Game {
   }
 
   async readyRobot(robot) {
-    var my = this
     var level = robot.level
     var delay = ROBOT_START_DELAY[level]
     var w, text
 
-    getAuto.call(my, this.room.game.theme, 2).then((list) => {
+    getAuto.call(this.room, this.room.game.theme, 2).then((list) => {
       if (list.length) {
         list.sort((a, b) => b.hit - a.hit)
         if (ROBOT_HIT_LIMIT[level] > list[0].hit) denied()
@@ -353,6 +352,7 @@ function getAuto(theme, type) {
   else aqs.push(["type", KOR_GROUP])
   if (my.game.chain) aqs.push(["_id", { $nin: my.game.chain }])
   raiser = kkutu[my.rule.lang].find(...aqs).limit(bool ? 1 : 123)
+
   switch (type) {
     case 0:
     default:
