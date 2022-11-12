@@ -59,34 +59,37 @@ const asValue = (val: string[] | number | string): string => {
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = (str: string, ...a: string[]) => {
+const Escape = (str: string, ...a: Array<string | number>) => {
   let i = 1
   const args = [str, ...a]
 
-  return str.replace(/%([%sILQkKV])/g, (_, type) => {
-    if ("%" == type) return "%"
+  return str.replace(
+    /%([%sILQkKV])/g,
+    (_, type: "s" | "I" | "L" | "Q" | "k" | "K" | "V" | "%") => {
+      if (type === "%") return "%"
 
-    const arg = args[i++] || ""
-    switch (type) {
-      case "s":
-        return escape.string(arg)
-      case "I":
-        return escape.ident(arg)
-      case "L":
-        return escape.literal(arg)
-      case "Q":
-        return escape.dollarQuotedString(arg)
-      case "k":
-        return asSKey(arg)
-      case "K":
-        return asKey(arg)
-      case "V":
-        return asValue(arg)
-      default:
-        logger.warn("Unknown escape type: " + type)
-        return ""
+      const arg = args[i++].toString() || ""
+      switch (type) {
+        case "s":
+          return escape.string(arg)
+        case "I":
+          return escape.ident(arg)
+        case "L":
+          return escape.literal(arg)
+        case "Q":
+          return escape.dollarQuotedString(arg)
+        case "k":
+          return asSKey(arg)
+        case "K":
+          return asKey(arg)
+        case "V":
+          return asValue(arg)
+        default:
+          logger.warn("Unknown escape type: " + type)
+          return ""
+      }
     }
-  })
+  )
 }
 
 global.getType = (obj: any): string => {
@@ -179,7 +182,7 @@ const sqlWhere = (q: Query) => {
           c.map((i) => Escape("%V", i)).join(",")
         )
       }
-      if ((c = item[1]["$nin"]) !== undefined) {
+      if ((c = value["$nin"]) !== undefined) {
         if (!c.length) return "TRUE"
         return Escape(
           "%I NOT IN (%s)",
@@ -204,20 +207,21 @@ const sqlSet = (q: Query, inc?: boolean) => {
     // return null
   }
   const doN = inc
-      ? (k, v) => Escape("%K=%K+%V", k, k, v)
-      : (k, v) => Escape("%K=%V", k, v),
+      ? (k: string, v: string) => Escape("%K=%K+%V", k, k, v)
+      : (k: string, v: string) => Escape("%K=%V", k, v),
     doJ = inc
       ? () => {
           logger.warn("[sqlSet] Cannot increase a value in JSON object.")
           return null //Escape("%K=jsonb_set(%K,%V,CAST(CAST(%k AS bigint)+%V AS text),true)", k, k, p, ok, Number(v));
         }
-      : (k, p, ok, v) => Escape("%K=jsonb_set(%K,%V,%V,true)", k, k, p, v)
+      : (k: string, p: string, ok: string, v: string) =>
+          Escape("%K=jsonb_set(%K,%V,%V,true)", k, k, p, v)
 
   return q
     .map((item) => {
       const c = item[0].split(".")
 
-      if (c.length === 1) return doN(item[0], item[1])
+      if (c.length === 1) return doN(item[0], item[1].toString())
 
       /* JSON 값 내부를 수정하기
       1. UPSERT 할 수 없다.
@@ -225,15 +229,19 @@ const sqlSet = (q: Query, inc?: boolean) => {
     */
 
       if (typeof item[1] === "number") item[1] = item[1].toString()
+
+      // 강제 toString() 작동 확인 필요
+      // @ts-ignore
       return doJ(c[0], c.slice(1), item[0], item[1])
     })
     .join(", ")
 }
 
-const sqlIK = (q) => q.map((item) => Escape("%K", item[0])).join(", ")
-const sqlIV = (q) => q.map((item) => Escape("%V", item[1])).join(", ")
+const sqlIK = (q: Query) => q.map((item) => Escape("%K", item[0])).join(", ")
+const sqlIV = (q: Query) =>
+  q.map((item) => Escape("%V", item[1].toString())).join(", ")
 
-const isDataAvailable = (data, chk) => {
+const isDataAvailable = (data: any, chk) => {
   let path
   let cursor
 
@@ -415,7 +423,8 @@ class Pointer {
               .map((item) => item[0] + (item[1] == 1 ? " ASC" : " DESC"))
               .join(",")
           )
-        if (this.findLimit) sql += Escape(" LIMIT %V", String(this.findLimit))
+        if (this.findLimit)
+          sql += Escape(" LIMIT %V", this.findLimit.toString())
         break
       case "insert":
         sql = Escape(
@@ -518,12 +527,16 @@ class Pointer {
   }
 }
 
-type QueryValue =
-  | string
-  | number
-  | boolean
-  | RegExp
-  | Record<string, string | number | RegExp>
+interface AdvancedQuery {
+  $not?: string
+  $nand?: string
+  $lte?: number
+  $gte?: number
+  $in?: number[] | string[]
+  $nin?: number[] | string[]
+}
+
+type QueryValue = string | number | boolean | RegExp | AdvancedQuery
 
 type ObjectQuery = Record<string, QueryValue>
 
