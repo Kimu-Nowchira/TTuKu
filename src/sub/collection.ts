@@ -159,42 +159,39 @@ const sqlWhere = (q: Query) => {
   if (!Object.keys(q).length) return "TRUE"
 
   const wSearch = (item: QueryElement): string => {
-    // 타입 가드
-    if (
-      typeof item[1] !== "object" ||
-      item[1] instanceof RegExp ||
-      Array.isArray(item[1])
-    )
-      throw new Error("Invalid query")
-
+    const value = item[1]
     let c
 
-    if ((c = item[1]["$not"]) !== undefined)
-      return Escape("NOT (%s)", wSearch([item[0], c]))
-    if ((c = item[1]["$nand"]) !== undefined)
-      return Escape("%K & %V = 0", item[0], c)
-    if ((c = item[1]["$lte"]) !== undefined) return Escape("%K<=%V", item[0], c)
-    if ((c = item[1]["$gte"]) !== undefined) return Escape("%K>=%V", item[0], c)
-    if ((c = item[1]["$in"]) !== undefined) {
-      if (!c.length) return "FALSE"
-      return Escape(
-        "%I IN (%s)",
-        item[0],
-        c.map((i) => Escape("%V", i)).join(",")
-      )
+    if (value instanceof RegExp) {
+      return Escape("%K ~ %L", item[0], value.source)
+    } else if (typeof value === "object" || Array.isArray(value)) {
+      if ((c = item[1]["$not"]) !== undefined)
+        return Escape("NOT (%s)", wSearch([item[0], c]))
+      if ((c = item[1]["$nand"]) !== undefined)
+        return Escape("%K & %V = 0", item[0], c)
+      if ((c = item[1]["$lte"]) !== undefined)
+        return Escape("%K<=%V", item[0], c)
+      if ((c = item[1]["$gte"]) !== undefined)
+        return Escape("%K>=%V", item[0], c)
+      if ((c = item[1]["$in"]) !== undefined) {
+        if (!c.length) return "FALSE"
+        return Escape(
+          "%I IN (%s)",
+          item[0],
+          c.map((i) => Escape("%V", i)).join(",")
+        )
+      }
+      if ((c = item[1]["$nin"]) !== undefined) {
+        if (!c.length) return "TRUE"
+        return Escape(
+          "%I NOT IN (%s)",
+          item[0],
+          c.map((i) => Escape("%V", i)).join(",")
+        )
+      }
+    } else {
+      return Escape("%K=%V", item[0], String(value))
     }
-    if ((c = item[1]["$nin"]) !== undefined) {
-      if (!c.length) return "TRUE"
-      return Escape(
-        "%I NOT IN (%s)",
-        item[0],
-        c.map((i) => Escape("%V", i)).join(",")
-      )
-    }
-    if (item[1] instanceof RegExp)
-      return Escape("%K ~ %L", item[0], item[1].source)
-
-    return Escape("%K=%V", item[0], item[1])
   }
 
   return q.map(wSearch).join(" AND ")
