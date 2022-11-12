@@ -222,7 +222,9 @@ const sqlSet = (q: Query, inc?: boolean) => {
     .map((item) => {
       const c = item[0].split(".")
 
-      if (c.length === 1) return doN(item[0], item[1].toString())
+      // 임시조치
+      // @ts-ignore
+      if (c.length === 1) return doN(item[0], item[1])
 
       /* JSON 값 내부를 수정하기
       1. UPSERT 할 수 없다.
