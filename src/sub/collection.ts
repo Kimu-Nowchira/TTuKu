@@ -52,14 +52,14 @@ const asSKey = (val: string) => {
   return c.slice(0, c.length - 1).join("->") + "->>" + c[c.length - 1]
 }
 
-const asValue = (val: string[] | number | string): string => {
+const asValue = (val: any): string => {
   if (val instanceof Array) return escape.literal("{" + val.join(",") + "}")
   if (typeof val === "number") return val.toString()
   if (typeof val === "string") return escape.literal(val)
   return escape.literal(JSON.stringify(val))
 }
 
-const Escape = (str: string, ...a: Array<string | number>) => {
+const Escape = (str: string, ...a: Array<any>) => {
   let i = 1
   const args = [str, ...a]
 
@@ -69,7 +69,7 @@ const Escape = (str: string, ...a: Array<string | number>) => {
       if (type === "%") return "%"
 
       // 임시조치
-      const arg = (args[i++] as any) || ""
+      const arg = args[i++] || ""
       switch (type) {
         case "s":
           return escape.string(arg)
@@ -208,33 +208,29 @@ const sqlSet = (q: Query, inc?: boolean) => {
     // return null
   }
   const doN = inc
-      ? (k: string, v: string) => Escape("%K=%K+%V", k, k, v)
-      : (k: string, v: string) => Escape("%K=%V", k, v),
+      ? (k: string, v: any) => Escape("%K=%K+%V", k, k, v)
+      : (k: string, v: any) => Escape("%K=%V", k, v),
     doJ = inc
       ? () => {
           logger.warn("[sqlSet] Cannot increase a value in JSON object.")
           return null //Escape("%K=jsonb_set(%K,%V,CAST(CAST(%k AS bigint)+%V AS text),true)", k, k, p, ok, Number(v));
         }
-      : (k: string, p: string, ok: string, v: string) =>
+      : (k: string, p: any, ok: string, v: any) =>
           Escape("%K=jsonb_set(%K,%V,%V,true)", k, k, p, v)
 
   return q
     .map((item) => {
       const c = item[0].split(".")
 
-      // 임시조치
-      // @ts-ignore
       if (c.length === 1) return doN(item[0], item[1])
 
       /* JSON 값 내부를 수정하기
-      1. UPSERT 할 수 없다.
+      1. UPSERT 할 수 없다. 
       2. 한 쿼리에 여러 값을 수정할 수 없다.
     */
 
       if (typeof item[1] === "number") item[1] = item[1].toString()
 
-      // 강제 toString() 작동 확인 필요
-      // @ts-ignore
       return doJ(c[0], c.slice(1), item[0], item[1])
     })
     .join(", ")
