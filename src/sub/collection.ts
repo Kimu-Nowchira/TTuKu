@@ -149,6 +149,7 @@ const sqlSelect = (q: any[]) => {
 }
 
 const sqlWhere = (q: any[]) => {
+  logger.debug("sqlWhere", q)
   if (!Object.keys(q).length) return "TRUE"
 
   const wSearch = (item) => {
@@ -561,6 +562,10 @@ export const Agent = function (type: string, origin: PoolClient) {
         var sq = _my.second["$set"]
         var uq
 
+        logger.debug("Point this", this)
+        logger.debug("Point _my", _my)
+        logger.debug("Point my", my)
+
         function preCB(err, res) {
           if (err) {
             logger.error("Error when querying: " + sql)
@@ -666,10 +671,6 @@ export const Agent = function (type: string, origin: PoolClient) {
         }
         if (!sql)
           return logger.warn("SQL is undefined. This call will be ignored.")
-
-        logger.debug("Point this", this)
-        logger.debug("Point my", _my)
-        logger.debug("Point my", my)
 
         logger.debug("Query: " + sql)
         origin.query(sql, preCB)
