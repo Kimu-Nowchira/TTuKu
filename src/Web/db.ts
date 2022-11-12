@@ -21,7 +21,7 @@ import { Pool, PoolClient } from "pg"
 import { logger } from "../sub/jjlog"
 import { Tail } from "../sub/lizard"
 import { config } from "../config"
-import { Agent, RedisTable } from "../sub/collection"
+import { Agent, PgTable, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
 
@@ -41,11 +41,11 @@ const FAKE_REDIS = {
 
 export let redis: typeof FAKE_REDIS | RedisTable
 
-export const kkutu = {}
+export const kkutu: Record<string, PgTable> = {}
 export const kkutu_cw = {}
 export const kkutu_manner = {}
 
-export let kkutu_injeong
+export let kkutu_injeong: PgTable
 export let kkutu_shop
 export let kkutu_shop_desc
 export let session

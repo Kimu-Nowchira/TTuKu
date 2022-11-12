@@ -148,8 +148,7 @@ const sqlSelect = (q: any[]) => {
     .join(", ")
 }
 
-const sqlWhere = (q: any[]) => {
-  logger.debug("sqlWhere", q)
+const sqlWhere = (q: [string, string | number | RegExp][]) => {
   if (!Object.keys(q).length) return "TRUE"
 
   const wSearch = (item) => {
@@ -507,28 +506,28 @@ export class PgTable {
     this.source = col
   }
 
-  findOne() {
-    return new Pointer("findOne", query(arguments), this.col, this.origin)
+  findOne(...args) {
+    return new Pointer("findOne", query(args), this.col, this.origin)
   }
 
-  find() {
-    return new Pointer("find", query(arguments), this.col, this.origin)
+  find(...args) {
+    return new Pointer("find", query(args), this.col, this.origin)
   }
 
-  insert() {
-    return new Pointer("insert", query(arguments), this.col, this.origin)
+  insert(...args) {
+    return new Pointer("insert", query(args), this.col, this.origin)
   }
 
-  update() {
-    return new Pointer("update", query(arguments), this.col, this.origin)
+  update(...args) {
+    return new Pointer("update", query(args), this.col, this.origin)
   }
 
-  upsert() {
-    return new Pointer("upsert", query(arguments), this.col, this.origin)
+  upsert(...args) {
+    return new Pointer("upsert", query(args), this.col, this.origin)
   }
 
-  remove() {
-    return new Pointer("remove", query(arguments), this.col, this.origin)
+  remove(...args) {
+    return new Pointer("remove", query(args), this.col, this.origin)
   }
 
   createColumn(name: string, type: string) {

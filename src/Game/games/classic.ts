@@ -32,6 +32,7 @@ import {
 import { all, Tail } from "../../sub/lizard"
 import Robot from "../classes/Robot"
 import Client from "../classes/Client"
+import { PgTable } from "../../sub/collection"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]
@@ -585,7 +586,10 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
   }
 
   const produce = () => {
-    var aqs = [["_id", new RegExp(adv)]] as [string, any][]
+    const aqs = [["_id", new RegExp(adv)]] as [
+      string,
+      string | number | RegExp | Record<string, string | number>
+    ][]
     var aft
     var lst
 
@@ -617,8 +621,9 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
         }
         break
     }
-    this.DB.kkutu[this.room.rule.lang].find
-      .apply(this, aqs)
+
+    ;(this.DB.kkutu[this.room.rule.lang] as PgTable)
+      .find(...aqs)
       .limit(bool ? 1 : 123)
       .on(($md) => {
         forManner($md)
