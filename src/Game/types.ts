@@ -1,5 +1,78 @@
 import Robot from "./classes/Robot"
 
+export interface IUser {
+  _id: string
+  money: number
+  kkutu: {
+    score: number
+    playTime: number
+    connectDate: number
+    record: Record<string, [number, number, number, number]>
+  }
+  lastLogin?: number
+  box?: Record<string, number>
+  equip?: any
+  exordial?: string
+  black?: string
+  blockeduntil?: string
+  server: string
+  password?: string
+  friends: Record<string, string>
+}
+
+export interface IWord {
+  _id: string
+  type: string
+  mean: string
+  hit: number
+  flag: number
+  theme: string
+}
+
+export interface ISession {
+  id: string
+  profile: {
+    authType: string
+    id: string
+    name: string
+    title: string
+    image: string
+    token: string
+    sid: string
+  }
+  createdAt: number
+}
+
+export interface IShopItem {
+  _id: string
+  cost: number
+  hit: number
+  term: number
+  group: string
+  updatedAt: number
+  options: {
+    gEXP?: number
+    gMNY?: number
+    hMNY?: number
+    hEXP?: number
+    gif?: boolean
+  }
+}
+
+export interface IShopDescription {
+  _id: string
+  name_ko_KR: string
+  desc_ko_KR: string
+  name_en_US: string
+  desc_en_US: string
+}
+
+export interface ICrossWordData {
+  _id: string
+  map: string
+  data: string
+}
+
 export interface GameData {
   ready?: boolean
   form?: string

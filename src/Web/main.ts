@@ -225,7 +225,7 @@ ROUTES.forEach((v) => {
 
 Server.get("/", (req, res) => {
   const server = parseInt(req.query.server?.toString() || "")
-  if (!server) logger.error("Server is not defined")
+  // if (!server) logger.error("Server is not defined")
 
   const onFinish = ($doc) => {
     let id = req.session.id

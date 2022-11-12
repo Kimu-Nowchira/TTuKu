@@ -66,7 +66,7 @@ export default class Client {
 
   box: any
   noChat: boolean
-  friends: any
+  friends: Record<string, string>
 
   cameWhenGaming: boolean
 
