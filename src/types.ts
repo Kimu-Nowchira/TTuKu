@@ -128,6 +128,10 @@ export interface GameData {
   clist?: any
   lists?: any[]
 
+  // sock.ts
+  words?: string[]
+  board?: string
+
   _rrt?: NodeJS.Timeout
   turnTimer?: NodeJS.Timeout
   hintTimer?: NodeJS.Timeout

@@ -17,6 +17,7 @@ import { GameData, RoomData, RoomExportData } from "../../types"
 import Robot from "./Robot"
 import Client from "./Client"
 import { redis } from "../../Web/db"
+import { Sock } from "../games/sock"
 
 const Rule: Record<string, typeof Game> = {
   Classic: Classic,
@@ -24,6 +25,7 @@ const Rule: Record<string, typeof Game> = {
   Daneo: Daneo,
   Hunmin: Hunmin,
   Typing: Typing,
+  Sock: Sock,
 }
 
 export default class Room {
