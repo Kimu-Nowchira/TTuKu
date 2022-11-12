@@ -36,9 +36,7 @@ const asKey = (val: string) => {
 
   return (
     ar
-      .map(function (item, x) {
-        return x ? `'${escape.literal(item)}'` : escape.ident(item)
-      })
+      .map((item, x) => (x ? `'${escape.literal(item)}'` : escape.ident(item)))
       .join("->") + `->>'${aEnd}'`
   )
 }
@@ -46,14 +44,14 @@ const asKey = (val: string) => {
 // (JSON ENDPOINT) KEY
 const asSKey = (val: string) => {
   if (val.indexOf(".") == -1) return asKey(val)
-  const c = val.split(".").map(function (item, x) {
-    return x ? escape.literal(item) : escape.ident(item)
-  })
+
+  const c = val
+    .split(".")
+    .map((item, x) => (x ? escape.literal(item) : escape.ident(item)))
 
   return c.slice(0, c.length - 1).join("->") + "->>" + c[c.length - 1]
 }
 
-// VALUE
 const asValue = (val: string[] | number | string): string => {
   if (val instanceof Array) return escape.literal("{" + val.join(",") + "}")
   if (typeof val === "number") return val.toString()
@@ -98,9 +96,9 @@ global.getType = (obj: any): string => {
   return s.slice(9, s.indexOf("("))
 }
 
-const query = (_q) => {
-  const res = []
-  for (const i in _q) if (_q[i]) res.push(_q[i])
+const query = (_q: Query) => {
+  const res: Query = []
+  for (const i of _q) if (i) res.push(i)
   return res
 }
 
@@ -110,7 +108,7 @@ const oQuery = (_q) => {
   return res
 }
 
-const uQuery = (q, id: string): [string, string][] => {
+const uQuery = (q, id: any): Query => {
   const res = []
   let noId = true
 
@@ -148,7 +146,7 @@ const sqlSelect = (q: any[]) => {
     .join(", ")
 }
 
-const sqlWhere = (q: [string, string | number | RegExp][]) => {
+const sqlWhere = (q: Query) => {
   if (!Object.keys(q).length) return "TRUE"
 
   const wSearch = (item) => {
@@ -194,7 +192,7 @@ const sqlSet = (q, inc?: boolean) => {
       ? (k, v) => Escape("%K=%K+%V", k, k, v)
       : (k, v) => Escape("%K=%V", k, v),
     doJ = inc
-      ? (k, p, ok, v) => {
+      ? () => {
           logger.warn("[sqlSet] Cannot increase a value in JSON object.")
           return null //Escape("%K=jsonb_set(%K,%V,CAST(CAST(%k AS bigint)+%V AS text),true)", k, k, p, ok, Number(v));
         }
@@ -220,11 +218,12 @@ const sqlSet = (q, inc?: boolean) => {
 const sqlIK = (q) => q.map((item) => Escape("%K", item[0])).join(", ")
 const sqlIV = (q) => q.map((item) => Escape("%V", item[1])).join(", ")
 
-function isDataAvailable(data, chk) {
+const isDataAvailable = (data, chk) => {
   let path
   let cursor
 
   if (data == null) return false
+
   for (const i in chk) {
     cursor = data
     path = i.split(".")
@@ -244,7 +243,7 @@ export class RedisTable {
   putGlobal = (id: string, score: number) => {
     const R = new Tail()
 
-    this.redis.zadd([this.key, score, id], (err, res) => {
+    this.redis.zadd([this.key, score, id], () => {
       R.go(id)
     })
     return R
@@ -311,8 +310,15 @@ class Pointer {
   findLimit: number
 
   constructor(
-    public mode,
-    public q,
+    public mode:
+      | "findOne"
+      | "find"
+      | "insert"
+      | "update"
+      | "upsert"
+      | "remove"
+      | "createColumn",
+    public q: Query | CreateColumnQuery,
     public col: string,
     public origin: PoolClient
   ) {}
@@ -383,14 +389,12 @@ class Pointer {
       // fall-through
       case "find":
         sql = Escape("SELECT %s FROM %I", sqlSelect(this.second), this.col)
-        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
+        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q as Query))
         if (this.sorts)
           sql += Escape(
             " ORDER BY %s",
             this.sorts
-              .map(function (item) {
-                return item[0] + (item[1] == 1 ? " ASC" : " DESC")
-              })
+              .map((item) => item[0] + (item[1] == 1 ? " ASC" : " DESC"))
               .join(",")
           )
         if (this.findLimit) sql += Escape(" LIMIT %V", String(this.findLimit))
@@ -399,8 +403,8 @@ class Pointer {
         sql = Escape(
           "INSERT INTO %I (%s) VALUES (%s)",
           this.col,
-          sqlIK(this.q),
-          sqlIV(this.q)
+          sqlIK(this.q as Query),
+          sqlIV(this.q as Query)
         )
         break
       case "update":
@@ -410,11 +414,11 @@ class Pointer {
           sq = sqlSet(sq)
         }
         sql = Escape("UPDATE %I SET %s", this.col, sq)
-        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
+        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q as Query))
         break
       case "upsert":
         // 업데이트 대상을 항상 _id(q의 가장 앞 값)로 가리키는 것으로 가정한다.
-        uq = uQuery(sq, this.q[0][1])
+        uq = uQuery(sq, (this.q as Query)[0][1])
         sql = Escape(
           "INSERT INTO %I (%s) VALUES (%s)",
           this.col,
@@ -425,14 +429,14 @@ class Pointer {
         break
       case "remove":
         sql = Escape("DELETE FROM %I", this.col)
-        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q))
+        if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q as Query))
         break
       case "createColumn":
         sql = Escape(
           "ALTER TABLE %I ADD COLUMN %K %I",
           this.col,
-          this.q[0],
-          this.q[1]
+          (this.q as CreateColumnQuery)[0],
+          (this.q as CreateColumnQuery)[1]
         )
         break
       default:
@@ -443,7 +447,8 @@ class Pointer {
     logger.debug("Query: " + sql)
     if (!sql) return logger.warn("SQL is undefined. This call will be ignored.")
     if (!this.origin) throw new Error("The origin of the query is not defined.")
-    // logger.log("Query: " + sql.slice(0, 100));
+
+    // logger.debug("Query: " + sql.slice(0, 100));
     this.origin.query(sql, preCB)
     /*if(_my.findLimit){
 
@@ -496,6 +501,15 @@ class Pointer {
   }
 }
 
+type QueryElement = [
+  string,
+  string | number | RegExp | Record<string, string | number | RegExp>
+]
+
+type Query = QueryElement[]
+
+type CreateColumnQuery = [string, string]
+
 export class PgTable {
   // TODO 중복 변수 제거
   source: string
@@ -504,27 +518,27 @@ export class PgTable {
     this.source = col
   }
 
-  findOne(...args) {
+  findOne(...args: Query) {
     return new Pointer("findOne", query(args), this.col, this.origin)
   }
 
-  find(...args) {
+  find(...args: Query) {
     return new Pointer("find", query(args), this.col, this.origin)
   }
 
-  insert(...args) {
+  insert(...args: Query) {
     return new Pointer("insert", query(args), this.col, this.origin)
   }
 
-  update(...args) {
+  update(...args: Query) {
     return new Pointer("update", query(args), this.col, this.origin)
   }
 
-  upsert(...args) {
+  upsert(...args: Query) {
     return new Pointer("upsert", query(args), this.col, this.origin)
   }
 
-  remove(...args) {
+  remove(...args: Query) {
     return new Pointer("remove", query(args), this.col, this.origin)
   }
 
