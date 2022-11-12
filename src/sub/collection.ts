@@ -102,13 +102,14 @@ const query = (_q: Query): Query => {
   return res
 }
 
-const oQuery = (_q) => {
-  const res = []
+// Object Query의 준말로, {"_id": -1}을 ["_id", -1]과 같은 형태로 변환한다.
+const oQuery = (_q: ObjectQuery) => {
+  const res: Query = []
   for (const i in _q) if (_q[i]) res.push([i, _q[i]])
   return res
 }
 
-const uQuery = (q, id: any): Query => {
+const uQuery = (q: Query, id: QueryValue): Query => {
   const res = []
   let noId = true
 
@@ -117,18 +118,20 @@ const uQuery = (q, id: any): Query => {
 
     if (q[i][0] == "_id") {
       noId = false
-    } else if (c.split)
-      if ((c = c.split(".")).length > 1) {
-        var jo = {},
-          j = jo
+    } else if (typeof c === "string") {
+      const _c = c.split(".")
+      if (_c.length > 1) {
+        const jo = {}
+        let j = jo
 
-        q[i][0] = c.shift()
-        while (c.length > 1) {
-          j = j[c.shift()] = {}
+        q[i][0] = _c.shift()
+        while (_c.length > 1) {
+          j = j[_c.shift()] = {}
         }
-        j[c.shift()] = q[i][1]
+        j[_c.shift()] = q[i][1]
         q[i][1] = JSON.stringify(jo)
       }
+    }
     res.push([q[i][0], q[i][1]])
   }
   if (noId) res.push(["_id", id])
@@ -308,7 +311,9 @@ class Pointer {
   second: Record<string, Query> = {} // "$set" | "$setOrInsert" | "$inc"
   third: Query = []
   sorts = null as any
-  findLimit: number
+
+  // Limit 값으로 0일 때는 Limit 옵션이 없는 것으로 취급한다.
+  findLimit: number = 0
 
   constructor(
     public mode:
@@ -330,9 +335,8 @@ class Pointer {
   */
 
   on(f?: Function, chk: boolean = false, onFail?) {
-    var sql
-    var sq = this.second["$set"]
-    var uq
+    let sql = ""
+    const sq = this.second["$set"]
 
     const callback = (err: Error, doc) => {
       if (f) {
@@ -417,7 +421,7 @@ class Pointer {
         break
       case "upsert":
         // 업데이트 대상을 항상 _id(q의 가장 앞 값)로 가리키는 것으로 가정한다.
-        uq = uQuery(sq, (this.q as Query)[0][1])
+        const uq = uQuery(sq, (this.q as Query)[0][1])
         sql = Escape(
           "INSERT INTO %I (%s) VALUES (%s)",
           this.col,
@@ -499,10 +503,16 @@ class Pointer {
   }
 }
 
-type QueryElement = [
-  string,
-  string | number | boolean | RegExp | Record<string, string | number | RegExp>
-]
+type QueryValue =
+  | string
+  | number
+  | boolean
+  | RegExp
+  | Record<string, string | number | RegExp>
+
+type ObjectQuery = Record<string, QueryValue>
+
+type QueryElement = [string, QueryValue]
 
 type Query = QueryElement[]
 
@@ -544,9 +554,8 @@ export class PgTable {
     return new Pointer("createColumn", [name, type], this.col, this.origin)
   }
 
-  direct(q, f) {
+  direct(q: string, f: (err: Error, res: any) => void) {
     logger.warn("Direct query: " + q)
     this.origin.query(q, f)
-    // this.origin.query(q).then(f)
   }
 }
