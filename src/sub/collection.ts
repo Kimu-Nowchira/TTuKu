@@ -96,7 +96,7 @@ global.getType = (obj: any): string => {
   return s.slice(9, s.indexOf("("))
 }
 
-const query = (_q: Query) => {
+const query = (_q: Query): Query => {
   const res: Query = []
   for (const i of _q) if (i) res.push(i)
   return res
@@ -135,7 +135,7 @@ const uQuery = (q, id: any): Query => {
   return res
 }
 
-const sqlSelect = (q: any[]) => {
+const sqlSelect = (q: Query) => {
   if (!Object.keys(q).length) return "*"
 
   return q
@@ -183,7 +183,7 @@ const sqlWhere = (q: Query) => {
   return q.map(wSearch).join(" AND ")
 }
 
-const sqlSet = (q, inc?: boolean) => {
+const sqlSet = (q: Query, inc?: boolean) => {
   if (!q) {
     logger.warn("[sqlSet] Invalid query.")
     return null
@@ -305,7 +305,8 @@ export class RedisTable {
 }
 
 class Pointer {
-  second = {} as any
+  second: Record<string, Query> = {} // "$set" | "$setOrInsert" | "$inc"
+  third: Query = []
   sorts = null as any
   findLimit: number
 
@@ -388,7 +389,7 @@ class Pointer {
         this.findLimit = 1
       // fall-through
       case "find":
-        sql = Escape("SELECT %s FROM %I", sqlSelect(this.second), this.col)
+        sql = Escape("SELECT %s FROM %I", sqlSelect(this.third), this.col)
         if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q as Query))
         if (this.sorts)
           sql += Escape(
@@ -408,12 +409,10 @@ class Pointer {
         )
         break
       case "update":
-        if (this.second["$inc"]) {
-          sq = sqlSet(this.second["$inc"], true)
-        } else {
-          sq = sqlSet(sq)
-        }
-        sql = Escape("UPDATE %I SET %s", this.col, sq)
+        const sqs = this.second["$inc"]
+          ? sqlSet(this.second["$inc"], true)
+          : sqlSet(sq)
+        sql = Escape("UPDATE %I SET %s", this.col, sqs)
         if (this.q) sql += Escape(" WHERE %s", sqlWhere(this.q as Query))
         break
       case "upsert":
@@ -467,12 +466,13 @@ class Pointer {
   }
 
   // limit: find 쿼리에 걸린 문서를 필터링하는 지침을 정의한다.
-  limit(_data, ...args) {
-    if (global.getType(_data) == "Number") {
+  limit(_data: number | QueryElement, ...args: Query) {
+    if (typeof _data === "number") {
       this.findLimit = _data
     } else {
-      this.second = query([_data, ...args])
-      this.second.push(["_id", true])
+      // second => third
+      this.third = query([_data, ...args])
+      this.third.push(["_id", true])
     }
     return this
   }
@@ -503,7 +503,7 @@ class Pointer {
 
 type QueryElement = [
   string,
-  string | number | RegExp | Record<string, string | number | RegExp>
+  string | number | boolean | RegExp | Record<string, string | number | RegExp>
 ]
 
 type Query = QueryElement[]
@@ -526,7 +526,7 @@ export class PgTable {
     return new Pointer("find", query(args), this.col, this.origin)
   }
 
-  insert(...args: Query) {
+  insert(...args: [string, string][]) {
     return new Pointer("insert", query(args), this.col, this.origin)
   }
 
