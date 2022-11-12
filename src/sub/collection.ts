@@ -68,7 +68,8 @@ const Escape = (str: string, ...a: Array<string | number>) => {
     (_, type: "s" | "I" | "L" | "Q" | "k" | "K" | "V" | "%") => {
       if (type === "%") return "%"
 
-      const arg = args[i++].toString() || ""
+      // 임시조치
+      const arg = (args[i++] as any) || ""
       switch (type) {
         case "s":
           return escape.string(arg)
@@ -238,8 +239,10 @@ const sqlSet = (q: Query, inc?: boolean) => {
 }
 
 const sqlIK = (q: Query) => q.map((item) => Escape("%K", item[0])).join(", ")
-const sqlIV = (q: Query) =>
-  q.map((item) => Escape("%V", item[1].toString())).join(", ")
+
+// 임시조치
+// @ts-ignore
+const sqlIV = (q: Query) => q.map((item) => Escape("%V", item[1])).join(", ")
 
 const isDataAvailable = (data: any, chk) => {
   let path
@@ -423,8 +426,7 @@ class Pointer {
               .map((item) => item[0] + (item[1] == 1 ? " ASC" : " DESC"))
               .join(",")
           )
-        if (this.findLimit)
-          sql += Escape(" LIMIT %V", this.findLimit.toString())
+        if (this.findLimit) sql += Escape(" LIMIT %V", this.findLimit)
         break
       case "insert":
         sql = Escape(
