@@ -524,7 +524,7 @@ class Pointer {
 }
 
 interface AdvancedQuery {
-  $not?: string
+  $not?: string | RegExp
   $nand?: string
   $lte?: number
   $gte?: number

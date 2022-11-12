@@ -15,18 +15,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { KOR_GROUP } from "../../const"
-import { Tail } from "../../sub/lizard"
+import { KOR_GROUP } from "../const"
+import { Tail } from "../sub/lizard"
+import { kkutu, kkutu_cw } from "../Web/db"
 
 const Prompt = require("prompt")
-const DB = require("../../Web/db")
-
 const LANG = "ko"
 
 Prompt.start()
 
-DB.ready = function () {
-  DB.kkutu_cw[LANG].find().on(($res) => {
+const run = async () => {
+  kkutu_cw[LANG].find().on(($res) => {
     for (const i in $res) {
       MC[$res[i].map]++
       const lis = $res[i].data.split("|")
@@ -71,7 +70,7 @@ DB.ready = function () {
       Prompt.get(["flush"], (err, _res) => {
         if (_res.flush == "y") {
           MC[data.map.name]++
-          DB.kkutu_cw[LANG].insert(
+          kkutu_cw[LANG].insert(
             ["map", data.map.name],
             [
               "data",
@@ -277,10 +276,6 @@ var words = [
   "창녀",
 ]
 
-function random(a, b) {
-  // [a ~ b) 범위 정수
-  return a + Math.floor(Math.random() * (b - a))
-}
 function getMap() {
   /* 희소 행렬 표기법
 		[ x, y, 세로?, 길이 ]
@@ -299,10 +294,9 @@ function getMap() {
 
 function getBoard(lang) {
   const R = new Tail()
-  var MEAN = ["mean", new RegExp("^.{9}[^=→][^.]{15}")]
+  var MEAN: [string, RegExp] = ["mean", new RegExp("^.{9}[^=→][^.]{15}")]
   var NO_BUL = new RegExp("^(500|210|120|10)$")
   var board = {}
-  var proc = []
   var map = getMap()
   const queue = map.queue.slice(0)
   var regCache = {}
@@ -333,7 +327,7 @@ function getBoard(lang) {
       // if(Math.random() < 0.5 && regCache[reg].length >= 50) regCache[reg].shift();
       onDBFound(regCache[reg].shift())
     } else
-      DB.kkutu[lang]
+      kkutu[lang]
         .find(
           ["_id", new RegExp(`^${reg}$`)],
           ["theme", { $not: NO_BUL }],
@@ -393,3 +387,5 @@ function getBoard(lang) {
   process()
   return R
 }
+
+run().then()
