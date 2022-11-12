@@ -33,6 +33,7 @@ import { all, Tail } from "../../sub/lizard"
 import Robot from "../classes/Robot"
 import Client from "../classes/Client"
 import { PgTable } from "../../sub/collection"
+import { kkutu, kkutu_manner } from "../../Web/db"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]
@@ -111,7 +112,7 @@ export default class Classic extends Game {
         R.go(EXAMPLE)
         return
       }
-      this.DB.kkutu[l.lang]
+      kkutu[l.lang]
         .find(
           [
             "_id",
@@ -360,7 +361,7 @@ export default class Classic extends Game {
 
           if (!client.robot) {
             client.invokeWordPiece(text, 1)
-            this.DB.kkutu[l]
+            kkutu[l]
               .update(["_id", text])
               .set(["hit", $doc.hit + 1])
               .on()
@@ -410,7 +411,7 @@ export default class Classic extends Game {
       }
     }
 
-    this.DB.kkutu[l]
+    kkutu[l]
       .findOne(["_id", text], l == "ko" ? ["type", KOR_GROUP] : ["_id", ENG_ID])
       .on(onDB)
   }
@@ -439,7 +440,6 @@ export default class Classic extends Game {
     var ended = {}
     var w
     let text: string
-    var lmax
     var isRev = GAME_TYPE[this.room.mode] == "KAP"
 
     getAuto
@@ -531,7 +531,7 @@ export default class Classic extends Game {
     const getWish = (char: string) => {
       var R = new Tail()
 
-      this.DB.kkutu[this.room.rule.lang]
+      kkutu[this.room.rule.lang]
         .find(["_id", new RegExp(isRev ? `.${char}$` : `^${char}.`)])
         .limit(10)
         .on(function ($res) {
@@ -558,12 +558,12 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
 
   const R = new Tail()
   const gameType = GAME_TYPE[this.room.mode]
-  var adv, adc
+  let adv: string
   const key = gameType + "_" + keyByOptions(this.room.opts)
-  var MAN = this.DB.kkutu_manner[this.room.rule.lang]
+  const MAN = kkutu_manner[this.room.rule.lang]
   const bool = type === 1
 
-  adc = char + (subc ? "|" + subc : "")
+  const adc = char + (subc ? "|" + subc : "")
   switch (gameType) {
     case "EKT":
       adv = `^(${adc})..`
@@ -590,7 +590,6 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
       string,
       string | number | RegExp | Record<string, string | number>
     ][]
-    var aft
     var lst
 
     if (!this.room.opts.injeong) aqs.push(["flag", { $nand: KOR_FLAG.INJEONG }])
@@ -603,6 +602,8 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
     } else {
       aqs.push(["_id", ENG_ID])
     }
+
+    let aft
     switch (type) {
       case 0:
       default:
@@ -622,7 +623,7 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
         break
     }
 
-    ;(this.DB.kkutu[this.room.rule.lang] as PgTable)
+    ;(kkutu[this.room.rule.lang] as PgTable)
       .find(...aqs)
       .limit(bool ? 1 : 123)
       .on(($md) => {
@@ -660,7 +661,7 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
 }
 
 function keyByOptions(opts) {
-  var arr = []
+  const arr = []
 
   if (opts.injeong) arr.push("X")
   if (opts.loanword) arr.push("L")
@@ -669,14 +670,9 @@ function keyByOptions(opts) {
 }
 
 function shuffle(arr) {
-  var i,
-    r = []
-
-  for (i in arr) r.push(arr[i])
-  r.sort(function (a, b) {
-    return Math.random() - 0.5
-  })
-
+  const r = []
+  for (const i in arr) r.push(arr[i])
+  r.sort(() => Math.random() - 0.5)
   return r
 }
 
