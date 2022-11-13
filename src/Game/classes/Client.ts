@@ -273,13 +273,13 @@ export default class Client {
       return { result: 200 }
     }
 
-    const $user = (await users.findOne(["_id", this.id]).onAsync()) as IUser
+    const user = (await users.findOne(["_id", this.id]).onAsync()) as IUser
 
     let black = ""
     let blockedUntil: number = null
 
-    const userData = $user
-      ? $user
+    const userData = user
+      ? user
       : {
           money: 0,
           exordial: "",
@@ -289,15 +289,15 @@ export default class Client {
           friends: undefined,
         }
 
-    if ($user) {
+    if (user) {
       // 기존 유저의 처벌 관련
-      black = $user.black
+      black = user.black
       if (black == "null") black = ""
       if (black == "chat") {
         black = ""
         this.noChat = true
       }
-      blockedUntil = $user.blockedUntil || null
+      blockedUntil = user.blockedUntil || null
     }
 
     if (userData.exordial) this.exordial = userData.exordial
@@ -308,7 +308,7 @@ export default class Client {
     this.data = new Data(userData.kkutu)
     this.money = Number(userData.money)
 
-    if (!$user) this.flush()
+    if (!user) this.flush()
     else {
       this.checkExpire()
       this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
@@ -319,21 +319,17 @@ export default class Client {
       if (blockedUntil)
         return { result: 444, black: black, blockedUntil: blockedUntil }
       else return { result: 444, black: black }
-    } else if (cluster.isPrimary && $user.server) {
+    } else if (cluster.isPrimary && user.server) {
       /* Enhanced User Block System [E] */
-      return { result: 409, black: $user.server }
+      return { result: 409, black: user.server }
     } else if (NIGHT && this.isAjae === false) return { result: 440 }
     else return { result: 200 }
   }
 
-  flush(box?: boolean, equip?: boolean, friends?: boolean) {
-    const R = new Tail()
+  async flush(box?: boolean, equip?: boolean, friends?: boolean) {
+    if (this.guest) return { id: this.id, prev: 0 }
 
-    if (this.guest) {
-      R.go({ id: this.id, prev: 0 })
-      return R
-    }
-    users
+    await users
       .upsert(["_id", this.id])
       .set(
         !isNaN(this.money) ? ["money", this.money] : undefined,
@@ -343,17 +339,13 @@ export default class Client {
         equip ? ["equip", this.equip] : undefined,
         friends ? ["friends", this.friends] : undefined
       )
-      .on((__res) => {
-        redis.getGlobal(this.id).then((_res) => {
-          redis.putGlobal(this.id, this.data.score).then(() => {
-            logger.info(
-              `FLUSHED [${this.id}] PTS=${this.data.score} MNY=${this.money}`
-            )
-            R.go({ id: this.id, prev: _res })
-          })
-        })
-      })
-    return R
+      .onAsync()
+
+    const res = await redis.getGlobal(this.id)
+    await redis.putGlobal(this.id, this.data.score)
+
+    logger.info(`FLUSHED [${this.id}] PTS=${this.data.score} MNY=${this.money}`)
+    return { id: this.id, prev: res }
   }
 
   invokeWordPiece(text, coef) {
