@@ -40,8 +40,6 @@ import { init as dbInit, ip_block, session } from "../Web/db"
 let Server: WebSocket.Server
 let HTTPS_Server
 
-const MainDB = require("../Web/db")
-
 const DIC: Record<string, Client> = {}
 const DNAME: Record<string, string> = {}
 const ROOM: Record<string, Room> = {}
@@ -62,7 +60,7 @@ const run = async () => {
   await dbInit()
 
   logger.info("DB is ready (SLAVE)")
-  KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, undefined, {
+  KKuTuInit(DIC, ROOM, GUEST_PERMISSION, undefined, {
     onClientClosed: onClientClosedOnSlave,
     onClientMessage: onClientMessageOnSlave,
   })
