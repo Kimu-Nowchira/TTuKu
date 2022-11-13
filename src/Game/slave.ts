@@ -35,7 +35,7 @@ import {
   ENABLE_FORM,
 } from "./master"
 import { config } from "../config"
-import { init as DBInit } from "../Web/db"
+import { init as dbInit, ip_block, session } from "../Web/db"
 
 let Server: WebSocket.Server
 let HTTPS_Server
@@ -59,7 +59,13 @@ const RESERVED: Record<
 const CHAN = Number(process.env["CHANNEL"])
 
 const run = async () => {
-  await DBInit()
+  await dbInit()
+
+  logger.info("DB is ready (SLAVE)")
+  KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, undefined, {
+    onClientClosed: onClientClosedOnSlave,
+    onClientMessage: onClientMessageOnSlave,
+  })
 
   if (IS_SECURED) {
     const options = Secure()
@@ -103,7 +109,7 @@ const run = async () => {
       socket.close()
       return
     }
-    MainDB.session
+    session
       .findOne(["_id", key])
       .limit(["profile", true])
       .on(($body) => {
@@ -119,26 +125,24 @@ const run = async () => {
           ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
             !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
         ) {
-          MainDB.ip_block
-            .findOne(["_id", $c.remoteAddress])
-            .on(function ($body) {
-              if ($body.reasonBlocked) {
-                $c.socket.send(
-                  JSON.stringify({
-                    type: "error",
-                    code: 446,
-                    reasonBlocked: !$body.reasonBlocked
-                      ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
-                      : $body.reasonBlocked,
-                    ipBlockedUntil: !$body.ipBlockedUntil
-                      ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
-                      : $body.ipBlockedUntil,
-                  })
-                )
-                $c.socket.close()
-                return
-              }
-            })
+          ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
+            if ($body.reasonBlocked) {
+              $c.socket.send(
+                JSON.stringify({
+                  type: "error",
+                  code: 446,
+                  reasonBlocked: !$body.reasonBlocked
+                    ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+                    : $body.reasonBlocked,
+                  ipBlockedUntil: !$body.ipBlockedUntil
+                    ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+                    : $body.ipBlockedUntil,
+                })
+              )
+              $c.socket.close()
+              return
+            }
+          })
         }
         /* Enhanced User Block System [E] */
         if (DIC[$c.id]) {
@@ -242,7 +246,7 @@ process.on("message", (msg: any) => {
 
 export const onClientMessageOnSlave = ($c, msg) => {
   let stable = true
-  var temp
+  let temp
 
   if (!msg) return
 
@@ -490,14 +494,6 @@ const onClientClosedOnSlave = ($c) => {
   publish("disconnRoom", { id: $c.id })
 
   logger.info(`Chan @${CHAN} Exit #${$c.id}`)
-}
-
-MainDB.ready = function () {
-  logger.info("DB is ready (SLAVE)")
-  KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, undefined, {
-    onClientClosed: onClientClosedOnSlave,
-    onClientMessage: onClientMessageOnSlave,
-  })
 }
 
 run().then()
