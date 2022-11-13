@@ -22,7 +22,7 @@ import { MAIN_PORTS } from "../const"
 import { init as masterInit } from "./master"
 
 const SID = Number(process.argv[2])
-let CPU = Number(process.argv[3]) //require("os").cpus().length;
+let CPU = Number(process.argv[3]) // os.cpus().length;
 
 if (isNaN(SID)) {
   if (process.argv[2] == "test") {

@@ -19,12 +19,12 @@
 import cluster, { Worker as ClusterWorker } from "node:cluster"
 import Room from "./classes/Room"
 import Client from "./classes/Client"
-import { ClientExportData, RoomExportData } from "../types"
+import { ClientExportData, IShopItem, RoomExportData } from "../types"
 import { kkutu_shop } from "../Web/db"
 
 export let GUEST_PERMISSION: Record<string, boolean> = {}
 
-export const SHOP: Record<string, any> = {}
+export const SHOP: Record<string, IShopItem> = {}
 
 export let DIC: Record<string, Client> = {}
 export let ROOM: Record<number, Room> = {}
@@ -57,7 +57,7 @@ export const init = (
   onClientMessage = events.onClientMessage
   onClientClosed = events.onClientClosed
 
-  kkutu_shop.find().on(($shop) => {
+  kkutu_shop.find().on(($shop: IShopItem[]) => {
     $shop.forEach((item) => (SHOP[item._id] = item))
   })
 }
@@ -83,10 +83,7 @@ export const publish = (type: string, data, _room?: string) => {
   } else {
     if (type == "room")
       process.send({ type: "room-publish", data: data, password: _room })
-    else
-      for (const i in DIC) {
-        DIC[i].send(type, data)
-      }
+    else for (const i in DIC) DIC[i].send(type, data)
   }
 }
 
