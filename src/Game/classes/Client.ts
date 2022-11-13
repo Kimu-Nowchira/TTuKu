@@ -10,7 +10,6 @@ import {
   SPAM_CLEAR_DELAY,
   SPAM_LIMIT,
 } from "../../const"
-import { Tail } from "../../sub/lizard"
 import Room from "./Room"
 import {
   CHAN,
@@ -82,7 +81,7 @@ export default class Client {
 
   passRecaptcha: boolean
   admin: boolean
-  remoteAddress: string | string[]
+  remoteAddress: string
   _error: number
   _invited: boolean
 
@@ -359,7 +358,7 @@ export default class Client {
     }
   }
 
-  enter(room, spec, pass) {
+  enter(room, spec, pass?) {
     let $room: Room | undefined
 
     if (this.place) {
@@ -502,7 +501,7 @@ export default class Client {
     this.publish("user", this.getData())
   }
 
-  kick(target, kickVote) {
+  kick(target, kickVote?) {
     const $room = ROOM[this.place]
     let len = $room.players.length
 

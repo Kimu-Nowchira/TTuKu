@@ -429,7 +429,7 @@ function joinNewUser($c) {
   logger.info("New user #" + $c.id)
 }
 
-export const onClientMessageOnMaster = ($c, msg) => {
+export const onClientMessageOnMaster = ($c: Client, msg) => {
   if (!msg) return
 
   if ($c.passRecaptcha) {
@@ -648,7 +648,7 @@ export const init = async (
   Server.on("connection", (socket, info) => {
     const key = info.url.slice(1)
 
-    socket.on("error", function (err) {
+    socket.on("error", (err) => {
       logger.warn("Error on #" + key + " on ws: " + err.toString())
     })
     // 웹 서버
@@ -676,7 +676,8 @@ export const init = async (
         /* Enhanced User Block System [S] */
         $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
           ? info.connection.remoteAddress
-          : info.headers["x-forwarded-for"] || info.connection.remoteAddress
+          : (info.headers["x-forwarded-for"] as string) ||
+            info.connection.remoteAddress
         /* Enhanced User Block System [E] */
 
         if (DIC[$c.id]) {

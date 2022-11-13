@@ -28,7 +28,6 @@ const ROBOT_CATCH_RATE = [0.1, 0.3, 0.5, 0.7, 0.99]
 const ROBOT_TYPE_COEF = [2000, 1200, 800, 300, 0]
 
 export class Jaqwi extends Game {
-  // @ts-ignore
   async getTitle() {
     this.room.game.done = []
     return super.getTitle()

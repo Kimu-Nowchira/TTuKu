@@ -117,7 +117,8 @@ export const init = async () => {
         /* Enhanced User Block System [S] */
         $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
           ? info.connection.remoteAddress
-          : info.headers["x-forwarded-for"] || info.connection.remoteAddress
+          : (info.headers["x-forwarded-for"] as string) ||
+            info.connection.remoteAddress
         if (
           config.USER_BLOCK_OPTIONS.USE_MODULE &&
           ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
@@ -242,7 +243,7 @@ process.on("message", (msg: any) => {
   }
 })
 
-export const onClientMessageOnSlave = ($c, msg) => {
+export const onClientMessageOnSlave = ($c: Client, msg) => {
   let stable = true
   let temp
 
