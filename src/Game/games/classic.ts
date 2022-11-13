@@ -45,7 +45,6 @@ const RIEUL_TO_IEUNG = [4451, 4455, 4456, 4461, 4466, 4469]
 const NIEUN_TO_IEUNG = [4455, 4461, 4466, 4469]
 
 export class Classic extends Game {
-  // @ts-ignore
   async getTitle(): Promise<string> {
     const l = this.room.rule
     let eng: string

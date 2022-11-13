@@ -39,14 +39,9 @@ const HUNMIN_LIST = [
 ]
 
 export class Hunmin extends Game {
-  getTitle() {
-    const R = new Tail()
-
+  async getTitle() {
     this.room.game.done = []
-    setTimeout(() => {
-      R.go("①②③④⑤⑥⑦⑧⑨⑩")
-    }, 500)
-    return R
+    return super.getTitle()
   }
 
   async roundReady() {

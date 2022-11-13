@@ -16,102 +16,106 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { all, Tail } from "../../sub/lizard"
 import { Game } from "./index"
 import Client from "../classes/Client"
 import { kkutu, kkutu_cw } from "../../Web/db"
+import { ICrossWordData, IWord } from "../../types"
 
 // const ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
 // const ROBOT_CATCH_RATE = [0.05, 0.2, 0.4, 0.6, 0.99]
 // const ROBOT_TYPE_COEF = [2000, 1200, 800, 300, 0]
 
 export class Crossword extends Game {
-  getTitle() {
-    const R = new Tail()
+  async getTitle() {
     var means = []
     var mdb = []
 
     this.room.game.started = false
-    kkutu_cw[this.room.rule.lang].find().on(($box) => {
-      var answers = {}
-      var boards = []
-      var maps = []
-      var left = this.room.round
-      var pick, pi, i, j
-      var mParser = []
 
-      while (left) {
-        pick = $box[(pi = Math.floor(Math.random() * $box.length))]
-        if (!pick) return
-        $box.splice(pi, 1)
-        if (maps.includes(pick.map)) continue
-        means.push({})
-        mdb.push({})
-        maps.push(pick.map)
-        boards.push(pick.data.split("|").map((item) => item.split(",")))
-        left--
-      }
-      for (i in boards) {
-        for (j in boards[i]) {
-          pi = boards[i][j]
-          mParser.push(getMeaning(i, pi))
-          answers[`${i},${pi[0]},${pi[1]},${pi[2]}`] = pi.pop()
-        }
-      }
-      this.room.game.numQ = mParser.length
-      all(mParser).then(() => {
-        this.room.game.prisoners = {}
-        this.room.game.answers = answers
-        this.room.game.boards = boards
-        this.room.game.means = means
-        this.room.game.mdb = mdb
-        R.go("①②③④⑤⑥⑦⑧⑨⑩")
-      })
-    })
-    const getMeaning = (round: string, bItem) => {
-      var R = new Tail()
-      var word = bItem[4]
-      var x = Number(bItem[0]),
-        y = Number(bItem[1])
+    const getMeaning = async (round: string, bItem): Promise<void> => {
+      const word = bItem[4]
+      let x = Number(bItem[0])
+      let y = Number(bItem[1])
 
-      kkutu[this.room.rule.lang].findOne(["_id", word]).on(($doc) => {
-        if (!$doc) return R.go(null)
-        var rk = `${x},${y}`
-        var i, o
+      const $doc = (await kkutu[this.room.rule.lang]
+        .findOne(["_id", word])
+        .onAsync()) as IWord | undefined
 
-        means[round][`${rk},${bItem[2]}`] = o = {
-          count: 0,
-          x: x,
-          y: y,
-          dir: Number(bItem[2]),
-          len: Number(bItem[3]),
-          type: $doc.type,
-          theme: $doc.theme,
-          mean: $doc.mean.replace(
-            new RegExp(
-              word
-                .split("")
-                .map((w) => {
-                  return w + "\\s?"
-                })
-                .join(""),
-              "g"
-            ),
-            "★"
+      if (!$doc) throw new Error("No such word: " + word)
+
+      var rk = `${x},${y}`
+      var o
+
+      means[round][`${rk},${bItem[2]}`] = o = {
+        count: 0,
+        x: x,
+        y: y,
+        dir: Number(bItem[2]),
+        len: Number(bItem[3]),
+        type: $doc.type,
+        theme: $doc.theme,
+        mean: $doc.mean.replace(
+          new RegExp(
+            word
+              .split("")
+              .map((w) => {
+                return w + "\\s?"
+              })
+              .join(""),
+            "g"
           ),
-        }
-        for (i = 0; i < o.len; i++) {
-          rk = `${x},${y}`
-          if (!mdb[round][rk]) mdb[round][rk] = []
-          mdb[round][rk].push(o)
-          if (o.dir) y++
-          else x++
-        }
-        R.go(true)
-      })
-      return R
+          "★"
+        ),
+      }
+      for (let i = 0; i < o.len; i++) {
+        rk = `${x},${y}`
+        if (!mdb[round][rk]) mdb[round][rk] = []
+        mdb[round][rk].push(o)
+        if (o.dir) y++
+        else x++
+      }
     }
-    return R
+
+    const $box = (await kkutu_cw[this.room.rule.lang]
+      .find()
+      .onAsync()) as ICrossWordData[]
+
+    var answers = {}
+    var boards = []
+    var maps = []
+    let left = this.room.round
+    var pick, pi, i, j
+    const mParser: Promise<void>[] = []
+
+    while (left) {
+      pick = $box[(pi = Math.floor(Math.random() * $box.length))]
+      if (!pick) return
+      $box.splice(pi, 1)
+      if (maps.includes(pick.map)) continue
+      means.push({})
+      mdb.push({})
+      maps.push(pick.map)
+      boards.push(pick.data.split("|").map((item) => item.split(",")))
+      left--
+    }
+
+    for (i in boards) {
+      for (j in boards[i]) {
+        pi = boards[i][j]
+        mParser.push(getMeaning(i, pi))
+        answers[`${i},${pi[0]},${pi[1]},${pi[2]}`] = pi.pop()
+      }
+    }
+    this.room.game.numQ = mParser.length
+
+    for (const m of mParser) await m
+
+    this.room.game.prisoners = {}
+    this.room.game.answers = answers
+    this.room.game.boards = boards
+    this.room.game.means = means
+    this.room.game.mdb = mdb
+    return "①②③④⑤⑥⑦⑧⑨⑩"
   }
 
   async roundReady() {

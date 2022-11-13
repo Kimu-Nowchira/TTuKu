@@ -20,49 +20,42 @@ import { PROVERBS } from "./typingConst"
 import { Tail } from "../../sub/lizard"
 import { Game } from "./index"
 import { kkutu } from "../../Web/db"
+import { IWord } from "../../types"
 
 const LIST_LENGTH = 200
 const DOUBLE_VOWELS = [9, 10, 11, 14, 15, 16, 19]
 const DOUBLE_TAILS = [3, 5, 6, 9, 10, 11, 12, 13, 14, 15, 18]
 
 export class Typing extends Game {
-  getTitle() {
-    const R = new Tail()
-    var i, j
+  async getTitle() {
+    const pick = (list: string[]) => {
+      const data = []
 
-    const pick = (list) => {
-      var data = []
-      var len = list.length
-      var arr
-
-      for (i = 0; i < this.room.round; i++) {
-        arr = []
-        for (j = 0; j < LIST_LENGTH; j++) {
-          arr.push(list[Math.floor(Math.random() * len)])
+      for (let i = 0; i < this.room.round; i++) {
+        const arr = []
+        for (let j = 0; j < LIST_LENGTH; j++) {
+          arr.push(list[Math.floor(Math.random() * list.length)])
         }
         data.push(arr)
       }
       this.room.game.lists = data
-      R.go("①②③④⑤⑥⑦⑧⑨⑩")
     }
 
     if (this.room.opts.proverb) pick(PROVERBS[this.room.rule.lang])
-    else
-      kkutu[this.room.rule.lang]
+    else {
+      const $res = (await kkutu[this.room.rule.lang]
         .find(["_id", /^.{2,5}$/], ["hit", { $gte: 1 }])
         .limit(416)
-        .on(($res) => {
-          pick(
-            $res.map((item) => {
-              return item._id
-            })
-          )
-        })
+        .onAsync()) as IWord[]
+
+      pick($res.map((item) => item._id))
+    }
 
     traverse.call(this, (o) => {
       o.game.spl = 0
     })
-    return R
+
+    return "①②③④⑤⑥⑦⑧⑨⑩"
   }
 
   async roundReady() {

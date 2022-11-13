@@ -28,7 +28,6 @@ import { redis } from "../../Web/db"
 import { Sock } from "../games/sock"
 
 const Rule: Record<string, typeof Game> = {
-  // @ts-ignore
   Classic: Classic,
   Crossword: Crossword,
   Daneo: Daneo,

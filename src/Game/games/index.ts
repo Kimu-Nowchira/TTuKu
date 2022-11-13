@@ -24,8 +24,9 @@ import Client from "../classes/Client"
 export class Game {
   constructor(public room: Room, protected DIC: Record<string, Client>) {}
 
-  getTitle() {
-    return new Tail()
+  async getTitle() {
+    await new Promise((resolve) => setTimeout(resolve, 500))
+    return "①②③④⑤⑥⑦⑧⑨⑩"
   }
 
   async roundReady() {}

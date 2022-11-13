@@ -26,15 +26,6 @@ const ROBOT_THINK_COEF = [4, 2, 1, 0, 0]
 const ROBOT_HIT_LIMIT = [4, 2, 1, 0, 0]
 
 export class Daneo extends Game {
-  getTitle() {
-    const R = new Tail()
-
-    setTimeout(() => {
-      R.go("①②③④⑤⑥⑦⑧⑨⑩")
-    }, 500)
-    return R
-  }
-
   async roundReady() {
     const ijl = this.room.opts.injpick.length
 

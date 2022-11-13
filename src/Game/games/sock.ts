@@ -36,15 +36,6 @@ const LANG_STATS = {
 }
 
 export class Sock extends Game {
-  getTitle() {
-    const R = new Tail()
-
-    setTimeout(() => {
-      R.go("①②③④⑤⑥⑦⑧⑨⑩")
-    }, 500)
-    return R
-  }
-
   async roundReady() {
     var words = []
     var conf = LANG_STATS[this.room.rule.lang]
