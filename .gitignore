@@ -16,3 +16,4 @@ dist
 lib
 
 *.min.js
+.pnp.cjs
