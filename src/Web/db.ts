@@ -25,12 +25,7 @@ import { PgTable, RedisTable } from "../sub/collection"
 
 const LANG = ["ko", "en"]
 
-const FAKE_REDIS_FUNC = () => {
-  const R = new Tail()
-
-  R.go({})
-  return R
-}
+const FAKE_REDIS_FUNC = async () => {}
 
 const FAKE_REDIS = {
   putGlobal: FAKE_REDIS_FUNC,

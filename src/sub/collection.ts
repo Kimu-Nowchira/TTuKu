@@ -261,22 +261,19 @@ const isDataAvailable = (data: any, chk) => {
 export class RedisTable {
   constructor(public redis: any, public key: string) {}
 
-  putGlobal = (id: string, score: number) => {
-    const R = new Tail()
-
-    this.redis.zadd([this.key, score, id], () => {
-      R.go(id)
+  putGlobal = async (id: string, score: number) => {
+    return new Promise((resolve, reject) => {
+      this.redis.zadd([this.key, score, id], () => resolve(id))
     })
-    return R
   }
 
-  getGlobal = (id: string) => {
-    const R = new Tail()
-
-    this.redis.zrevrank([this.key, id], (err, res) => {
-      R.go(res)
+  getGlobal = async (id: string) => {
+    return new Promise((resolve, reject) => {
+      this.redis.zrevrank([this.key, id], (err, res) => {
+        if (err) reject(err)
+        resolve(res)
+      })
     })
-    return R
   }
 
   getPage = (pg: number, lpp: number) => {
