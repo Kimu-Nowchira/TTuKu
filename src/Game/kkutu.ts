@@ -35,8 +35,8 @@ export let _rid: number = 100
 
 export const NIGHT = false
 
-export let onClientMessage: any
-export let onClientClosed: any
+export let onClientMessage: (client: Client, msg: any) => any
+export let onClientClosed: (client: Client) => any
 
 export const init = (
   _DIC: Record<string, Client>,
@@ -44,8 +44,8 @@ export const init = (
   _GUEST_PERMISSION: Record<string, boolean>,
   _CHAN: Record<string, ClusterWorker> | undefined,
   events: {
-    onClientMessage: any
-    onClientClosed: any
+    onClientMessage: (client: Client, msg: any) => any
+    onClientClosed: (client: Client) => any
   }
 ) => {
   DIC = _DIC

@@ -608,7 +608,7 @@ function processClientRequest($c, msg) {
 }
 
 // $c, code를 받았지만, code를 사용하지 않아서 없애 둠
-const onClientClosedOnMaster = ($c) => {
+const onClientClosedOnMaster = ($c: Client) => {
   delete DIC[$c.id]
   if ($c._error != 409) users.update(["_id", $c.id]).set(["server", ""]).on()
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]

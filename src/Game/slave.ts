@@ -486,7 +486,7 @@ export const onClientMessageOnSlave = ($c: Client, msg) => {
   }
 }
 
-const onClientClosedOnSlave = ($c) => {
+const onClientClosedOnSlave = ($c: Client) => {
   delete DIC[$c.id]
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]
   if ($c.socket) $c.socket.removeAllListeners()

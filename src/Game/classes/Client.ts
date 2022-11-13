@@ -110,11 +110,13 @@ export default class Client {
       }
     }
 
-    socket.on("close", (code) => {
+    socket.on("close", () => {
       if (ROOM[this.place]) ROOM[this.place].go(this)
       if (this.subPlace) this.pracRoom.go(this)
 
-      onClientClosed(this, code)
+      // code를 보내지만 쓰지 않아서 없애 둠 (리스너에서 받음)
+      // onClientClosed(this, code)
+      onClientClosed(this)
     })
 
     socket.on("message", (msg: any) => {
@@ -256,9 +258,10 @@ export default class Client {
         expired.push(i)
       }
     }
+
     if (expired.length) {
       this.send("expired", { list: expired })
-      this.flush(this.box, !!this.equip)
+      this.flush(this.box, !!this.equip).then()
     }
   }
 
@@ -307,7 +310,7 @@ export default class Client {
     this.data = new Data(userData.kkutu)
     this.money = Number(userData.money)
 
-    if (!user) this.flush()
+    if (!user) this.flush().then()
     else {
       this.checkExpire()
       this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
@@ -621,8 +624,8 @@ export default class Client {
     this.pracRoom.practice = true
     this.subPlace = this.pracRoom.id
     this.pracRoom.come(this)
-    this.pracRoom.start(level)
     this.pracRoom.game.hum = 1
+    this.pracRoom.start(level).then()
   }
 
   setRoom(room) {
@@ -688,7 +691,7 @@ export default class Client {
     else this.box[k] = q
 
     this.send("obtain", { key: k, q: q })
-    if (flush) this.flush(true)
+    if (flush) this.flush(true).then()
   }
 
   addFriend(id) {
@@ -696,7 +699,7 @@ export default class Client {
 
     if (!fd) return
     this.friends[id] = fd.profile.title || fd.profile.name
-    this.flush(false, false, true)
+    this.flush(false, false, true).then()
     this.send("friendEdit", { friends: this.friends })
   }
 
@@ -713,7 +716,7 @@ export default class Client {
         users.update(["_id", id]).set(["friends", f]).on()
       })
     delete this.friends[id]
-    this.flush(false, false, true)
+    this.flush(false, false, true).then()
     this.send("friendEdit", { friends: this.friends })
   }
 }
