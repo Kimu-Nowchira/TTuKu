@@ -72,6 +72,8 @@
   },
   "scripts": {
     "build": "tsc && webpack",
-    "webpack": "webpack"
+    "webpack": "webpack",
+    "prod:game": "node lib/Game/cluster.js 0 1",
+    "prod:web": "node lib/Web/cluster.js 1"
   }
 }

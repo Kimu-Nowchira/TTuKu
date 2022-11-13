@@ -7,7 +7,7 @@ services:
       - ./Server/lib:/app/Server/lib/
     depends_on:
       - db
-    command: [ "yarn node", "/app/lib/Game/cluster.js", "0", "1" ]
+    command: yarn prod:game
     restart: always
     ports:
       - 8496:8496
@@ -18,7 +18,7 @@ services:
     volumes:
       - ./Server/lib:/app/Server/lib/
       - kkutu_data:/kkutu
-    command: [ "yarn node", "/app/lib/Web/cluster.js", "1" ]
+    command: yarn prod:web
     restart: always
     depends_on:
       - db
