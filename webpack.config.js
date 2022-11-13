@@ -41,9 +41,9 @@ class ConcatPlugin {
   }
 }
 
-const sourcePath = resolve(__dirname, "lib/Web/lib")
+const sourcePath = resolve(__dirname, "dist/Web/lib")
 const gameSourcePath = resolve(sourcePath, "kkutu")
-const distributionPath = resolve(__dirname, "lib/Web/public/js")
+const distributionPath = resolve(__dirname, "dist/Web/public/js")
 
 if (!File.existsSync(resolve(sourcePath, "in_game_kkutu.js")))
   File.writeFileSync(resolve(sourcePath, "in_game_kkutu.js"))
