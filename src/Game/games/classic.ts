@@ -32,8 +32,8 @@ import {
 import { all, Tail } from "../../sub/lizard"
 import Robot from "../classes/Robot"
 import Client from "../classes/Client"
-import { PgTable } from "../../sub/collection"
 import { kkutu, kkutu_manner } from "../../Web/db"
+import { IWord } from "../../types"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]
@@ -45,20 +45,13 @@ const RIEUL_TO_IEUNG = [4451, 4455, 4456, 4461, 4466, 4469]
 const NIEUN_TO_IEUNG = [4455, 4461, 4466, 4469]
 
 export class Classic extends Game {
-  getTitle() {
-    const R = new Tail()
+  // @ts-ignore
+  async getTitle(): Promise<string> {
     const l = this.room.rule
     let eng: string
     let ja: number
 
-    if (!l) {
-      R.go("undefinedd")
-      return R
-    }
-    if (!l.lang) {
-      R.go("undefinedd")
-      return R
-    }
+    if (!l || !l.lang) return "undefinedd"
 
     const EXAMPLE = EXAMPLE_TITLE[l.lang]
     this.room.game.dic = {}
@@ -81,12 +74,11 @@ export class Classic extends Game {
         break
     }
 
-    const checkTitle = (title: null | string) => {
-      const _R = new Tail()
-      const list: Tail[] = []
+    const checkTitle = async (title: null | string): Promise<string> => {
+      const list: Promise<string | string[] | boolean>[] = []
 
       if (title == null) {
-        _R.go(EXAMPLE)
+        return EXAMPLE
       } else {
         const len = title.length
         for (let i = 0; i < len; i++)
@@ -99,20 +91,20 @@ export class Classic extends Game {
             )
           )
 
-        all(list).then((res) => {
-          for (const i in res) if (!res[i]) return _R.go(EXAMPLE)
-          return _R.go(title)
-        })
+        const results = []
+        for (const p of list) {
+          results.push(await p)
+        }
+
+        for (const result in results) if (!result) return EXAMPLE
+        return title
       }
-      return _R
     }
 
-    const tryTitle = (h: number) => {
-      if (h > 50) {
-        R.go(EXAMPLE)
-        return
-      }
-      kkutu[l.lang]
+    const tryTitle = async (h: number) => {
+      if (h > 50) return EXAMPLE
+
+      const $md = (await kkutu[l.lang]
         .find(
           [
             "_id",
@@ -123,24 +115,24 @@ export class Classic extends Game {
           // '$where', eng+"this._id.length == " + Math.max(2, this.room.round) + " && this.hit <= " + h
         )
         .limit(20)
-        .on(($md) => {
-          if ($md.length) {
-            const onChecked = (v) => {
-              if (v) R.go(v)
-              else if (list.length) checkTitle(list.shift()._id).then(onChecked)
-              else R.go(EXAMPLE)
-            }
+        .onAsync()) as IWord[]
 
-            const list = shuffle($md)
-            checkTitle(list.shift()._id).then(onChecked)
-          } else {
-            tryTitle(h + 10)
-          }
-        })
+      if ($md.length) {
+        const onChecked = (v) => {
+          if (v) return v
+          else if (list.length) checkTitle(list.shift()._id).then(onChecked)
+          else return EXAMPLE
+        }
+
+        const list = shuffle($md)
+        const r = checkTitle(list.shift()._id)
+        return onChecked(r)
+      }
+
+      return tryTitle(h + 10)
     }
 
-    tryTitle(10)
-    return R
+    return await tryTitle(10)
   }
 
   async roundReady() {
@@ -549,14 +541,17 @@ function getMission(l) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
+async function getAuto(
+  char: string,
+  subc: string,
+  type: 0 | 1 | 2
+): Promise<string | string[] | boolean> {
   /* type
     0 무작위 단어 하나
     1 존재 여부
     2 단어 목록
   */
 
-  const R = new Tail()
   const gameType = GAME_TYPE[this.room.mode]
   let adv: string
   const key = gameType + "_" + keyByOptions(this.room.opts)
@@ -585,7 +580,7 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
     console.log(`Undefined char detected! key=${key} type=${type} adc=${adc}`)
   }
 
-  const produce = () => {
+  const produce = async () => {
     const aqs = [["_id", new RegExp(adv)]] as [
       string,
       string | number | RegExp | Record<string, string | number>
@@ -603,39 +598,25 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
       aqs.push(["_id", ENG_ID])
     }
 
-    let aft
+    let aft: (md: string[]) => string | boolean | string[]
     switch (type) {
       case 0:
       default:
-        aft = function ($md) {
-          R.go($md[Math.floor(Math.random() * $md.length)])
+        aft = ($md) => {
+          return $md[Math.floor(Math.random() * $md.length)]
         }
         break
       case 1:
-        aft = function ($md) {
-          R.go(!!$md.length)
+        aft = ($md) => {
+          return !!$md.length
         }
         break
       case 2:
-        aft = function ($md) {
-          R.go($md)
+        aft = ($md) => {
+          return $md
         }
         break
     }
-
-    ;(kkutu[this.room.rule.lang] as PgTable)
-      .find(...aqs)
-      .limit(bool ? 1 : 123)
-      .on(($md) => {
-        forManner($md)
-        if (this.room.game.chain)
-          aft(
-            $md.filter((item) => {
-              return !this.room.game.chain.includes(item)
-            })
-          )
-        else aft($md)
-      })
 
     const onFail = () => {
       MAN.createColumn(key, "boolean").on(function () {
@@ -647,17 +628,29 @@ function getAuto(char: string, subc: string, type: 0 | 1 | 2): Tail {
       lst = list
       MAN.upsert(["_id", char]).set([key, !!lst.length]).on(null, null, onFail)
     }
+
+    const $md = (await kkutu[this.room.rule.lang]
+      .find(...aqs)
+      .limit(bool ? 1 : 123)
+      .onAsync()) as string[]
+    console.debug("$md", $md)
+
+    forManner($md)
+    if (this.room.game.chain)
+      return aft(
+        $md.filter((item) => {
+          return !this.room.game.chain.includes(item)
+        })
+      )
+    else return aft($md)
   }
 
-  MAN.findOne(["_id", char || "★"]).on(($mn) => {
-    if ($mn && bool) {
-      if ($mn[key] === null) produce()
-      else R.go($mn[key])
-    } else {
-      produce()
-    }
-  })
-  return R
+  const $mn = await MAN.findOne(["_id", char || "★"]).onAsync()
+
+  if ($mn && bool) {
+    if ($mn[key] === null) return await produce()
+    else return $mn[key]
+  } else return await produce()
 }
 
 function keyByOptions(opts) {
