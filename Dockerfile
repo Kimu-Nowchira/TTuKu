@@ -8,6 +8,4 @@ COPY ./src/ ./lib/
 
 RUN yarn && yarn build
 
-RUN cd lib && node setup
-
 WORKDIR /kkutu
