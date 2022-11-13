@@ -21,7 +21,6 @@
  * getCookie 코드오류로 인한 코드 수정
  */
 var global = {};
-var L;
 
 (function(){
 	var size;
