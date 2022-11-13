@@ -34,10 +34,9 @@ import Client from "./classes/Client"
 import { init as KKuTuInit } from "./kkutu"
 import WebServer from "./classes/WebServer"
 
-import { init as DBInit } from "../Web/db"
+import { init as DBInit, ip_block, session, users } from "../Web/db"
 
 let HTTPS_Server
-let MainDB
 
 let Server: WebSocketServer<WebSocket>
 
@@ -150,12 +149,12 @@ function processAdmin(id: string, value: string) {
       try {
         let args = value.split(",")
         if (args.length == 2) {
-          MainDB.users
+          users
             .update(["_id", args[0].trim()])
             .set(["black", args[1].trim()])
             .on()
         } else if (args.length == 3) {
-          MainDB.users
+          users
             .update(["_id", args[0].trim()])
             .set(
               ["black", args[1].trim()],
@@ -180,12 +179,12 @@ function processAdmin(id: string, value: string) {
       try {
         let args = value.split(",")
         if (args.length == 2) {
-          MainDB.ip_block
+          ip_block
             .update(["_id", args[0].trim()])
             .set(["reasonBlocked", args[1].trim()])
             .on()
         } else if (args.length == 3) {
-          MainDB.ip_block
+          ip_block
             .update(["_id", args[0].trim()])
             .set(
               ["reasonBlocked", args[1].trim()],
@@ -203,7 +202,7 @@ function processAdmin(id: string, value: string) {
       return null
     case "unban":
       try {
-        MainDB.users
+        users
           .update(["_id", value])
           .set(["black", null], ["blockedUntil", 0])
           .on()
@@ -216,7 +215,7 @@ function processAdmin(id: string, value: string) {
       return null
     case "ipunban":
       try {
-        MainDB.ip_block
+        ip_block
           .update(["_id", value])
           .set(["reasonBlocked", null], ["ipBlockedUntil", 0])
           .on()
@@ -264,7 +263,7 @@ function narrateFriends(id, friends, stat) {
 
   if (!fl.length) return
 
-  MainDB.users
+  users
     .find(["_id", { $in: fl }], ["server", /^\w+$/])
     .limit(["server", true])
     .on(function ($fon) {
@@ -611,8 +610,7 @@ function processClientRequest($c, msg) {
 // $c, code를 받았지만, code를 사용하지 않아서 없애 둠
 const onClientClosedOnMaster = ($c) => {
   delete DIC[$c.id]
-  if ($c._error != 409)
-    MainDB.users.update(["_id", $c.id]).set(["server", ""]).on()
+  if ($c._error != 409) users.update(["_id", $c.id]).set(["server", ""]).on()
   if ($c.profile) delete DNAME[$c.profile.title || $c.profile.name]
   if ($c.socket) $c.socket.removeAllListeners()
   if ($c.friends) narrateFriends($c.id, $c.friends, "off")
@@ -627,194 +625,189 @@ export const init = async (
 ) => {
   SID = _SID
 
-  MainDB = require("../Web/db")
-  MainDB.ready = function () {
-    logger.info("Master DB is ready.")
+  await DBInit()
 
-    MainDB.users.update(["server", SID]).set(["server", ""]).on()
-    if (IS_SECURED) {
-      const options = Secure()
-      HTTPS_Server = https
-        .createServer(options)
-        .listen(global.test ? TEST_PORT + 416 : process.env["KKUTU_PORT"])
-      Server = new WebSocket.Server({ server: HTTPS_Server })
-    } else {
-      Server = new WebSocket.Server({
-        port: global.test
-          ? TEST_PORT + 416
-          : parseInt(process.env["KKUTU_PORT"] || ""),
-        perMessageDeflate: false,
-      })
-    }
+  logger.info("Master DB is ready.")
 
-    Server.on("connection", (socket, info) => {
-      const key = info.url.slice(1)
-
-      socket.on("error", function (err) {
-        logger.warn("Error on #" + key + " on ws: " + err.toString())
-      })
-      // 웹 서버
-      if (info.headers.host.startsWith(config.GAME_SERVER_HOST + ":")) {
-        if (WDIC[key]) WDIC[key].socket.close()
-        WDIC[key] = new WebServer(socket)
-        logger.info(`New web server #${key}`)
-        WDIC[key].socket.on("close", function () {
-          logger.info(`Exit web server #${key}`)
-          WDIC[key].socket.removeAllListeners()
-          delete WDIC[key]
-        })
-        return
-      }
-      if (Object.keys(DIC).length >= KKUTU_MAX) {
-        socket.send(`{ "type": "error", "code": "full" }`)
-        return
-      }
-      MainDB.session
-        .findOne(["_id", key])
-        .limit(["profile", true])
-        .on(function ($body) {
-          const $c = new Client(socket, $body ? $body.profile : null, key)
-          $c.admin = config.ADMIN.indexOf($c.id) != -1
-          /* Enhanced User Block System [S] */
-          $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
-            ? info.connection.remoteAddress
-            : info.headers["x-forwarded-for"] || info.connection.remoteAddress
-          /* Enhanced User Block System [E] */
-
-          if (DIC[$c.id]) {
-            DIC[$c.id].sendError(408)
-            DIC[$c.id].socket.close()
-          }
-          if (DEVELOP && !TESTER.includes($c.id)) {
-            $c.sendError(500)
-            $c.socket.close()
-            return
-          }
-          if ($c.guest) {
-            if (SID != "0") {
-              $c.sendError(402)
-              $c.socket.close()
-              return
-            }
-            if (NIGHT) {
-              $c.sendError(440)
-              $c.socket.close()
-              return
-            }
-          }
-          /* Enhanced User Block System [S] */
-          if (
-            config.USER_BLOCK_OPTIONS.USE_MODULE &&
-            ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
-              !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
-          ) {
-            MainDB.ip_block
-              .findOne(["_id", $c.remoteAddress])
-              .on(function ($body) {
-                if ($body && $body.reasonBlocked) {
-                  if ($body.ipBlockedUntil < Date.now()) {
-                    MainDB.ip_block
-                      .update(["_id", $c.remoteAddress])
-                      .set(["ipBlockedUntil", 0], ["reasonBlocked", null])
-                      .on()
-                    logger.info(
-                      `IP 주소 ${$c.remoteAddress}의 이용제한이 해제되었습니다.`
-                    )
-                  } else {
-                    $c.socket.send(
-                      JSON.stringify({
-                        type: "error",
-                        code: 446,
-                        reasonBlocked: !$body.reasonBlocked
-                          ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
-                          : $body.reasonBlocked,
-                        ipBlockedUntil: !$body.ipBlockedUntil
-                          ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
-                          : $body.ipBlockedUntil,
-                      })
-                    )
-                    $c.socket.close()
-                    return
-                  }
-                }
-              })
-          }
-          /* Enhanced User Block System [E] */
-          if ($c.isAjae === null) {
-            $c.sendError(441)
-            $c.socket.close()
-            return
-          }
-          $c.refresh().then(function (ref) {
-            /* Enhanced User Block System [S] */
-            let isBlockRelease = false
-
-            if (ref.blockedUntil < Date.now()) {
-              DIC[$c.id] = $c
-              MainDB.users
-                .update(["_id", $c.id])
-                .set(["blockedUntil", 0], ["black", null])
-                .on()
-              logger.info(`사용자 #${$c.id}의 이용제한이 해제되었습니다.`)
-              isBlockRelease = true
-            }
-            /* Enhanced User Block System [E] */
-
-            /* Enhanced User Block System [S] */
-            if (ref.result == 200 || isBlockRelease) {
-              /* Enhanced User Block System [E] */
-              DIC[$c.id] = $c
-              DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] =
-                $c.id
-              MainDB.users.update(["_id", $c.id]).set(["server", SID]).on()
-
-              if (
-                ($c.guest && config.GOOGLE_RECAPTCHA_TO_GUEST) ||
-                config.GOOGLE_RECAPTCHA_TO_USER
-              ) {
-                $c.socket.send(
-                  JSON.stringify({
-                    type: "recaptcha",
-                    siteKey: config.GOOGLE_RECAPTCHA_SITE_KEY,
-                  })
-                )
-              } else {
-                $c.passRecaptcha = true
-
-                joinNewUser($c)
-              }
-            } else {
-              /* Enhanced User Block System [S] */
-              if (ref.blockedUntil)
-                $c.send("error", {
-                  code: ref.result,
-                  message: ref.black,
-                  blockedUntil: ref.blockedUntil,
-                })
-              else
-                $c.send("error", {
-                  code: ref.result,
-                  message: ref.black,
-                })
-              /* Enhanced User Block System [E] */
-
-              $c._error = ref.result
-              $c.socket.close()
-              // logger.info("Black user #" + $c.id);
-            }
-          })
-        })
-    })
-
-    Server.on("error", (err: Error) => {
-      logger.warn("Error on ws: " + err.toString())
-    })
-
-    KKuTuInit(MainDB, DIC, ROOM, GUEST_PERMISSION, CHAN, {
-      onClientMessage: onClientMessageOnMaster,
-      onClientClosed: onClientClosedOnMaster,
+  users.update(["server", SID]).set(["server", ""]).on()
+  if (IS_SECURED) {
+    const options = Secure()
+    HTTPS_Server = https
+      .createServer(options)
+      .listen(global.test ? TEST_PORT + 416 : process.env["KKUTU_PORT"])
+    Server = new WebSocket.Server({ server: HTTPS_Server })
+  } else {
+    Server = new WebSocket.Server({
+      port: global.test
+        ? TEST_PORT + 416
+        : parseInt(process.env["KKUTU_PORT"] || ""),
+      perMessageDeflate: false,
     })
   }
 
-  await DBInit()
+  Server.on("connection", (socket, info) => {
+    const key = info.url.slice(1)
+
+    socket.on("error", function (err) {
+      logger.warn("Error on #" + key + " on ws: " + err.toString())
+    })
+    // 웹 서버
+    if (info.headers.host.startsWith(config.GAME_SERVER_HOST + ":")) {
+      if (WDIC[key]) WDIC[key].socket.close()
+      WDIC[key] = new WebServer(socket)
+      logger.info(`New web server #${key}`)
+      WDIC[key].socket.on("close", function () {
+        logger.info(`Exit web server #${key}`)
+        WDIC[key].socket.removeAllListeners()
+        delete WDIC[key]
+      })
+      return
+    }
+    if (Object.keys(DIC).length >= KKUTU_MAX) {
+      socket.send(`{ "type": "error", "code": "full" }`)
+      return
+    }
+    session
+      .findOne(["_id", key])
+      .limit(["profile", true])
+      .on(function ($body) {
+        const $c = new Client(socket, $body ? $body.profile : null, key)
+        $c.admin = config.ADMIN.indexOf($c.id) != -1
+        /* Enhanced User Block System [S] */
+        $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
+          ? info.connection.remoteAddress
+          : info.headers["x-forwarded-for"] || info.connection.remoteAddress
+        /* Enhanced User Block System [E] */
+
+        if (DIC[$c.id]) {
+          DIC[$c.id].sendError(408)
+          DIC[$c.id].socket.close()
+        }
+        if (DEVELOP && !TESTER.includes($c.id)) {
+          $c.sendError(500)
+          $c.socket.close()
+          return
+        }
+        if ($c.guest) {
+          if (SID != "0") {
+            $c.sendError(402)
+            $c.socket.close()
+            return
+          }
+          if (NIGHT) {
+            $c.sendError(440)
+            $c.socket.close()
+            return
+          }
+        }
+        /* Enhanced User Block System [S] */
+        if (
+          config.USER_BLOCK_OPTIONS.USE_MODULE &&
+          ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
+            !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
+        ) {
+          ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
+            if ($body && $body.reasonBlocked) {
+              if ($body.ipBlockedUntil < Date.now()) {
+                ip_block
+                  .update(["_id", $c.remoteAddress])
+                  .set(["ipBlockedUntil", 0], ["reasonBlocked", null])
+                  .on()
+                logger.info(
+                  `IP 주소 ${$c.remoteAddress}의 이용제한이 해제되었습니다.`
+                )
+              } else {
+                $c.socket.send(
+                  JSON.stringify({
+                    type: "error",
+                    code: 446,
+                    reasonBlocked: !$body.reasonBlocked
+                      ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+                      : $body.reasonBlocked,
+                    ipBlockedUntil: !$body.ipBlockedUntil
+                      ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+                      : $body.ipBlockedUntil,
+                  })
+                )
+                $c.socket.close()
+                return
+              }
+            }
+          })
+        }
+        /* Enhanced User Block System [E] */
+        if ($c.isAjae === null) {
+          $c.sendError(441)
+          $c.socket.close()
+          return
+        }
+        $c.refresh().then(function (ref) {
+          /* Enhanced User Block System [S] */
+          let isBlockRelease = false
+
+          if (ref.blockedUntil < Date.now()) {
+            DIC[$c.id] = $c
+            users
+              .update(["_id", $c.id])
+              .set(["blockedUntil", 0], ["black", null])
+              .on()
+            logger.info(`사용자 #${$c.id}의 이용제한이 해제되었습니다.`)
+            isBlockRelease = true
+          }
+          /* Enhanced User Block System [E] */
+
+          /* Enhanced User Block System [S] */
+          if (ref.result == 200 || isBlockRelease) {
+            /* Enhanced User Block System [E] */
+            DIC[$c.id] = $c
+            DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] =
+              $c.id
+            users.update(["_id", $c.id]).set(["server", SID]).on()
+
+            if (
+              ($c.guest && config.GOOGLE_RECAPTCHA_TO_GUEST) ||
+              config.GOOGLE_RECAPTCHA_TO_USER
+            ) {
+              $c.socket.send(
+                JSON.stringify({
+                  type: "recaptcha",
+                  siteKey: config.GOOGLE_RECAPTCHA_SITE_KEY,
+                })
+              )
+            } else {
+              $c.passRecaptcha = true
+
+              joinNewUser($c)
+            }
+          } else {
+            /* Enhanced User Block System [S] */
+            if (ref.blockedUntil)
+              $c.send("error", {
+                code: ref.result,
+                message: ref.black,
+                blockedUntil: ref.blockedUntil,
+              })
+            else
+              $c.send("error", {
+                code: ref.result,
+                message: ref.black,
+              })
+            /* Enhanced User Block System [E] */
+
+            $c._error = ref.result
+            $c.socket.close()
+            // logger.info("Black user #" + $c.id);
+          }
+        })
+      })
+  })
+
+  Server.on("error", (err: Error) => {
+    logger.warn("Error on ws: " + err.toString())
+  })
+
+  KKuTuInit(DIC, ROOM, GUEST_PERMISSION, CHAN, {
+    onClientMessage: onClientMessageOnMaster,
+    onClientClosed: onClientClosedOnMaster,
+  })
 }

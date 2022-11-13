@@ -39,7 +39,6 @@ export let onClientMessage: any
 export let onClientClosed: any
 
 export const init = (
-  _DB,
   _DIC: Record<string, Client>,
   _ROOM: Record<number, Room>,
   _GUEST_PERMISSION: Record<string, boolean>,
