@@ -26,7 +26,7 @@ import {
   onClientMessage,
   onClientClosed,
 } from "../kkutu"
-import { ClientExportData } from "../../types"
+import { ClientExportData, IUser } from "../../types"
 import Data from "./Data"
 import { redis, users } from "../../Web/db"
 
@@ -39,11 +39,16 @@ const PER_OKG = 600000
 
 export default class Client {
   id: string
+  robot = false
+  guest = false
+  game: Record<string, any> = {}
 
   place = 0
+  data: Data
+  equip: Record<string, any>
+
   team = 0
   ready = false
-  game: Record<string, any> = {}
 
   subPlace = 0
   error = false
@@ -51,16 +56,13 @@ export default class Client {
   spam = 0
   _pub = Date.now()
 
-  guest = false
   isAjae: boolean
 
   pracRoom: Room
-  data: Data
 
   okgCount: number
   form: string
   money: number
-  equip: any
   exordial: string
   numSpam: any
 
@@ -69,8 +71,6 @@ export default class Client {
   friends: Record<string, string>
 
   cameWhenGaming: boolean
-
-  robot = false
 
   playAt: number
 
@@ -175,6 +175,7 @@ export default class Client {
       money: gaming ? null : this.money,
       equip: gaming ? null : this.equip,
       exordial: gaming ? null : this.exordial,
+      robot: false,
     }
   }
 
@@ -252,7 +253,7 @@ export default class Client {
     }
     if (expired.length) {
       this.send("expired", { list: expired })
-      this.flush(this.box, this.equip)
+      this.flush(this.box, !!this.equip)
     }
   }
 

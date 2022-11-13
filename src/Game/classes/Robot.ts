@@ -1,8 +1,8 @@
-import { UserData } from "../../types"
+import { RobotExportData } from "../../types"
 import { DIC } from "../kkutu"
 
 export default class Robot {
-  id: number
+  id: string
   robot: boolean = true
   game: {
     team?: number
@@ -29,12 +29,16 @@ export default class Robot {
     public place: number,
     public level: number
   ) {
-    this.id = target + place + Math.floor(Math.random() * 1000000000)
+    this.id = (
+      target +
+      place +
+      Math.floor(Math.random() * 1000000000)
+    ).toString()
     this.setLevel(level)
     this.setTeam(0)
   }
 
-  getData(): UserData {
+  getData(): RobotExportData {
     return {
       id: this.id,
       guest: false,

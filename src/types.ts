@@ -84,7 +84,7 @@ export interface GameData {
   late?: boolean
   round?: number
   turn?: number
-  seq?: any[]
+  seq?: any[] // Array<string | Robot>[], 키를 turn으로 하므로 사실상 Record<number, string | Robot>[]
   robots?: Robot[]
 
   title?: string
@@ -146,21 +146,6 @@ export interface GameData {
   robotTimer?: NodeJS.Timeout
 }
 
-export interface UserData {
-  id: number
-  robot: boolean
-  guest: boolean
-  game: GameData
-  target: number
-  level: number
-  ready: boolean
-
-  data?: any
-  place?: number
-  equip?: any
-  exordial?: any
-}
-
 export interface RoomData {
   id: number
   channel: number
@@ -179,23 +164,36 @@ export interface RoomData {
   opts: any
 }
 
-export interface ClientExportData {
+export interface PlayerExportData {
   id: string
+  robot: boolean
   guest: boolean
-  game: {
-    ready: boolean
-    form: string
-    team: number
-    practice: number
-    score: number
-    item: any[]
-  }
-  profile: string | null
+  game: GameData
+
+  // 이하는 Robot에게는 항상 존재하는 값이지만, Client는 게임 중에 null을 반환함
   place: number | null
-  data: any | null
+  data: Record<string, any> | null
+  equip: Record<string, any> | null
+}
+
+export interface ClientExportData extends PlayerExportData {
+  profile: string | null
   money: number | null
-  equip: any | null
   exordial: string | null
+  // game: {
+  //   ready: boolean
+  //   form: string
+  //   team: number
+  //   practice: number
+  //   score: number
+  //   item: any[]
+  // }
+}
+
+export interface RobotExportData extends PlayerExportData {
+  target: number
+  level: number
+  ready: boolean
 }
 
 export interface RoomExportData {
