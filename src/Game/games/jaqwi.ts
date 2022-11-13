@@ -22,6 +22,8 @@ import { Game } from "./index"
 import { INIT_SOUNDS, KOR_GROUP } from "../../const"
 import { kkutu } from "../../Web/db"
 
+// TODO: setTimeout을 Promise로 바꿔야 작동함
+
 const ROBOT_CATCH_RATE = [0.1, 0.3, 0.5, 0.7, 0.99]
 const ROBOT_TYPE_COEF = [2000, 1200, 800, 300, 0]
 
