@@ -58,7 +58,7 @@ export default class Room {
   mode: number
   round: number
   time: number
-  practice: number
+  practice: boolean
 
   rule: IGameRule
   _avTeam: any[]

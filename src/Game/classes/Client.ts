@@ -54,7 +54,7 @@ export default class Client {
   guest = false
   isAjae: boolean
 
-  pracRoom: any // Room
+  pracRoom: Room
   data: Data
 
   okgCount: number
