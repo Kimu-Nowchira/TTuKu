@@ -38,14 +38,24 @@ const MAX_OKG = 18
 const PER_OKG = 600000
 
 export default class Client {
+  // PlayerExportData
   id: string
   robot = false
   guest = false
   game: Record<string, any> = {}
 
+  // PlayerExportData (때떄로 null로 보내는 거)
   place = 0
   data: Data
-  equip: Record<string, any>
+  equip: Record<string, any> = {}
+
+  // DB에서 불러온 그 외의 값
+  money: number = 0
+  exordial: string = ""
+
+  // refresh에서 처리하는 값
+  noChat: boolean = false
+  okgCount: number
 
   team = 0
   ready = false
@@ -60,15 +70,11 @@ export default class Client {
 
   pracRoom: Room
 
-  okgCount: number
   form: string
-  money: number
-  exordial: string
   numSpam: any
 
-  box: any
-  noChat: boolean
-  friends: Record<string, string>
+  box: any = {}
+  friends: Record<string, string> = {}
 
   cameWhenGaming: boolean
 
@@ -268,32 +274,46 @@ export default class Client {
 
       R.go({ result: 200 })
     } else
-      users.findOne(["_id", this.id]).on(($user) => {
-        const first = !$user
-        let black = first ? "" : $user.black
-        /* Enhanced User Block System [S] */
-        const blockedUntil =
-          first || !$user.blockedUntil ? null : $user.blockedUntil
-        /* Enhanced User Block System [E] */
+      users.findOne(["_id", this.id]).on(($user?: IUser) => {
+        let black = ""
+        let blockedUntil: string = null
 
-        if (first) $user = { money: 0 }
-        if (black == "null") black = false
-        if (black == "chat") {
-          black = false
-          this.noChat = true
+        const userData = $user
+          ? $user
+          : {
+              money: 0,
+              exordial: "",
+              equip: undefined,
+              box: undefined,
+              kkutu: undefined,
+              friends: undefined,
+            }
+
+        if ($user) {
+          // 기존 유저의 처벌 관련
+          black = $user.black
+          if (black == "null") black = ""
+          if (black == "chat") {
+            black = ""
+            this.noChat = true
+          }
+          blockedUntil = $user.blockedUntil || null
         }
 
-        this.exordial = $user.exordial || ""
-        this.equip = $user.equip || {}
-        this.box = $user.box || {}
-        this.data = new Data($user.kkutu)
-        this.money = Number($user.money)
-        this.friends = $user.friends || {}
-        if (first) this.flush()
+        if (userData.exordial) this.exordial = userData.exordial
+        if (userData.equip) this.equip = userData.equip
+        if (userData.box) this.box = userData.box
+        if (userData.friends) this.friends = userData.friends
+
+        this.data = new Data(userData.kkutu)
+        this.money = Number(userData.money)
+
+        if (!$user) this.flush()
         else {
           this.checkExpire()
           this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
         }
+
         /* Enhanced User Block System [S] */
         if (black) {
           if (blockedUntil)
