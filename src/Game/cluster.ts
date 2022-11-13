@@ -20,6 +20,7 @@ import cluster, { Worker as ClusterWorker } from "node:cluster"
 import { logger } from "../sub/jjlog"
 import { MAIN_PORTS } from "../const"
 import { init as masterInit } from "./master"
+import { init as slaveInit } from "./slave"
 
 const SID = Number(process.argv[2])
 let CPU = Number(process.argv[3]) // os.cpus().length;
@@ -40,7 +41,7 @@ if (isNaN(CPU)) {
 }
 
 const run = async () => {
-  if (!cluster.isPrimary) return require("./slave.js")
+  if (!cluster.isPrimary) return slaveInit()
 
   const channels: Record<number, ClusterWorker> = {}
   let chan: number

@@ -56,7 +56,7 @@ const RESERVED: Record<
 
 const CHAN = Number(process.env["CHANNEL"])
 
-const run = async () => {
+export const init = async () => {
   await dbInit()
 
   logger.info("DB is ready (SLAVE)")
@@ -493,5 +493,3 @@ const onClientClosedOnSlave = ($c) => {
 
   logger.info(`Chan @${CHAN} Exit #${$c.id}`)
 }
-
-run().then()
