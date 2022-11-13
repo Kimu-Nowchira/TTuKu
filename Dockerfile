@@ -7,5 +7,3 @@ COPY . .
 COPY ./src/ ./lib/
 
 RUN yarn && yarn build
-
-WORKDIR /kkutu
