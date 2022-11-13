@@ -4,6 +4,6 @@ WORKDIR /app
 
 COPY . .
 
-COPY ./src/ ./lib/
+COPY ./src/ ./dist/
 
 RUN yarn && yarn build
