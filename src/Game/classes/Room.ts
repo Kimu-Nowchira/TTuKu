@@ -8,7 +8,15 @@ import {
   KO_IJP,
   OPTIONS,
 } from "../../const"
-import { Crossword, Daneo, Game, Typing, Hunmin, Classic } from "../games"
+import {
+  Crossword,
+  Daneo,
+  Game,
+  Typing,
+  Hunmin,
+  Classic,
+  Jaqwi,
+} from "../games"
 import cluster from "node:cluster"
 import { logger } from "../../sub/jjlog"
 import { all } from "../../sub/lizard"
@@ -26,6 +34,7 @@ const Rule: Record<string, typeof Game> = {
   Hunmin: Hunmin,
   Typing: Typing,
   Sock: Sock,
+  Jaqwi: Jaqwi,
 }
 
 export default class Room {

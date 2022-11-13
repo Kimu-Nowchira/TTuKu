@@ -132,6 +132,11 @@ export interface GameData {
   words?: string[]
   board?: string
 
+  // jaqwi.ts
+  answer?: any
+  winner?: string[]
+  giveup?: any
+
   _rrt?: NodeJS.Timeout
   turnTimer?: NodeJS.Timeout
   hintTimer?: NodeJS.Timeout

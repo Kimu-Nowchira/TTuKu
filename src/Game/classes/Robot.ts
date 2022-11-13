@@ -17,6 +17,10 @@ export default class Robot {
   // classic.js에서 사용함
   _done: any[] = []
 
+  // jaqwi.ts에서 사용함
+  _delay?: number
+  _timer?: NodeJS.Timeout
+
   playAt: number
   ready: boolean
 
