@@ -741,7 +741,7 @@ export const init = async (
           $c.socket.close()
           return
         }
-        $c.refresh().then(function (ref) {
+        $c.refresh().then((ref) => {
           /* Enhanced User Block System [S] */
           let isBlockRelease = false
 

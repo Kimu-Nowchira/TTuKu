@@ -83,7 +83,7 @@ export default class Client {
   passRecaptcha: boolean
   admin: boolean
   remoteAddress: string | string[]
-  _error: Error
+  _error: number
   _invited: boolean
 
   constructor(
@@ -263,69 +263,67 @@ export default class Client {
     }
   }
 
-  refresh() {
-    const R = new Tail()
-
+  async refresh() {
     if (this.guest) {
       this.equip = {}
       this.data = new Data()
       this.money = 0
       this.friends = {}
 
-      R.go({ result: 200 })
-    } else
-      users.findOne(["_id", this.id]).on(($user?: IUser) => {
-        let black = ""
-        let blockedUntil: string = null
+      return { result: 200 }
+    }
 
-        const userData = $user
-          ? $user
-          : {
-              money: 0,
-              exordial: "",
-              equip: undefined,
-              box: undefined,
-              kkutu: undefined,
-              friends: undefined,
-            }
+    const $user = (await users.findOne(["_id", this.id]).onAsync()) as IUser
 
-        if ($user) {
-          // 기존 유저의 처벌 관련
-          black = $user.black
-          if (black == "null") black = ""
-          if (black == "chat") {
-            black = ""
-            this.noChat = true
-          }
-          blockedUntil = $user.blockedUntil || null
+    let black = ""
+    let blockedUntil: number = null
+
+    const userData = $user
+      ? $user
+      : {
+          money: 0,
+          exordial: "",
+          equip: undefined,
+          box: undefined,
+          kkutu: undefined,
+          friends: undefined,
         }
 
-        if (userData.exordial) this.exordial = userData.exordial
-        if (userData.equip) this.equip = userData.equip
-        if (userData.box) this.box = userData.box
-        if (userData.friends) this.friends = userData.friends
+    if ($user) {
+      // 기존 유저의 처벌 관련
+      black = $user.black
+      if (black == "null") black = ""
+      if (black == "chat") {
+        black = ""
+        this.noChat = true
+      }
+      blockedUntil = $user.blockedUntil || null
+    }
 
-        this.data = new Data(userData.kkutu)
-        this.money = Number(userData.money)
+    if (userData.exordial) this.exordial = userData.exordial
+    if (userData.equip) this.equip = userData.equip
+    if (userData.box) this.box = userData.box
+    if (userData.friends) this.friends = userData.friends
 
-        if (!$user) this.flush()
-        else {
-          this.checkExpire()
-          this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
-        }
+    this.data = new Data(userData.kkutu)
+    this.money = Number(userData.money)
 
-        /* Enhanced User Block System [S] */
-        if (black) {
-          if (blockedUntil)
-            R.go({ result: 444, black: black, blockedUntil: blockedUntil })
-          else R.go({ result: 444, black: black })
-        } else if (cluster.isPrimary && $user.server)
-          /* Enhanced User Block System [E] */
-          R.go({ result: 409, black: $user.server })
-        else if (NIGHT && this.isAjae === false) R.go({ result: 440 })
-        else R.go({ result: 200 })
-      })
-    return R
+    if (!$user) this.flush()
+    else {
+      this.checkExpire()
+      this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
+    }
+
+    /* Enhanced User Block System [S] */
+    if (black) {
+      if (blockedUntil)
+        return { result: 444, black: black, blockedUntil: blockedUntil }
+      else return { result: 444, black: black }
+    } else if (cluster.isPrimary && $user.server) {
+      /* Enhanced User Block System [E] */
+      return { result: 409, black: $user.server }
+    } else if (NIGHT && this.isAjae === false) return { result: 440 }
+    else return { result: 200 }
   }
 
   flush(box?: boolean, equip?: boolean, friends?: boolean) {
