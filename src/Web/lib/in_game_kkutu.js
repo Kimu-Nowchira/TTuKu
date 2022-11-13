@@ -16,6 +16,8 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+(function(){
+
 var MODE;
 var BEAT = [ null,
 	"10000000",
@@ -4789,3 +4791,4 @@ function yell(msg){
 
 delete window.WebSocket;
 delete window.setInterval;
+})();
