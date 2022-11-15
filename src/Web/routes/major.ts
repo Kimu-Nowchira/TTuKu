@@ -15,13 +15,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-import { Express } from "express"
-import { kkutu } from "../db"
 
-var Web = require("request")
-var MainDB = require("../db")
-var JLog = require("../../sub/jjlog")
-var Const = require("../../const")
+import { Express } from "express"
+import { KO_INJEONG } from "../../const"
+import { kkutu, kkutu_injeong, kkutu_shop, redis, users } from "../db"
+import { logger } from "../../sub/jjlog"
+
+const Web = require("request")
 
 function obtain($user, key, value, term, addValue = false) {
   var now = new Date().getTime()
@@ -53,13 +53,13 @@ function consume($user, key, value, force = false) {
 export const run = (Server: Express, page) => {
   Server.get("/box", function (req, res) {
     if (req.session.profile) {
-      /*if(Const.ADMIN.indexOf(req.session.profile.id) == -1){
+      /*if(ADMIN.indexOf(req.session.profile.id) == -1){
 			return res.send({ error: 555 });
 		}*/
     } else {
       return res.send({ error: 400 })
     }
-    MainDB.users
+    users
       .findOne(["_id", req.session.profile.id])
       .limit(["box", true])
       .on(function ($body) {
@@ -72,7 +72,7 @@ export const run = (Server: Express, page) => {
   })
   Server.get("/help", function (req, res) {
     page(req, res, "help", {
-      KO_INJEONG: Const.KO_INJEONG,
+      KO_INJEONG,
     })
   })
   Server.get("/ranking", function (req, res) {
@@ -80,12 +80,12 @@ export const run = (Server: Express, page) => {
     var id = req.query.id
 
     if (id) {
-      MainDB.redis.getSurround(id, 15).then(function ($body) {
+      redis.getSurround(id, 15).then(function ($body) {
         res.send($body)
       })
     } else {
       if (isNaN(pg)) pg = 0
-      MainDB.redis.getPage(pg, 15).then(function ($body) {
+      redis.getPage(pg, 15).then(function ($body) {
         res.send($body)
       })
     }
@@ -99,11 +99,11 @@ export const run = (Server: Express, page) => {
     if (now - req.session.injBefore < 2000) return res.send({ error: 429 })
     req.session.injBefore = now
 
-    MainDB.kkutu["ko"]
+    kkutu["ko"]
       .findOne(["_id", word.replace(/[^가-힣0-9]/g, "")])
       .on(function ($word) {
         if ($word) return res.send({ error: 409 })
-        MainDB.kkutu_injeong.findOne(["_id", word]).on(function ($ij) {
+        kkutu_injeong.findOne(["_id", word]).on(function ($ij) {
           if ($ij) {
             if ($ij.theme == "~") return res.send({ error: 406 })
             else return res.send({ error: 403 })
@@ -113,7 +113,7 @@ export const run = (Server: Express, page) => {
             function (err, _res) {
               if (err) return res.send({ error: 400 })
               else if (_res.statusCode != 200) return res.send({ error: 405 })
-              MainDB.kkutu_injeong
+              kkutu_injeong
                 .insert(
                   ["_id", word],
                   ["theme", theme],
@@ -138,7 +138,7 @@ export const run = (Server: Express, page) => {
     )
   })
   Server.get("/shop", function (req, res) {
-    MainDB.kkutu_shop
+    kkutu_shop
       .find()
       .limit(
         ["cost", true],
@@ -159,7 +159,7 @@ export const run = (Server: Express, page) => {
 
     if (req.session.profile) {
       text = text.slice(0, 100)
-      MainDB.users
+      users
         .update(["_id", req.session.profile.id])
         .set(["exordial", text])
         .on(function ($res) {
@@ -172,10 +172,10 @@ export const run = (Server: Express, page) => {
       var uid = req.session.profile.id
       var gid = req.params.id
 
-      MainDB.kkutu_shop.findOne(["_id", gid]).on(function ($item) {
+      kkutu_shop.findOne(["_id", gid]).on(function ($item) {
         if (!$item) return res.json({ error: 400 })
         if ($item.cost < 0) return res.json({ error: 400 })
-        MainDB.users
+        users
           .findOne(["_id", uid])
           .limit(["money", true], ["box", true])
           .on(function ($user) {
@@ -186,15 +186,15 @@ export const run = (Server: Express, page) => {
             if (postM < 0) return res.send({ result: 400 })
 
             obtain($user, gid, 1, $item.term)
-            MainDB.users
+            users
               .update(["_id", uid])
               .set(["money", postM], ["box", $user.box])
               .on(function ($fin) {
                 res.send({ result: 200, money: postM, box: $user.box })
-                JLog.log("[PURCHASED] " + gid + " by " + uid)
+                logger.info("[PURCHASED] " + gid + " by " + uid)
               })
             // HIT를 올리는 데에 동시성 문제가 발생한다. 조심하자.
-            MainDB.kkutu_shop
+            kkutu_shop
               .update(["_id", gid])
               .set(["hit", $item.hit + 1])
               .on()
@@ -209,7 +209,7 @@ export const run = (Server: Express, page) => {
     var isLeft = req.body.isLeft == "true"
     var now = Date.now() * 0.001
 
-    MainDB.users
+    users
       .findOne(["_id", uid])
       .limit(["box", true], ["equip", true])
       .on(function ($user) {
@@ -219,12 +219,12 @@ export const run = (Server: Express, page) => {
         var q = $user.box[gid],
           r
 
-        MainDB.kkutu_shop
+        kkutu_shop
           .findOne(["_id", gid])
           .limit(["group", true])
           .on(function ($item) {
             if (!$item) return res.json({ error: 430 })
-            if (!Const.AVAIL_EQUIP.includes($item.group))
+            if (!AVAIL_EQUIP.includes($item.group))
               return res.json({ error: 400 })
 
             var part = $item.group
@@ -247,7 +247,7 @@ export const run = (Server: Express, page) => {
               consume($user, gid, 1)
               $user.equip[part] = $item._id
             }
-            MainDB.users
+            users
               .update(["_id", uid])
               .set(["box", $user.box], ["equip", $user.equip])
               .on(function ($res) {
@@ -263,7 +263,7 @@ export const run = (Server: Express, page) => {
     // 없음 -> 0
     const isDyn = gid.charAt(0) === "$"
 
-    MainDB.users
+    users
       .findOne(["_id", uid])
       .limit(["money", true], ["box", true])
       .on(function ($user) {
@@ -272,7 +272,7 @@ export const run = (Server: Express, page) => {
         var q = $user.box[gid]
 
         if (!q) return res.json({ error: 430 })
-        MainDB.kkutu_shop
+        kkutu_shop
           .findOne(["_id", isDyn ? gid.slice(0, 4) : gid])
           .limit(["cost", true])
           .on(function ($item) {
@@ -281,7 +281,7 @@ export const run = (Server: Express, page) => {
             consume($user, gid, 1, true)
             $user.money =
               Number($user.money) + Math.round(0.2 * Number($item.cost))
-            MainDB.users
+            users
               .update(["_id", uid])
               .set(["money", $user.money], ["box", $user.box])
               .on(function ($res) {
@@ -322,7 +322,7 @@ export const run = (Server: Express, page) => {
     var i, o
 
     if (tray.length < 1 || tray.length > 6) return res.json({ error: 400 })
-    MainDB.users
+    users
       .findOne(["_id", uid])
       .limit(["money", true], ["box", true])
       .on(function ($user) {
@@ -342,44 +342,42 @@ export const run = (Server: Express, page) => {
           if (($user.box[tray[i]] || 0) < req[tray[i]])
             return res.json({ error: 434 })
         }
-        MainDB.kkutu[parseLanguage(word)]
-          .findOne(["_id", word])
-          .on(function ($dic) {
-            if (!$dic) {
-              if (word.length == 3) {
-                blend = true
-              } else return res.json({ error: 404 })
-            }
-            cfr = getCFRewards(word, level, blend)
-            if ($user.money < cfr.cost) return res.json({ error: 407 })
-            for (i in req) consume($user, i, req[i])
-            for (i in cfr.data) {
-              o = cfr.data[i]
+        kkutu[parseLanguage(word)].findOne(["_id", word]).on(function ($dic) {
+          if (!$dic) {
+            if (word.length == 3) {
+              blend = true
+            } else return res.json({ error: 404 })
+          }
+          cfr = getCFRewards(word, level, blend)
+          if ($user.money < cfr.cost) return res.json({ error: 407 })
+          for (i in req) consume($user, i, req[i])
+          for (i in cfr.data) {
+            o = cfr.data[i]
 
-              if (Math.random() >= o.rate) continue
-              if (o.key.charAt(4) == "?") {
-                o.key =
-                  o.key.slice(0, 4) +
-                  (blend
-                    ? blendWord(word)
-                    : word.charAt(Math.floor(Math.random() * word.length)))
-              }
-              obtain($user, o.key, o.value, o.term)
-              gain.push(o)
+            if (Math.random() >= o.rate) continue
+            if (o.key.charAt(4) == "?") {
+              o.key =
+                o.key.slice(0, 4) +
+                (blend
+                  ? blendWord(word)
+                  : word.charAt(Math.floor(Math.random() * word.length)))
             }
-            $user.money -= cfr.cost
-            MainDB.users
-              .update(["_id", uid])
-              .set(["money", $user.money], ["box", $user.box])
-              .on(function ($res) {
-                res.send({
-                  result: 200,
-                  box: $user.box,
-                  money: $user.money,
-                  gain: gain,
-                })
+            obtain($user, o.key, o.value, o.term)
+            gain.push(o)
+          }
+          $user.money -= cfr.cost
+          users
+            .update(["_id", uid])
+            .set(["money", $user.money], ["box", $user.box])
+            .on(function ($res) {
+              res.send({
+                result: 200,
+                box: $user.box,
+                money: $user.money,
+                gain: gain,
               })
-          })
+            })
+        })
       })
     // res.send(getCFRewards(req.params.word, Number(req.query.l || 0)));
   })

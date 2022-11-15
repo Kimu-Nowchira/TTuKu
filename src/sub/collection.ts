@@ -295,7 +295,8 @@ export class RedisTable {
     return R
   }
 
-  getSurround = (id: string, rv: number = 8) => {
+  // TODO string[]을 넣는 경우가 있어서 임시로 any로 처리 (확실하게 알면 정하기)
+  getSurround = (id: any, rv: number = 8) => {
     const R = new Tail()
 
     this.redis.zrevrank([this.key, id], (err, res) => {
