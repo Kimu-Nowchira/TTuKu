@@ -37,6 +37,7 @@ import {
 import { config } from "../config"
 import { init as dbInit, ip_block, session } from "../Web/db"
 import { z } from "zod"
+import { ISession } from "../types"
 
 let Server: WebSocket.Server
 let HTTPS_Server
@@ -79,7 +80,7 @@ export const init = async () => {
     })
   }
 
-  Server.on("connection", (socket, info) => {
+  Server.on("connection", async (socket, info) => {
     if (!info.url) throw new Error("No URL on IncomingMessage")
 
     const chunk = info.url.slice(1).split("&")
@@ -110,76 +111,76 @@ export const init = async () => {
       socket.close()
       return
     }
-    session
+
+    const $body = (await session
       .findOne(["_id", key])
       .limit(["profile", true])
-      .on(($body) => {
-        const $c = new Client(socket, $body ? $body.profile : null, key)
-        $c.admin = config.ADMIN.indexOf($c.id) != -1
+      .onAsync()) as ISession | undefined
 
-        /* Enhanced User Block System [S] */
-        $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
-          ? info.connection.remoteAddress
-          : (info.headers["x-forwarded-for"] as string) ||
-            info.connection.remoteAddress
-        if (
-          config.USER_BLOCK_OPTIONS.USE_MODULE &&
-          ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
-            !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
-        ) {
-          ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
-            if ($body.reasonBlocked) {
-              $c.socket.send(
-                JSON.stringify({
-                  type: "error",
-                  code: 446,
-                  reasonBlocked: !$body.reasonBlocked
-                    ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
-                    : $body.reasonBlocked,
-                  ipBlockedUntil: !$body.ipBlockedUntil
-                    ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
-                    : $body.ipBlockedUntil,
-                })
-              )
-              $c.socket.close()
-              return
-            }
-          })
-        }
-        /* Enhanced User Block System [E] */
-        if (DIC[$c.id]) {
-          DIC[$c.id].send("error", { code: 408 })
-          DIC[$c.id].socket.close()
-        }
-        if (DEVELOP && !TESTER.includes($c.id)) {
-          $c.send("error", { code: 500 })
+    const $c = new Client(socket, $body ? $body.profile : null, key)
+    $c.admin = config.ADMIN.indexOf($c.id) != -1
+
+    /* Enhanced User Block System [S] */
+    $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
+      ? info.connection.remoteAddress
+      : (info.headers["x-forwarded-for"] as string) ||
+        info.connection.remoteAddress
+    if (
+      config.USER_BLOCK_OPTIONS.USE_MODULE &&
+      ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
+        !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
+    ) {
+      ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
+        if ($body.reasonBlocked) {
+          $c.socket.send(
+            JSON.stringify({
+              type: "error",
+              code: 446,
+              reasonBlocked: !$body.reasonBlocked
+                ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+                : $body.reasonBlocked,
+              ipBlockedUntil: !$body.ipBlockedUntil
+                ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+                : $body.ipBlockedUntil,
+            })
+          )
           $c.socket.close()
           return
         }
-        $c.refresh().then(function (ref) {
-          if (ref.result == 200) {
-            DIC[$c.id] = $c
-            DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] =
-              $c.id
-
-            $c.enter(room, reserve.spec, reserve.pass)
-            if ($c.place == room.id) {
-              $c.publish("connRoom", { user: $c.getData() })
-            } else {
-              // 입장 실패
-              $c.socket.close()
-            }
-            logger.info(`Chan @${CHAN} New #${$c.id}`)
-          } else {
-            $c.send("error", {
-              code: ref.result,
-              message: ref.black,
-            })
-            $c._error = ref.result
-            $c.socket.close()
-          }
-        })
       })
+    }
+    /* Enhanced User Block System [E] */
+    if (DIC[$c.id]) {
+      DIC[$c.id].send("error", { code: 408 })
+      DIC[$c.id].socket.close()
+    }
+    if (DEVELOP && !TESTER.includes($c.id)) {
+      $c.send("error", { code: 500 })
+      $c.socket.close()
+      return
+    }
+    $c.refresh().then((ref) => {
+      if (ref.result == 200) {
+        DIC[$c.id] = $c
+        DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] = $c.id
+
+        $c.enter(room, reserve.spec, reserve.pass)
+        if ($c.place == room.id) {
+          $c.publish("connRoom", { user: $c.getData() })
+        } else {
+          // 입장 실패
+          $c.socket.close()
+        }
+        logger.info(`Chan @${CHAN} New #${$c.id}`)
+      } else {
+        $c.send("error", {
+          code: ref.result,
+          message: ref.black,
+        })
+        $c._error = ref.result
+        $c.socket.close()
+      }
+    })
   })
   Server.on("error", function (err) {
     logger.warn("Error on ws: " + err.toString())
@@ -188,7 +189,7 @@ export const init = async () => {
   logger.info(`<< KKuTu Server:${Server.options.port} >>`)
 }
 
-process.on("uncaughtException", function (err) {
+process.on("uncaughtException", (err) => {
   const text = `:${
     process.env["KKUTU_PORT"]
   } [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${err.stack}`
@@ -207,64 +208,94 @@ process.on("uncaughtException", function (err) {
   }, 10000)
 })
 
-process.on("message", async (msg: { type: string }) => {
-  const inviteErrorSchema = z.object({
-    target: z.string(),
-    code: z.number(),
-  })
+// message event
+const inviteErrorSchema = z.object({
+  target: z.string(),
+  code: z.number(),
+})
 
-  const roomReserveSchema = z.object({
-    session: z.string(),
-  })
+const onInviteError = async (data: z.infer<typeof inviteErrorSchema>) => {
+  if (!DIC[data.target]) return
+  DIC[data.target].sendError(data.code)
+}
 
-  switch (msg.type) {
-    case "invite-error":
-      const result = await inviteErrorSchema.safeParseAsync(msg)
-      if (!result.success) return logger.error(result.error)
-      const { data } = result
+const roomReserveSchema = z.object({
+  session: z.string(),
+  profile: z.string(),
+  room: z.object({ id: z.string() }),
+  spec: z.string(),
+  pass: z.string(),
+  create: z.boolean(),
+})
 
-      if (!DIC[data.target]) break
-      DIC[data.target].sendError(data.code)
-      break
+const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
+  // 이미 입장 요청을 했는데 또 하는 경우
+  if (RESERVED[data.session]) return
 
-    case "room-reserve":
-      const result = await roomReserveSchema.safeParseAsync(msg)
-      if (!result.success) return logger.error(result.error)
-      const { data } = result
-
-      if (RESERVED[msg.session]) {
-        // 이미 입장 요청을 했는데 또 하는 경우
-        break
-      } else
-        RESERVED[msg.session] = {
-          profile: msg.profile,
-          room: msg.room,
-          spec: msg.spec,
-          pass: msg.pass,
-          _expiration: setTimeout(
-            (tg, create) => {
-              process.send({
-                type: "room-expired",
-                id: msg.room.id,
-                create: create,
-              })
-              delete RESERVED[tg]
-            },
-            10000,
-            msg.session,
-            msg.create
-          ),
-        }
-      break
-    case "room-invalid":
-      delete ROOM[msg.room.id]
-      break
-    default:
-      logger.warn(`Unhandled IPC message type: ${msg.type}`)
+  RESERVED[data.session] = {
+    profile: data.profile,
+    room: data.room,
+    spec: data.spec,
+    pass: data.pass,
+    _expiration: setTimeout(
+      (tg: string, create: boolean) => {
+        process.send({
+          type: "room-expired",
+          id: data.room.id,
+          create: create,
+        })
+        delete RESERVED[tg]
+      },
+      10000,
+      data.session,
+      data.create
+    ),
   }
+}
+
+const roomInvalidSchema = z.object({
+  room: z.object({ id: z.string() }),
+})
+
+const onRoomInvalid = (data: z.infer<typeof roomInvalidSchema>) => {
+  delete ROOM[data.room.id]
+}
+
+process.on("message", async (msg: { type: string }) => {
+  logger.debug("Message from master:", msg)
+
+  const eventHandlerData: {
+    [key: string]: {
+      schema: z.ZodSchema<any>
+      handler: (data: unknown) => void
+    }
+  } = {
+    "invite-error": {
+      schema: inviteErrorSchema,
+      handler: onInviteError,
+    },
+    "room-reserve": {
+      schema: roomReserveSchema,
+      handler: onRoomReserve,
+    },
+    "room-invalid": {
+      schema: roomInvalidSchema,
+      handler: onRoomInvalid,
+    },
+  }
+
+  const eventHandler = eventHandlerData[msg.type]
+  if (eventHandler) logger.warn(`Unhandled IPC message type: ${msg.type}`)
+
+  const result = await eventHandler.schema.safeParseAsync(msg)
+  // @ts-ignore 버그로 추정
+  if (!result.success) return logger.error(result.error)
+
+  eventHandler.handler(result.data)
 })
 
 export const onClientMessageOnSlave = ($c: Client, msg) => {
+  logger.debug(`Message from #${$c.id} (Slave):`, msg)
   let stable = true
   let temp
 
