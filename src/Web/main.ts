@@ -95,6 +95,9 @@ declare module "express-session" {
   interface SessionData {
     passport: any
     profile: any
+    id: string
+    admin: boolean
+    injBefore: number
   }
 }
 

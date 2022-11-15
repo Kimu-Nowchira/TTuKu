@@ -21,6 +21,7 @@ import { logger } from "../../sub/jjlog"
 import { session, users } from "../db"
 import { config } from "../../config"
 import { DiscordAuth } from "../auth/discordAuth"
+import { Express } from "express"
 
 const authModules = [DiscordAuth]
 
@@ -28,17 +29,20 @@ const authProcess = (req, accessToken, $p, done) => {
   $p.token = accessToken
   $p.sid = req.session.id
 
-  let now = Date.now()
+  const now = Date.now()
   $p.sid = req.session.id
   req.session.admin = config.ADMIN.includes($p.id)
   req.session.authType = $p.authType
+
   session
     .upsert(["_id", req.session.id])
     .set({
       profile: $p,
       createdAt: now,
     })
-    .on()
+    .onAsync()
+    .then()
+
   users.findOne(["_id", $p.id]).on(() => {
     req.session.profile = $p
     users.update(["_id", $p.id]).set(["lastLogin", now]).on()
@@ -47,8 +51,8 @@ const authProcess = (req, accessToken, $p, done) => {
   done(null, $p)
 }
 
-exports.run = (Server, page) => {
-  //passport configure
+export const run = (Server: Express, page) => {
+  // passport configure
   passport.serializeUser((user, done) => {
     done(null, user)
   })
@@ -78,6 +82,7 @@ exports.run = (Server, page) => {
           auth.strategy(authProcess)
         )
       )
+
       strategyList[auth.config.vendor] = {
         vendor: auth.config.vendor,
         displayName: auth.config.displayName,
@@ -100,9 +105,9 @@ exports.run = (Server, page) => {
         loginList: strategyList,
       })
     } else {
-      let now = Date.now()
-      let id = req.query.id || "ADMIN"
-      let lp = {
+      const now = Date.now()
+      const id = req.query.id || "ADMIN"
+      const lp = {
         id: id,
         title: "LOCAL #" + id,
         birth: [4, 16, 0],
@@ -123,12 +128,11 @@ exports.run = (Server, page) => {
   })
 
   Server.get("/logout", (req, res) => {
-    if (!req.session.profile) {
-      return res.redirect("/")
-    } else {
-      req.session.destroy()
-      res.redirect("/")
-    }
+    if (!req.session.profile) return res.redirect("/")
+
+    // callback이 필수여서 빈 함수를 넣음
+    req.session.destroy(() => {})
+    res.redirect("/")
   })
 
   Server.get("/loginfail", (req, res) => {
