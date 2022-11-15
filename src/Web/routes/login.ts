@@ -76,6 +76,7 @@ export const run = (Server: Express, page) => {
           failureRedirect: "/loginfail",
         })
       )
+
       passport.use(
         new auth.config.strategy(
           auth.strategyConfig,

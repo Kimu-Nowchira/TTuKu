@@ -17,18 +17,21 @@
  */
 
 import cluster from "node:cluster"
+import { logger } from "../sub/jjlog"
 
-const CPU = Number(process.argv[2])
+// 첫 번째 인자: 워커 개수 (기본값은 1)
+const CPU = Number(process.argv[2]) || 1
 if (isNaN(CPU)) throw new Error(`Invalid CPU Number ${CPU}`)
 
-if (cluster.isPrimary) {
+const run = async () => {
   for (let i = 0; i < CPU; i++) {
     cluster.fork({ SERVER_NO_FORK: true, WS_KEY: i + 1 })
   }
 
-  cluster.on("exit", function (w) {
-    console.log(`Worker ${w.process.pid} died`)
+  cluster.on("exit", (w) => {
+    logger.warn(`Worker ${w.process.pid} died`)
   })
-} else {
-  require("./main.js")
 }
+
+if (cluster.isPrimary) run().then()
+else require("./main.js")
