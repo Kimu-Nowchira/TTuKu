@@ -195,13 +195,11 @@ process.on("uncaughtException", (err) => {
     process.env["KKUTU_PORT"]
   } [${new Date().toLocaleString()}] ERROR: ${err.toString()}\n${err.stack}`
 
-  for (const i in DIC) {
-    DIC[i].send("dying")
-  }
+  for (const i in DIC) DIC[i].send("dying")
 
   appendFile("../KKUTU_ERROR.log", text, () => {
     logger.error(`ERROR OCCURRED! This worker will die in 10 seconds.`)
-    console.log(text)
+    logger.error(text)
   })
 
   setTimeout(() => {
@@ -262,31 +260,35 @@ const onRoomInvalid = (data: z.infer<typeof roomInvalidSchema>) => {
   delete ROOM[data.room.id]
 }
 
+type messageType = "invite-error" | "room-reserve" | "room-invalid"
 process.on("message", async (msg: { type: string }) => {
   logger.debug("Message from master:", msg)
 
-  const eventHandlerData: {
-    [key: string]: {
-      schema: z.ZodSchema<any>
-      handler: (data: unknown) => void
+  const eventHandlerData = new Map<
+    string,
+    {
+      schema: z.ZodSchema
+      handler: (data: any) => void
     }
-  } = {
-    "invite-error": {
-      schema: inviteErrorSchema,
-      handler: onInviteError,
-    },
-    "room-reserve": {
-      schema: roomReserveSchema,
-      handler: onRoomReserve,
-    },
-    "room-invalid": {
-      schema: roomInvalidSchema,
-      handler: onRoomInvalid,
-    },
-  }
+  >()
 
-  const eventHandler = eventHandlerData[msg.type]
-  if (eventHandler) logger.warn(`Unhandled IPC message type: ${msg.type}`)
+  eventHandlerData.set("invite-error", {
+    schema: inviteErrorSchema,
+    handler: onInviteError,
+  })
+
+  eventHandlerData.set("room-reserve", {
+    schema: roomReserveSchema,
+    handler: onRoomReserve,
+  })
+
+  eventHandlerData.set("room-invalid", {
+    schema: roomInvalidSchema,
+    handler: onRoomInvalid,
+  })
+
+  const eventHandler = eventHandlerData.get(msg.type)
+  if (!eventHandler) logger.warn(`Unhandled IPC message type: ${msg.type}`)
 
   const result = await eventHandler.schema.safeParseAsync(msg)
   // @ts-ignore 버그로 추정
