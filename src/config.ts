@@ -1,5 +1,5 @@
-export const config = require("./sub/global.json") as IConfig
-export const auth = require("./sub/auth.json") as IAuthConfig
+export const config = require("../global.json") as IConfig
+export const auth = require("../auth.json") as IAuthConfig
 
 interface IConfig {
   ADMIN: string[]
