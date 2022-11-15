@@ -430,6 +430,7 @@ function joinNewUser($c) {
 }
 
 export const onClientMessageOnMaster = ($c: Client, msg) => {
+  logger.debug(`Message from #${$c.id} (Master):`, msg)
   if (!msg) return
 
   if ($c.passRecaptcha) {

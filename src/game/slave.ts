@@ -260,7 +260,6 @@ const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
       data.create
     ),
   }
-  logger.debug("RESERVED", RESERVED)
 }
 
 const roomInvalidSchema = z.object({
@@ -272,8 +271,6 @@ const onRoomInvalid = (data: z.infer<typeof roomInvalidSchema>) => {
 }
 
 process.on("message", async (msg: { type: string }) => {
-  logger.debug("Message from master:", msg)
-
   const eventHandlerData = new Map<
     string,
     {
