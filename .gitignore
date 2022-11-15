@@ -11,6 +11,7 @@ Server/lib/sub/global.json
 
 .yarn/cache
 .yarn/unplugged
+.yarn/install-state.gz
 
 dist
 lib
