@@ -51,13 +51,17 @@ import Secure from "../sub/secure"
 import * as WebInit from "../sub/webinit"
 import { init as DBInit } from "./db"
 
+import { run as adminRun } from "./routes/admin"
+import { run as consumeRun } from "./routes/consume"
+import { run as majorRun } from "./routes/major"
+import { run as loginRun } from "./routes/login"
+
 type LangFile = Record<string, Record<string, string>>
 const Language = {
   ko_KR: require("./lang/ko_KR.json") as LangFile,
   en_US: require("./lang/en_US.json") as LangFile,
 }
 
-const ROUTES = ["major", "consume", "admin", "login"]
 const gameServers: GameClient[] = []
 
 const DB = require("./db")
@@ -222,9 +226,10 @@ MAIN_PORTS.forEach((v: number, i: number) => {
   )
 })
 
-ROUTES.forEach((v) => {
-  require(`./routes/${v}`).run(Server, WebInit.page)
-})
+adminRun(Server, WebInit.page)
+consumeRun(Server, WebInit.page)
+majorRun(Server, WebInit.page)
+loginRun(Server, WebInit.page)
 
 Server.get("/", (req, res) => {
   const server = parseInt(req.query.server?.toString() || "")
