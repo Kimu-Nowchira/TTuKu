@@ -16,11 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * 볕뉘 수정사항:
- * Login 을 Passport 로 수행하기 위한 수정
- */
-
 import WS from "ws"
 import Express from "express"
 import Exession from "express-session"

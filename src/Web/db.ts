@@ -92,8 +92,4 @@ export const init = async () => {
   session = new PgTable(pgMain, "session")
   users = new PgTable(pgMain, "users")
   ip_block = new PgTable(pgMain, "ip_block")
-
-  // DEPRECATED: Promise를 사용해 주세요
-  if (exports.ready) exports.ready(Redis, Pg)
-  else logger.warn("DB.onReady was not defined yet.")
 }

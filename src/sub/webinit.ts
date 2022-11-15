@@ -71,7 +71,7 @@ export const page = (req: any, res: Response, file: string, data?: any) => {
   if (!Language[data.lang as keyof typeof Language]) data.lang = "ko_KR"
   // URL ...?locale=en_US will show the page in English
 
-  // if(exports.STATIC) data.static = exports.STATIC[data.lang];
+  // if(STATIC) data.static = STATIC[data.lang];
   data.season = config.SEASON
   data.season_pre = config.SEASON_PRE
 
