@@ -218,13 +218,44 @@ const onInviteError = async (data: z.infer<typeof inviteErrorSchema>) => {
   DIC[data.target].sendError(data.code)
 }
 
+/*
+game_1   | {
+game_1   |   type: 'room-reserve',
+game_1   |   create: true,
+game_1   |   session: 'rtYxQi__VplLSq_sVKXHY9N9WvPteiRk',
+game_1   |   room: {
+game_1   |     type: 'enter',
+game_1   |     title: '회원님의 방',
+game_1   |     password: '[***]',
+game_1   |     limit: 8,
+game_1   |     mode: 3,
+game_1   |     round: 5,
+game_1   |     time: 60,
+game_1   |     opts: {
+game_1   |       injpick: [],
+game_1   |       manner: false,
+game_1   |       injeong: false,
+game_1   |       mission: false,
+game_1   |       loanword: false,
+game_1   |       proverb: false,
+game_1   |       strict: false,
+game_1   |       sami: false,
+game_1   |       no2: false,
+game_1   |       '': false
+game_1   |     },
+game_1   |     code: false,
+game_1   |     id: 100,
+game_1   |     _create: true
+game_1   |   }
+game_1   | } 
+ */
 const roomReserveSchema = z.object({
   session: z.string(),
-  profile: z.string(),
-  room: z.object({ id: z.string() }),
-  spec: z.string(),
-  pass: z.string(),
   create: z.boolean(),
+  room: z.object({ id: z.number() }),
+  profile: z.string().optional(),
+  spec: z.string().optional(),
+  pass: z.string().optional(),
 })
 
 const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
