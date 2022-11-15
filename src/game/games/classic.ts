@@ -33,7 +33,7 @@ import { all, Tail } from "../../sub/lizard"
 import Robot from "../classes/Robot"
 import Client from "../classes/Client"
 import { kkutu, kkutu_manner } from "../../Web/db"
-import { IWord } from "../../types"
+import { IWord } from "../types"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]

@@ -1,4 +1,4 @@
-import { PlayerExportData } from "../../types"
+import { PlayerExportData } from "../types"
 import Data from "./Data"
 
 export abstract class Player {

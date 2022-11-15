@@ -19,7 +19,7 @@
 import cluster, { Worker as ClusterWorker } from "node:cluster"
 import Room from "./classes/Room"
 import Client from "./classes/Client"
-import { ClientExportData, IShopItem, RoomExportData } from "../types"
+import { ClientExportData, IShopItem, RoomExportData } from "./types"
 import { kkutu_shop } from "../Web/db"
 
 export let GUEST_PERMISSION: Record<string, boolean> = {}

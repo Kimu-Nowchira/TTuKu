@@ -19,7 +19,7 @@
 import { Game } from "./index"
 import Client from "../classes/Client"
 import { kkutu, kkutu_cw } from "../../Web/db"
-import { ICrossWordData, IWord } from "../../types"
+import { ICrossWordData, IWord } from "../types"
 
 // const ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
 // const ROBOT_CATCH_RATE = [0.05, 0.2, 0.4, 0.6, 0.99]

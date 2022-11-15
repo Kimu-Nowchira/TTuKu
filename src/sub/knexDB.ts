@@ -7,7 +7,7 @@ import {
   IShopItem,
   IUser,
   IWord,
-} from "../types"
+} from "../game/types"
 
 const connection = `postgres://${config.PG_USER}:${config.PG_PASSWORD}@${config.PG_HOST}:${config.PG_PORT}/${config.PG_DATABASE}`
 

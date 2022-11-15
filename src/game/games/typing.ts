@@ -20,7 +20,7 @@ import { PROVERBS } from "./typingConst"
 import { Tail } from "../../sub/lizard"
 import { Game } from "./index"
 import { kkutu } from "../../Web/db"
-import { IWord } from "../../types"
+import { IWord } from "../types"
 
 const LIST_LENGTH = 200
 const DOUBLE_VOWELS = [9, 10, 11, 14, 15, 16, 19]

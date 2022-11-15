@@ -37,7 +37,7 @@ import {
 import { config } from "../config"
 import { init as dbInit, ip_block, session } from "../Web/db"
 import { z } from "zod"
-import { ISession } from "../types"
+import { ISession } from "./types"
 
 let Server: WebSocket.Server
 let HTTPS_Server
@@ -81,6 +81,7 @@ export const init = async () => {
   }
 
   Server.on("connection", async (socket, info) => {
+    logger.debug("Promise 정상 작동")
     if (!info.url) throw new Error("No URL on IncomingMessage")
 
     const chunk = info.url.slice(1).split("&")
@@ -182,7 +183,7 @@ export const init = async () => {
       }
     })
   })
-  Server.on("error", function (err) {
+  Server.on("error", (err) => {
     logger.warn("Error on ws: " + err.toString())
   })
 

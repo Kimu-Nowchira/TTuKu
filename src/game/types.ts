@@ -1,4 +1,4 @@
-import Robot from "./Game/classes/Robot"
+import Robot from "./classes/Robot"
 
 export interface IUser {
   _id: string
