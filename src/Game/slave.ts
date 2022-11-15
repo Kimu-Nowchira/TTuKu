@@ -36,6 +36,7 @@ import {
 } from "./master"
 import { config } from "../config"
 import { init as dbInit, ip_block, session } from "../Web/db"
+import { z } from "zod"
 
 let Server: WebSocket.Server
 let HTTPS_Server
@@ -79,6 +80,8 @@ export const init = async () => {
   }
 
   Server.on("connection", (socket, info) => {
+    if (!info.url) throw new Error("No URL on IncomingMessage")
+
     const chunk = info.url.slice(1).split("&")
     const key = chunk[0]
     const reserve = RESERVED[key] || {}
@@ -204,13 +207,31 @@ process.on("uncaughtException", function (err) {
   }, 10000)
 })
 
-process.on("message", (msg: any) => {
+process.on("message", async (msg: { type: string }) => {
+  const inviteErrorSchema = z.object({
+    target: z.string(),
+    code: z.number(),
+  })
+
+  const roomReserveSchema = z.object({
+    session: z.string(),
+  })
+
   switch (msg.type) {
     case "invite-error":
-      if (!DIC[msg.target]) break
-      DIC[msg.target].sendError(msg.code)
+      const result = await inviteErrorSchema.safeParseAsync(msg)
+      if (!result.success) return logger.error(result.error)
+      const { data } = result
+
+      if (!DIC[data.target]) break
+      DIC[data.target].sendError(data.code)
       break
+
     case "room-reserve":
+      const result = await roomReserveSchema.safeParseAsync(msg)
+      if (!result.success) return logger.error(result.error)
+      const { data } = result
+
       if (RESERVED[msg.session]) {
         // 이미 입장 요청을 했는데 또 하는 경우
         break
@@ -221,7 +242,7 @@ process.on("message", (msg: any) => {
           spec: msg.spec,
           pass: msg.pass,
           _expiration: setTimeout(
-            function (tg, create) {
+            (tg, create) => {
               process.send({
                 type: "room-expired",
                 id: msg.room.id,
