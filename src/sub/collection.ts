@@ -381,7 +381,7 @@ class Pointer {
 
     const preCB = (err, res) => {
       if (err) {
-        logger.error("Error when querying: " + sql)
+        logger.error("Error when querying: " + sql, this.second)
         logger.error("Context: " + err.toString())
         if (onFail) {
           logger.info("onFail calling...")

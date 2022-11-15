@@ -309,7 +309,7 @@ export default class Client {
     if (userData.friends) this.friends = userData.friends
 
     this.data = new Data(userData.kkutu)
-    this.money = Number(userData.money)
+    this.money = userData.money
 
     if (!user) this.flush().then()
     else {
