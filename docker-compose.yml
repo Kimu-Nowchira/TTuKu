@@ -16,6 +16,7 @@ services:
       - "3345:3345"
       - "3346:3346"
       - "3347:3347"
+      - "3348:3348"
   web:
     build: .
     volumes:
@@ -27,7 +28,6 @@ services:
       - db
       - game
     ports:
-      # 웹 서버 메인 포트 (+1)
       - "2930:80"
   db:
     build:
