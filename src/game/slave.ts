@@ -271,7 +271,6 @@ const onRoomInvalid = (data: z.infer<typeof roomInvalidSchema>) => {
   delete ROOM[data.room.id]
 }
 
-type messageType = "invite-error" | "room-reserve" | "room-invalid"
 process.on("message", async (msg: { type: string }) => {
   logger.debug("Message from master:", msg)
 
@@ -298,8 +297,9 @@ process.on("message", async (msg: { type: string }) => {
     handler: onRoomInvalid,
   })
 
+  if (!eventHandlerData.has(msg.type))
+    return logger.warn(`Unhandled IPC message type: ${msg.type}`)
   const eventHandler = eventHandlerData.get(msg.type)
-  if (!eventHandler) logger.warn(`Unhandled IPC message type: ${msg.type}`)
 
   const result = await eventHandler.schema.safeParseAsync(msg)
   // @ts-ignore 버그로 추정

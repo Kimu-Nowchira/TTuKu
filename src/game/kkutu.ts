@@ -76,7 +76,7 @@ export const getRoomList = () => {
 export const narrate = (list, type: string, data) =>
   list.forEach((v) => DIC[v]?.send(type, data))
 
-export const publish = (type: string, data, _room?: string) => {
+export const publish = (type: string, data, _room?: string | boolean) => {
   if (cluster.isPrimary) {
     for (const i in DIC) DIC[i].send(type, data)
   } else {

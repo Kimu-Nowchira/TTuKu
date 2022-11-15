@@ -53,7 +53,7 @@ export default class Room {
   game: GameData = {}
 
   title: string
-  password: string
+  password: string | boolean
   limit: number
   mode: number
   round: number
@@ -268,7 +268,7 @@ export default class Room {
     }
   }
 
-  set(room) {
+  set(room: RoomData) {
     this.title = room.title
     this.password = room.password
     this.limit = Math.max(
