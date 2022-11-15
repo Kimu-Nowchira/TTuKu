@@ -280,7 +280,6 @@ export default class Client {
     let black: string = ""
     let blockedUntil: number | null = null
 
-    logger.debug(`User ${this.id} refresh`, user, this)
     const userData = user
       ? user
       : {
