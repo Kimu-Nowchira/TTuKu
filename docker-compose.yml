@@ -10,9 +10,12 @@ services:
     command: yarn prod:game
     restart: always
     ports:
-      - 8496:8496
-      - 2929:2929
-      - 3345:3345
+      # 0번 게임 서버 메인 포트 (+0)
+      - "2929:2929"
+      # 0번 게임 서버 워커 포트 (+416 ~)
+      - "3345:3345"
+      - "3346:3346"
+      - "3347:3347"
   web:
     build: .
     volumes:
@@ -24,7 +27,8 @@ services:
       - db
       - game
     ports:
-      - 2930:80
+      # 웹 서버 메인 포트 (+1)
+      - "2930:80"
   db:
     build:
       context: .
