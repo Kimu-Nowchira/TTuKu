@@ -74,7 +74,7 @@ declare module "express-session" {
   }
 }
 
-const run = async () => {
+export const run = async () => {
   logger.info("<< KKuTu Web >>")
 
   if (!config.isPublic) logger.info("Disable public mode.")
@@ -289,5 +289,3 @@ class GameClient {
     this.socket.send(JSON.stringify(data))
   }
 }
-
-run().then()

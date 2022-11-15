@@ -18,6 +18,7 @@
 
 import cluster from "node:cluster"
 import { logger } from "../sub/jjlog"
+import { run as runMain } from "./main"
 
 // 첫 번째 인자: 워커 개수 (기본값은 1)
 const CPU = Number(process.argv[2]) || 1
@@ -34,4 +35,4 @@ const run = async () => {
 }
 
 if (cluster.isPrimary) run().then()
-else require("./main.js")
+else runMain().then()
