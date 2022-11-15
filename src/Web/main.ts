@@ -44,7 +44,7 @@ import { logger } from "../sub/jjlog"
 import { config } from "../config"
 import Secure from "../sub/secure"
 import * as WebInit from "../sub/webinit"
-import { init as DBInit } from "./db"
+import { init as DBInit, kkutu_shop_desc, session } from "./db"
 
 import { run as adminRun } from "./routes/admin"
 import { run as consumeRun } from "./routes/consume"
@@ -59,36 +59,10 @@ const Language = {
 
 const gameServers: GameClient[] = []
 
-const DB = require("./db")
-
 const Server = Express()
 
 // TODO: 임시 코드 - 추후 삭제 필요
 global.isPublic = config.isPublic
-
-DBInit().then()
-
-logger.info("<< KKuTu Web >>")
-
-if (!config.isPublic) logger.info("Disable public mode.")
-
-Server.set("views", __dirname + "/views")
-Server.set("view engine", "pug")
-Server.use(Express.static(__dirname + "/public"))
-Server.use(urlencoded({ extended: true }))
-Server.use(
-  Exession({
-    /* use only for redis-installed
-
-	store: new Redission({
-		client: Redis.createClient(),
-		ttl: 3600 * 12
-	}),*/
-    secret: "kkutu",
-    resave: false,
-    saveUninitialized: true,
-  })
-)
 
 declare module "express-session" {
   interface SessionData {
@@ -174,58 +148,6 @@ class GameClient {
   }
 }
 
-WebInit.init(Server, true)
-
-DB.ready = function () {
-  setInterval(function () {
-    const q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }]
-
-    DB.session.remove(q).on()
-  }, 600000)
-  setInterval(function () {
-    gameServers.forEach((v) => {
-      if (v.socket) v.socket.send(`{"type":"seek"}`)
-      else v.seek = undefined
-    })
-  }, 4000)
-  logger.info("DB is ready.")
-
-  DB.kkutu_shop_desc.find().on(($docs) => {
-    const flush = (lang: keyof typeof Language) => {
-      let db
-
-      Language[lang].SHOP = db = {}
-      for (const j in $docs) {
-        db[$docs[j]._id] = [$docs[j][`name_${lang}`], $docs[j][`desc_${lang}`]]
-      }
-    }
-
-    for (const i in Language) flush(i as keyof typeof Language)
-  })
-
-  Server.listen(80)
-
-  if (IS_SECURED) {
-    const options = Secure()
-    https.createServer(options, Server).listen(443)
-  }
-}
-
-MAIN_PORTS.forEach((v: number, i: number) => {
-  const KEY = process.env["WS_KEY"] || ""
-  const protocol = IS_SECURED ? "wss" : "ws"
-
-  gameServers[i] = new GameClient(
-    KEY,
-    `${protocol}://${config.GAME_SERVER_HOST}:${v}/${KEY}`
-  )
-})
-
-adminRun(Server, WebInit.page)
-consumeRun(Server, WebInit.page)
-majorRun(Server, WebInit.page)
-loginRun(Server, WebInit.page)
-
 Server.get("/", (req, res) => {
   const server = parseInt(req.query.server?.toString() || "")
   // if (!server) logger.error("Server is not defined")
@@ -265,7 +187,7 @@ Server.get("/", (req, res) => {
     })
   }
 
-  DB.session.findOne(["_id", req.session.id]).on(($ses) => {
+  session.findOne(["_id", req.session.id]).on(($ses) => {
     // var sid = (($ses || {}).profile || {}).sid || "NULL";
     if (config.isPublic) {
       onFinish($ses)
@@ -289,3 +211,84 @@ Server.get("/servers", (_req, res) => {
 Server.get("/legal/:page", (req, res) => {
   WebInit.page(req, res, "legal/" + req.params.page)
 })
+
+const run = async () => {
+  logger.info("<< KKuTu Web >>")
+
+  if (!config.isPublic) logger.info("Disable public mode.")
+
+  Server.set("views", __dirname + "/views")
+  Server.set("view engine", "pug")
+  Server.use(Express.static(__dirname + "/public"))
+  Server.use(urlencoded({ extended: true }))
+  Server.use(
+    Exession({
+      /* use only for redis-installed
+
+    store: new Redission({
+      client: Redis.createClient(),
+      ttl: 3600 * 12
+    }),*/
+      secret: "kkutu",
+      resave: false,
+      saveUninitialized: true,
+    })
+  )
+
+  WebInit.init(Server, true)
+
+  MAIN_PORTS.forEach((v: number, i: number) => {
+    const KEY = process.env["WS_KEY"] || ""
+    const protocol = IS_SECURED ? "wss" : "ws"
+
+    gameServers[i] = new GameClient(
+      KEY,
+      `${protocol}://${config.GAME_SERVER_HOST}:${v}/${KEY}`
+    )
+  })
+
+  adminRun(Server, WebInit.page)
+  consumeRun(Server, WebInit.page)
+  majorRun(Server, WebInit.page)
+  loginRun(Server, WebInit.page)
+
+  await DBInit()
+
+  setInterval(() => {
+    const q = ["createdAt", { $lte: Date.now() - 3600000 * 12 }] as [
+      string,
+      { $lte: number }
+    ]
+
+    session.remove(q).on()
+  }, 600000)
+  setInterval(() => {
+    gameServers.forEach((v) => {
+      if (v.socket) v.socket.send(`{"type":"seek"}`)
+      else v.seek = undefined
+    })
+  }, 4000)
+  logger.info("DB is ready.")
+
+  kkutu_shop_desc.find().on(($docs) => {
+    const flush = (lang: keyof typeof Language) => {
+      let db
+
+      Language[lang].SHOP = db = {}
+      for (const j in $docs) {
+        db[$docs[j]._id] = [$docs[j][`name_${lang}`], $docs[j][`desc_${lang}`]]
+      }
+    }
+
+    for (const i in Language) flush(i as keyof typeof Language)
+  })
+
+  Server.listen(80)
+
+  if (IS_SECURED) {
+    const options = Secure()
+    https.createServer(options, Server).listen(443)
+  }
+}
+
+run().then()
