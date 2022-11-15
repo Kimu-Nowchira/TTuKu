@@ -30,12 +30,14 @@
 1. 레포지토리 폴더 내에서 `sudo docker-compose up -d --build`를 실행합니다.
 
 #### 공통
-- 폴더 `./Server/lib/sub`에 oAuth 설정 파일(`auth.json`)과 전역 설정 파일(`global.json`)을 **반드시** 만들어 주세요. 본 레포지토리에는 각 파일의 양식이 들어가 있습니다.
+- `global.example.json`과 `auth.example.json`을 같은 경로에 복사하여 oAuth 설정 파일(`auth.json`)과 전역 설정 파일(`global.json`)을 **반드시** 만들어 주세요.
+  - 도커 기본 설정을 사용할 경우 추가로 설정을 변경하지 않아도 정상 작동하지만 보안을 위해 비밀번호, 토큰 등을 변경해 주세요.
+  - 도커를 사용하며 PostgreSQL 서버 비밀번호를 변경할 경우 `docker-compose.yml`의 `POSTGRES_PASSWORD`를 변경해 주세요.
 - 본 레포지토리에는 [WordNet](https://wordnet.princeton.edu/) 자료가 포함되어 있습니다. 서버를 운영할 때 반드시 사용자에게 이에 대한 라이선스를 안내해야 합니다.
 - 서버가 정상적으로 설치된 다음부터는 서버를 실행시키기 위해서 가장 마지막 단계만 수행하면 됩니다.
 - 서버가 성공적으로 열린 후 웹 브라우저에서 `127.0.0.1:2930`(다른 사람들은 해당 컴퓨터의 외부 IP 주소:2930)로 접속하여 끄투를 즐길 수 있습니다.
-  - 외부 포트는 global.json이 아닌 docker-compose.yml에서 변경해야 합니다.
-- Docker에 pg, redis 등에 관한 모든 기본 설정이 되어 있습니다. Docker를 사용하신다면 따로 DB를 세팅하실 필요가 없습니다.
+  - 외부 포트는 global.json이 아닌 docker-compose.yml에서 변경해야 합니다. 기본 외부 포트는 2930입니다.
+- Docker에 Postgres, Redis 등에 관한 모든 기본 설정이 되어 있습니다. Docker를 사용하신다면 따로 DB를 세팅하실 필요가 없습니다.
 - [Cloudflare](https://www.cloudflare.com/)를 이용하는 경우, DNS 탭의 status를 `DNS only`로 두세요. `DNS and HTTP proxy (CDN)`으로 둘 경우, 방 만들기와 방 입장이 불가합니다.
 
 ### 라이선스
