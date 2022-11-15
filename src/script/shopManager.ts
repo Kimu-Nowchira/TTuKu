@@ -21,7 +21,7 @@
 import { readFile } from "fs"
 import { logger } from "../sub/jjlog"
 
-import { init as dbInit, kkutu_shop } from "../Web/db"
+import { init as dbInit, kkutu_shop } from "../sub/db"
 
 /* 상품 group 명세: NIK	이름 스킨; 이름의 색상을 변경합니다. */
 const run = async () => {

@@ -35,7 +35,7 @@ import {
   ENABLE_FORM,
 } from "./master"
 import { config } from "../config"
-import { init as dbInit, ip_block, session } from "../Web/db"
+import { init as dbInit, ip_block, session } from "../sub/db"
 import { z } from "zod"
 import { IPBlockData, ISession, roomDataSchema, RoomDataToSend } from "./types"
 

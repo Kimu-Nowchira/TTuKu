@@ -26,7 +26,7 @@ import {
 import { Game } from "./index"
 import Room from "../classes/Room"
 import { Tail } from "../../sub/lizard"
-import { kkutu } from "../../Web/db"
+import { kkutu } from "../../sub/db"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]

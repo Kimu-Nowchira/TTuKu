@@ -18,10 +18,10 @@
 
 import { createClient } from "redis"
 import { Pool, PoolClient } from "pg"
-import { logger } from "../sub/jjlog"
-import { Tail } from "../sub/lizard"
+import { logger } from "./jjlog"
+import { Tail } from "./lizard"
 import { config } from "../config"
-import { PgTable, RedisTable } from "../sub/collection"
+import { PgTable, RedisTable } from "./collection"
 
 const LANG = ["ko", "en"]
 

@@ -26,7 +26,7 @@ import {
   kkutu_shop_desc,
   session,
   users,
-} from "../db"
+} from "../../sub/db"
 import { config } from "../../config"
 import { all, Tail } from "../../sub/lizard"
 

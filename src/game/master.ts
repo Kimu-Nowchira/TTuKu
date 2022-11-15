@@ -34,7 +34,7 @@ import Client from "./classes/Client"
 import { init as KKuTuInit } from "./kkutu"
 import WebServer from "./classes/WebServer"
 
-import { init as DBInit, ip_block, session, users } from "../Web/db"
+import { init as DBInit, ip_block, session, users } from "../sub/db"
 
 let HTTPS_Server
 

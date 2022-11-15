@@ -20,7 +20,7 @@ import Room from "../classes/Room"
 import { Tail } from "../../sub/lizard"
 import { Game } from "./index"
 import { INIT_SOUNDS, KOR_GROUP } from "../../const"
-import { kkutu } from "../../Web/db"
+import { kkutu } from "../../sub/db"
 
 // TODO: setTimeout을 Promise로 바꿔야 작동함
 

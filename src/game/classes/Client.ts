@@ -27,7 +27,7 @@ import {
 } from "../kkutu"
 import { ClientExportData, IUser } from "../types"
 import Data from "./Data"
-import { redis, users } from "../../Web/db"
+import { redis, users } from "../../sub/db"
 
 const channel = Number(process.env["CHANNEL"]) || 0
 

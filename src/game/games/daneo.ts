@@ -18,7 +18,7 @@
 import { Game } from "./index"
 import { getPenalty, getPreScore, MISSION_en, MISSION_ko } from "../../const"
 import { Tail } from "../../sub/lizard"
-import { kkutu } from "../../Web/db"
+import { kkutu } from "../../sub/db"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]

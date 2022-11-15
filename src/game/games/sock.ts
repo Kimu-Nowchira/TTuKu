@@ -18,7 +18,7 @@
 import { Tail } from "../../sub/lizard"
 import { Game } from "./index"
 import { KOR_GROUP } from "../../const"
-import { kkutu } from "../../Web/db"
+import { kkutu } from "../../sub/db"
 
 const LANG_STATS = {
   ko: {

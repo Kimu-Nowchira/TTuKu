@@ -18,7 +18,7 @@
 
 // 많이 쓰인 단어 순위를 출력하는 스크립트
 
-import { init as dbInit, kkutu } from "../Web/db"
+import { init as dbInit, kkutu } from "../sub/db"
 import { IWord } from "../game/types"
 
 const len = Number(process.argv[2] || 10)

@@ -19,7 +19,7 @@
 import { PROVERBS } from "./typingConst"
 import { Tail } from "../../sub/lizard"
 import { Game } from "./index"
-import { kkutu } from "../../Web/db"
+import { kkutu } from "../../sub/db"
 import { IWord } from "../types"
 
 const LIST_LENGTH = 200

@@ -16,7 +16,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Express } from "express"
-import { kkutu_shop, users } from "../db"
+import { kkutu_shop, users } from "../../sub/db"
 import { logger } from "../../sub/jjlog"
 
 export const run = (Server: Express, _page) => {

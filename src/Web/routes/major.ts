@@ -18,7 +18,7 @@
 
 import { Express } from "express"
 import { KO_INJEONG } from "../../const"
-import { kkutu, kkutu_injeong, kkutu_shop, redis, users } from "../db"
+import { kkutu, kkutu_injeong, kkutu_shop, redis, users } from "../../sub/db"
 import { logger } from "../../sub/jjlog"
 
 const Web = require("request")

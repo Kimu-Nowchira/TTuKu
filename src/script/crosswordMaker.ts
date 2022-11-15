@@ -17,7 +17,7 @@
  */
 import { KOR_GROUP } from "../const"
 import { Tail } from "../sub/lizard"
-import { kkutu, kkutu_cw } from "../Web/db"
+import { kkutu, kkutu_cw } from "../sub/db"
 
 const Prompt = require("prompt")
 const LANG = "ko"

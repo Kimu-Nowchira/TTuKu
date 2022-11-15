@@ -18,7 +18,7 @@
 
 import passport from "passport"
 import { logger } from "../../sub/jjlog"
-import { session, users } from "../db"
+import { session, users } from "../../sub/db"
 import { config } from "../../config"
 import { DiscordAuth } from "../auth/discordAuth"
 import { Express } from "express"

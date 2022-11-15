@@ -44,7 +44,7 @@ import { logger } from "../sub/jjlog"
 import { config } from "../config"
 import Secure from "../sub/secure"
 import * as WebInit from "../sub/webinit"
-import { init as dbInit, kkutu_shop_desc, session } from "./db"
+import { init as dbInit, kkutu_shop_desc, session } from "../sub/db"
 
 import { run as adminRun } from "./routes/admin"
 import { run as consumeRun } from "./routes/consume"

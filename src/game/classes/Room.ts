@@ -24,7 +24,7 @@ import { DIC, ROOM, _rid, publish } from "../kkutu"
 import { GameData, RoomData, RoomDataToSend, RoomExportData } from "../types"
 import Robot from "./Robot"
 import Client from "./Client"
-import { redis } from "../../Web/db"
+import { redis } from "../../sub/db"
 import { Sock } from "../games/sock"
 
 const Rule: Record<string, typeof Game> = {

@@ -18,7 +18,7 @@
 
 import { Game } from "./index"
 import Client from "../classes/Client"
-import { kkutu, kkutu_cw } from "../../Web/db"
+import { kkutu, kkutu_cw } from "../../sub/db"
 import { ICrossWordData, IWord } from "../types"
 
 // const ROBOT_SEEK_DELAY = [5000, 3000, 1500, 700, 100]
