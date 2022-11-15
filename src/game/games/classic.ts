@@ -698,6 +698,12 @@ function getSubChar(char: string) {
     case "KKT":
     case "KSH":
     case "KAP":
+      // 숫자 두음법칙 예외
+      if (!isNaN(parseInt(char)))
+        return ["영", "일", "이", "삼", "사", "오", "육", "칠", "팔", "구"][
+          parseInt(char)
+        ]
+
       k = c - 0xac00
       if (k < 0 || k > 11171) break
       ca = [Math.floor(k / 28 / 21), Math.floor(k / 28) % 21, k % 28]
