@@ -207,17 +207,6 @@ process.on("uncaughtException", (err) => {
   }, 10000)
 })
 
-// message event
-const inviteErrorSchema = z.object({
-  target: z.string(),
-  code: z.number(),
-})
-
-const onInviteError = async (data: z.infer<typeof inviteErrorSchema>) => {
-  if (!DIC[data.target]) return
-  DIC[data.target].sendError(data.code)
-}
-
 /*
 game_1   | {
 game_1   |   type: 'room-reserve',
@@ -249,6 +238,18 @@ game_1   |     _create: true
 game_1   |   }
 game_1   | }
  */
+
+// message event
+const inviteErrorSchema = z.object({
+  target: z.string(),
+  code: z.number(),
+})
+
+const onInviteError = async (data: z.infer<typeof inviteErrorSchema>) => {
+  if (!DIC[data.target]) return
+  DIC[data.target].sendError(data.code)
+}
+
 const roomReserveSchema = z.object({
   session: z.string(),
   create: z.boolean(),
@@ -282,6 +283,7 @@ const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
       data.create
     ),
   }
+  logger.debug("RESERVED", RESERVED)
 }
 
 const roomInvalidSchema = z.object({
@@ -328,6 +330,45 @@ process.on("message", async (msg: { type: string }) => {
 
   eventHandler.handler(result.data)
 })
+
+// process.on("message", (msg: any) => {
+//   switch (msg.type) {
+//     case "invite-error":
+//       if (!DIC[msg.target]) break
+//       DIC[msg.target].sendError(msg.code)
+//       break
+//     case "room-reserve":
+//       if (RESERVED[msg.session]) {
+//         // 이미 입장 요청을 했는데 또 하는 경우
+//         break
+//       } else
+//         RESERVED[msg.session] = {
+//           profile: msg.profile,
+//           room: msg.room,
+//           spec: msg.spec,
+//           pass: msg.pass,
+//           _expiration: setTimeout(
+//             function (tg, create) {
+//               process.send({
+//                 type: "room-expired",
+//                 id: msg.room.id,
+//                 create: create,
+//               })
+//               delete RESERVED[tg]
+//             },
+//             10000,
+//             msg.session,
+//             msg.create
+//           ),
+//         }
+//       break
+//     case "room-invalid":
+//       delete ROOM[msg.room.id]
+//       break
+//     default:
+//       logger.warn(`Unhandled IPC message type: ${msg.type}`)
+//   }
+// })
 
 export const onClientMessageOnSlave = ($c: Client, msg) => {
   logger.debug(`Message from #${$c.id} (Slave):`, msg)
