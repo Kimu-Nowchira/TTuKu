@@ -69,7 +69,7 @@ const Escape = (str: string, ...a: Array<any>) => {
       if (type === "%") return "%"
 
       // 임시조치
-      const arg = args[i++] || ""
+      const arg = args[i++]
       switch (type) {
         case "s":
           return escape.string(arg)
