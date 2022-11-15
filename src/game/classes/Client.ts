@@ -21,7 +21,6 @@ import {
   _rid,
   setRId,
   addRId,
-  NIGHT,
   onClientMessage,
   onClientClosed,
 } from "../kkutu"
@@ -65,8 +64,6 @@ export default class Client {
   spam = 0
   _pub = Date.now()
 
-  isAjae: boolean
-
   pracRoom: Room
 
   form: string
@@ -85,6 +82,8 @@ export default class Client {
   _error: number
   _invited: boolean
 
+  _kickTimer?: NodeJS.Timeout
+
   constructor(
     public socket: WebSocket,
     public profile: any,
@@ -102,7 +101,6 @@ export default class Client {
 
       this.id = "guest__" + sid
       this.guest = true
-      this.isAjae = false
       this.profile = {
         id: sid,
         title: getGuestName(sid),
@@ -275,10 +273,12 @@ export default class Client {
       return { result: 200 }
     }
 
-    const user = (await users.findOne(["_id", this.id]).onAsync()) as IUser
+    const user = await users
+      .findOne(["_id", this.id])
+      .onAsync<IUser | undefined>()
 
-    let black = ""
-    let blockedUntil: number = null
+    let black: string = ""
+    let blockedUntil: number | null = null
 
     const userData = user
       ? user
@@ -293,7 +293,7 @@ export default class Client {
 
     if (user) {
       // 기존 유저의 처벌 관련
-      black = user.black
+      black = user.black || ""
       if (black == "null") black = ""
       if (black == "chat") {
         black = ""
@@ -316,16 +316,13 @@ export default class Client {
       this.okgCount = Math.floor((this.data.playTime || 0) / PER_OKG)
     }
 
-    /* Enhanced User Block System [S] */
     if (black) {
-      if (blockedUntil)
+      if (blockedUntil) {
         return { result: 444, black: black, blockedUntil: blockedUntil }
-      else return { result: 444, black: black }
-    } else if (cluster.isPrimary && user.server) {
-      /* Enhanced User Block System [E] */
+      } else return { result: 444, black: black }
+    } else if (cluster.isPrimary && user?.server) {
       return { result: 409, black: user.server }
-    } else if (NIGHT && this.isAjae === false) return { result: 440 }
-    else return { result: 200 }
+    } else return { result: 200 }
   }
 
   async flush(box?: boolean, equip?: boolean, friends?: boolean) {
@@ -350,7 +347,7 @@ export default class Client {
     return { id: this.id, prev: res }
   }
 
-  invokeWordPiece(text, coef) {
+  invokeWordPiece(text: string, coef: number) {
     if (!this.game.wpc) return
     let v
 
@@ -364,7 +361,7 @@ export default class Client {
   enter(
     room: { id?: number; password?: string; _create?: boolean; _id?: number },
     spec,
-    pass?
+    pass = false
   ) {
     let $room: Room | undefined
 
@@ -550,7 +547,7 @@ export default class Client {
     }
   }
 
-  kickVote(client, agree) {
+  kickVote(client: Client, agree: boolean) {
     const $room = ROOM[client.place]
     if (!$room) return
 
@@ -576,7 +573,8 @@ export default class Client {
         $room.kickVote = null
       }
     }
-    clearTimeout(client.kickTimer)
+    // kickTimer라 되어 있었는데 _kickTimer인 듯
+    clearTimeout(client._kickTimer)
   }
 
   toggle() {

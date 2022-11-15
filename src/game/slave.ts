@@ -52,7 +52,7 @@ const RESERVED: Record<
     profile?: string
     room: z.infer<typeof roomDataSchema>
     spec?: string
-    pass?: string
+    pass?: boolean
     _expiration: NodeJS.Timeout
   }
 > = {}
@@ -234,7 +234,7 @@ const roomReserveSchema = z.object({
   room: roomDataSchema,
   profile: z.string().optional(),
   spec: z.string().optional(),
-  pass: z.string().optional(),
+  pass: z.boolean().optional(),
 })
 
 const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {

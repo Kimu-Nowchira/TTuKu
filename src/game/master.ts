@@ -737,12 +737,6 @@ export const init = async (
             }
           })
         }
-        /* Enhanced User Block System [E] */
-        if ($c.isAjae === null) {
-          $c.sendError(441)
-          $c.socket.close()
-          return
-        }
         $c.refresh().then((ref) => {
           /* Enhanced User Block System [S] */
           let isBlockRelease = false
