@@ -16,14 +16,19 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Express } from "express"
+import { readFile, writeFile } from "fs"
 import { ISession, IUser } from "../../game/types"
-import { session, users } from "../db"
-
-var File = require("fs")
-var MainDB = require("../db")
-var GLOBAL = require("../../sub/global.json")
-var JLog = require("../../sub/jjlog")
-var Lizard = require("../../sub/lizard.js")
+import { logger } from "../../sub/jjlog"
+import {
+  kkutu,
+  kkutu_injeong,
+  kkutu_shop,
+  kkutu_shop_desc,
+  session,
+  users,
+} from "../db"
+import { config } from "../../config"
+import { all, Tail } from "../../sub/lizard"
 
 export const run = (Server: Express, page) => {
   Server.get("/gwalli", function (req, res) {
@@ -36,7 +41,7 @@ export const run = (Server: Express, page) => {
   Server.get("/gwalli/injeong", function (req, res) {
     if (!checkAdmin(req, res)) return
 
-    MainDB.kkutu_injeong
+    kkutu_injeong
       .find(["theme", { $not: "~" }])
       .limit(100)
       .on(function ($list) {
@@ -72,15 +77,15 @@ export const run = (Server: Express, page) => {
     if (!checkAdmin(req, res)) return
 
     if (req.query.name) {
-      MainDB.session.find(["profile.title", req.query.name]).on(function ($u) {
+      session.find(["profile.title", req.query.name]).on(function ($u) {
         if ($u) return onSession($u)
-        MainDB.session.find(["profile.name", req.query.name]).on(function ($u) {
+        session.find(["profile.name", req.query.name]).on(function ($u) {
           if ($u) return onSession($u)
           res.sendStatus(404)
         })
       })
     } else {
-      MainDB.users.findOne(["_id", req.query.id]).on(function ($u) {
+      users.findOne(["_id", req.query.id]).on(function ($u) {
         if ($u) return res.send({ list: [$u] })
         res.sendStatus(404)
       })
@@ -88,8 +93,8 @@ export const run = (Server: Express, page) => {
     function onSession(list) {
       var board = {}
 
-      Lizard.all(
-        list.map(function (v) {
+      all(
+        list.map((v) => {
           if (board[v.profile.id]) return null
           else {
             board[v.profile.id] = true
@@ -101,10 +106,10 @@ export const run = (Server: Express, page) => {
       })
     }
     function getProfile(id) {
-      var R = new Lizard.Tail()
+      const R = new Tail()
 
       if (id)
-        MainDB.users.findOne(["_id", id]).on(function ($u) {
+        users.findOne(["_id", id]).on(function ($u) {
           R.go($u)
         })
       else R.go(null)
@@ -117,7 +122,7 @@ export const run = (Server: Express, page) => {
     (req: { params: { word: string }; query: { lang: "ko" | "en" } }, res) => {
       if (!checkAdmin(req, res)) return
 
-      const TABLE = MainDB.kkutu[req.query.lang]
+      const TABLE = kkutu[req.query.lang]
 
       if (!TABLE) return res.sendStatus(400)
       if (!TABLE.findOne) return res.sendStatus(400)
@@ -137,7 +142,7 @@ export const run = (Server: Express, page) => {
     ) => {
       if (!checkAdmin(req, res)) return
 
-      var TABLE = MainDB.kkutu[req.query.lang]
+      var TABLE = kkutu[req.query.lang]
 
       if (!TABLE) return res.sendStatus(400)
       if (!TABLE.find) return res.sendStatus(400)
@@ -151,7 +156,7 @@ export const run = (Server: Express, page) => {
   Server.get("/gwalli/kkutuhot", (req, res) => {
     if (!checkAdmin(req, res)) return
 
-    File.readFile(GLOBAL.KKUTUHOT_PATH, function (err, file) {
+    readFile(config.KKUTUHOT_PATH, function (err, file) {
       var data = JSON.parse(file.toString())
 
       parseKKuTuHot().then(function ($kh) {
@@ -163,20 +168,22 @@ export const run = (Server: Express, page) => {
   Server.get("/gwalli/shop/:key", (req, res) => {
     if (!checkAdmin(req, res)) return
 
-    var q = req.params.key == "~ALL" ? undefined : ["_id", req.params.key]
+    const q =
+      req.params.key == "~ALL"
+        ? undefined
+        : (["_id", req.params.key] as [string, string])
 
-    MainDB.kkutu_shop.find(q).on(function ($docs) {
-      MainDB.kkutu_shop_desc.find(q).on(function ($desc) {
+    kkutu_shop.find(q).on(function ($docs) {
+      kkutu_shop_desc.find(q).on(function ($desc) {
         res.send({ goods: $docs, desc: $desc })
       })
     })
   })
   Server.post("/gwalli/injeong", function (req, res) {
     if (!checkAdmin(req, res)) return
-    if (req.body.pw != GLOBAL.PASS) return res.sendStatus(400)
+    if (req.body.pw != config.PASS) return res.sendStatus(400)
 
     var list = JSON.parse(req.body.list).list
-    var themes
 
     list.forEach(function (v) {
       if (v.ok) {
@@ -195,20 +202,20 @@ export const run = (Server: Express, page) => {
           )
         })
       } else {
-        MainDB.kkutu_injeong.update(["_id", v._origin]).set(["theme", "~"]).on()
+        kkutu_injeong.update(["_id", v._origin]).set(["theme", "~"]).on()
       }
-      // MainDB.kkutu_injeong.remove([ '_id', v._origin ]).on();
+      // kkutu_injeong.remove([ '_id', v._origin ]).on();
     })
     res.sendStatus(200)
   })
   Server.post("/gwalli/kkutudb", onKKuTuDB)
   function onKKuTuDB(req, res) {
     if (!checkAdmin(req, res)) return
-    if (req.body.pw != GLOBAL.PASS) return res.sendStatus(400)
+    if (req.body.pw != config.PASS) return res.sendStatus(400)
 
     var theme = req.body.theme
     var list = req.body.list
-    var TABLE = MainDB.kkutu[req.body.lang]
+    var TABLE = kkutu[req.body.lang]
 
     if (list) list = list.split(/[,\r\n]+/)
     else return res.sendStatus(400)
@@ -244,7 +251,7 @@ export const run = (Server: Express, page) => {
             )
             .on()
         } else {
-          JLog.warn(`Word '${item}' already has the theme '${theme}'!`)
+          logger.warn(`Word '${item}' already has the theme '${theme}'!`)
         }
       })
     })
@@ -252,8 +259,8 @@ export const run = (Server: Express, page) => {
   }
   Server.post("/gwalli/kkutudb/:word", function (req, res) {
     if (!checkAdmin(req, res)) return
-    if (req.body.pw != GLOBAL.PASS) return res.sendStatus(400)
-    var TABLE = MainDB.kkutu[req.body.lang]
+    if (req.body.pw != config.PASS) return res.sendStatus(400)
+    var TABLE = kkutu[req.body.lang]
     var data = JSON.parse(req.body.data)
 
     if (!TABLE) return res.sendStatus(400)
@@ -279,7 +286,7 @@ export const run = (Server: Express, page) => {
   })
   Server.post("/gwalli/kkutuhot", function (req, res) {
     if (!checkAdmin(req, res)) return
-    if (req.body.pw != GLOBAL.PASS) return res.sendStatus(400)
+    if (req.body.pw != config.PASS) return res.sendStatus(400)
 
     noticeAdmin(req)
     parseKKuTuHot().then(function ($kh) {
@@ -292,43 +299,43 @@ export const run = (Server: Express, page) => {
           obj[$kh[i][j]._id] = $kh[i][j].hit
         }
       }
-      File.writeFile(GLOBAL.KKUTUHOT_PATH, JSON.stringify(obj), function (err) {
+      writeFile(config.KKUTUHOT_PATH, JSON.stringify(obj), function (err) {
         res.send(err)
       })
     })
   })
   Server.post("/gwalli/users", function (req, res) {
     if (!checkAdmin(req, res)) return
-    if (req.body.pw != GLOBAL.PASS) return res.sendStatus(400)
+    if (req.body.pw != config.PASS) return res.sendStatus(400)
 
     var list = JSON.parse(req.body.list).list
 
     list.forEach(function (item) {
-      MainDB.users.upsert(["_id", item._id]).set(item).on()
+      users.upsert(["_id", item._id]).set(item).on()
     })
     res.sendStatus(200)
   })
   Server.post("/gwalli/shop", function (req, res) {
     if (!checkAdmin(req, res)) return
-    if (req.body.pw != GLOBAL.PASS) return res.sendStatus(400)
+    if (req.body.pw != config.PASS) return res.sendStatus(400)
 
     var list = JSON.parse(req.body.list).list
 
     list.forEach(function (item) {
       item.core.options = JSON.parse(item.core.options)
-      MainDB.kkutu_shop.upsert(["_id", item._id]).set(item.core).on()
-      MainDB.kkutu_shop_desc.upsert(["_id", item._id]).set(item.text).on()
+      kkutu_shop.upsert(["_id", item._id]).set(item.core).on()
+      kkutu_shop_desc.upsert(["_id", item._id]).set(item.text).on()
     })
     res.sendStatus(200)
   })
 }
 function noticeAdmin(req, ...args) {
-  JLog.info(`[ADMIN] ${req.originalUrl} ${req.ip} | ${args.join(" | ")}`)
+  logger.info(`[ADMIN] ${req.originalUrl} ${req.ip} | ${args.join(" | ")}`)
 }
 function checkAdmin(req, res) {
   if (global.isPublic) {
     if (req.session.profile) {
-      if (GLOBAL.ADMIN.indexOf(req.session.profile.id) == -1) {
+      if (config.ADMIN.indexOf(req.session.profile.id) == -1) {
         req.session.admin = false
         return res.send({ error: 400 }), false
       }
@@ -340,9 +347,9 @@ function checkAdmin(req, res) {
   return true
 }
 function parseKKuTuHot() {
-  var R = new Lizard.Tail()
+  var R = new Tail()
 
-  Lizard.all([
+  all([
     query(`SELECT * FROM kkutu_ko WHERE hit > 0 ORDER BY hit DESC LIMIT 50`),
     query(
       `SELECT * FROM kkutu_ko WHERE _id ~ '^...$' AND hit > 0 ORDER BY hit DESC LIMIT 50`
@@ -355,10 +362,10 @@ function parseKKuTuHot() {
     R.go($docs)
   })
   function query(q) {
-    var R = new Lizard.Tail()
+    var R = new Tail()
 
-    MainDB.kkutu["ko"].direct(q, function (err, $docs) {
-      if (err) return JLog.error(err.toString())
+    kkutu["ko"].direct(q, function (err, $docs) {
+      if (err) return logger.error(err.toString())
       R.go($docs.rows)
     })
     return R

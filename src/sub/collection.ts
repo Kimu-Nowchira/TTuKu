@@ -563,7 +563,7 @@ export class PgTable {
     return new Pointer("find", query(args), this.col, this.origin)
   }
 
-  insert(...args: [string, string][]) {
+  insert(...args: [string, QueryValue][]) {
     return new Pointer("insert", query(args), this.col, this.origin)
   }
 
