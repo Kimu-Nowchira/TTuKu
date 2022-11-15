@@ -97,7 +97,7 @@ export const roomDataSchema = z.object({
   title: z.string(),
   password: z.string(),
   limit: z.number(),
-  mode: z.string(),
+  mode: z.number(),
   round: z.number(),
   time: z.number(),
   opts: roomOptionSchema,
