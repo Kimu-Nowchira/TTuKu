@@ -10,6 +10,8 @@ services:
     command: yarn prod:game
     restart: always
     ports:
+      # 일단 복구
+      - "8469:8469"
       # 0번 게임 서버 메인 포트 (+0)
       - "2929:2929"
       # 0번 게임 서버 워커 포트 (+416 ~)

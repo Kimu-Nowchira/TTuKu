@@ -247,7 +247,7 @@ game_1   |     code: false,
 game_1   |     id: 100,
 game_1   |     _create: true
 game_1   |   }
-game_1   | } 
+game_1   | }
  */
 const roomReserveSchema = z.object({
   session: z.string(),
@@ -260,7 +260,8 @@ const roomReserveSchema = z.object({
 
 const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
   // 이미 입장 요청을 했는데 또 하는 경우
-  if (RESERVED[data.session]) return
+  if (RESERVED[data.session])
+    return logger.warn("이미 입장 요청을 했는데 또 함")
 
   RESERVED[data.session] = {
     profile: data.profile,
