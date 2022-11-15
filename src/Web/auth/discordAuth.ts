@@ -1,8 +1,9 @@
 import { auth } from "../../config"
 
 import { Strategy } from "passport-discord"
+import { Auth } from "./index"
 
-export class DiscordAuth {
+export class DiscordAuth extends Auth {
   static config = {
     strategy: Strategy,
     color: "#7289DA",
