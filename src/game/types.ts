@@ -1,4 +1,5 @@
 import Robot from "./classes/Robot"
+import { z } from "zod"
 
 export interface IUser {
   _id: string
@@ -71,6 +72,43 @@ export interface ICrossWordData {
   _id: string
   map: string
   data: string
+}
+
+export interface IPBlockData {
+  _id: string
+  reasonBlocked: string
+  ipBlockedUntil: string
+}
+
+export const roomOptionSchema = z.object({
+  injpick: z.array(z.string()),
+  manner: z.boolean(),
+  injeong: z.boolean(),
+  mission: z.boolean(),
+  loanword: z.boolean(),
+  proverb: z.boolean(),
+  strict: z.boolean(),
+  sami: z.boolean(),
+  no2: z.boolean(),
+})
+
+export const roomDataSchema = z.object({
+  type: z.string(),
+  title: z.string(),
+  password: z.string(),
+  limit: z.number(),
+  mode: z.string(),
+  round: z.number(),
+  time: z.number(),
+  opts: roomOptionSchema,
+  code: z.boolean(),
+  id: z.number(),
+  _create: z.boolean(),
+})
+
+export interface RoomDataToSend extends z.infer<typeof roomDataSchema> {
+  _id: number
+  id?: number
 }
 
 export interface GameData {
@@ -147,21 +185,21 @@ export interface GameData {
 }
 
 export interface RoomData {
-  id: number
-  channel: number
-  title: string
-  password: string | boolean
-  limit: number
-  mode: number
-  round: number
-  time: number
-  master: string
-  players: any[]
-  readies: any
-  gaming: boolean
-  game: GameData
-  practice: string | boolean
-  opts: any
+  id?: number
+  password?: string | boolean
+  channel?: number
+  title?: string
+  limit?: number
+  mode?: number
+  round?: number
+  time?: number
+  master?: string
+  players?: any[]
+  readies?: any
+  gaming?: boolean
+  game?: GameData
+  practice?: string | boolean
+  opts?: any
 }
 
 export interface PlayerExportData {

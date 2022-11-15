@@ -361,7 +361,11 @@ export default class Client {
     }
   }
 
-  enter(room, spec, pass?) {
+  enter(
+    room: { id?: number; password?: string; _create?: boolean; _id?: number },
+    spec,
+    pass?
+  ) {
     let $room: Room | undefined
 
     if (this.place) {
@@ -381,7 +385,7 @@ export default class Client {
         } else {
           process.send({ type: "room-invalid", room: room })
         }
-        return this.sendError(430, room.id)
+        return this.sendError(430, room.id.toString())
       }
       if (!spec) {
         if ($room.gaming) {

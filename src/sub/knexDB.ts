@@ -2,6 +2,7 @@ import _knex from "knex"
 import { config } from "../config"
 import {
   ICrossWordData,
+  IPBlockData,
   ISession,
   IShopDescription,
   IShopItem,
@@ -31,11 +32,5 @@ export const ShopDescriptionTable = knex<IShopDescription>("kkutu_shop_desc")
 
 export const Session = knex<ISession>("session")
 export const UserTable = knex<IUser>("users")
-
-interface IPBlockData {
-  _id: string
-  reasonblocked: string
-  ipblockeduntil: string
-}
 
 export const IPBlockTable = knex<IPBlockData>("ip_block")

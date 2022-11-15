@@ -37,7 +37,7 @@ import {
 import { config } from "../config"
 import { init as dbInit, ip_block, session } from "../Web/db"
 import { z } from "zod"
-import { ISession } from "./types"
+import { IPBlockData, ISession, roomDataSchema, RoomDataToSend } from "./types"
 
 let Server: WebSocket.Server
 let HTTPS_Server
@@ -45,14 +45,15 @@ let HTTPS_Server
 const DIC: Record<string, Client> = {}
 const DNAME: Record<string, string> = {}
 const ROOM: Record<string, Room> = {}
+
 const RESERVED: Record<
   string,
   {
     profile?: string
-    room?: any
+    room: z.infer<typeof roomDataSchema>
     spec?: string
     pass?: string
-    _expiration?: NodeJS.Timeout
+    _expiration: NodeJS.Timeout
   }
 > = {}
 
@@ -80,17 +81,17 @@ export const init = async () => {
     })
   }
 
+  // 플레이어가 소켓에 연결된 경우
   Server.on("connection", async (socket, info) => {
-    logger.debug("Promise 정상 작동")
     if (!info.url) throw new Error("No URL on IncomingMessage")
-
-    const chunk = info.url.slice(1).split("&")
-    const key = chunk[0]
-    const reserve = RESERVED[key] || {}
 
     socket.on("error", (err) => {
       logger.warn("Error on #" + key + " on ws: " + err.toString())
     })
+
+    const chunk = info.url.slice(1).split("&")
+    const key = chunk[0]
+    const reserve = RESERVED[key]
 
     if (CHAN !== Number(chunk[1])) {
       logger.warn(`Wrong channel value ${chunk[1]} on @${CHAN}`)
@@ -98,91 +99,100 @@ export const init = async () => {
       return
     }
 
-    const room = reserve.room
-    if (room) {
-      if (room._create) {
-        room._id = room.id
-        delete room.id
-      }
-      clearTimeout(reserve._expiration)
-      delete reserve._expiration
-      delete RESERVED[key]
-    } else {
-      logger.warn(`Not reserved from ${key} on @${CHAN}`)
-      socket.close()
-      return
+    const _room = reserve.room
+
+    if (!reserve.room) {
+      logger.error(`Not reserved from ${key} on @${CHAN}`)
+      return socket.close()
     }
 
-    const $body = (await session
+    const room: RoomDataToSend = {
+      ..._room,
+      id: _room._create ? undefined : _room.id,
+      _id: _room._create ? _room.id : undefined,
+    }
+
+    clearTimeout(reserve._expiration)
+    delete reserve._expiration
+    delete RESERVED[key]
+
+    const $body = await session
       .findOne(["_id", key])
       .limit(["profile", true])
-      .onAsync()) as ISession | undefined
+      .onAsync<ISession | undefined>()
 
     const $c = new Client(socket, $body ? $body.profile : null, key)
-    $c.admin = config.ADMIN.indexOf($c.id) != -1
+    $c.admin = config.ADMIN.includes($c.id)
 
-    /* Enhanced User Block System [S] */
+    // IP 차단 여부 확인
     $c.remoteAddress = config.USER_BLOCK_OPTIONS.USE_X_FORWARDED_FOR
       ? info.connection.remoteAddress
       : (info.headers["x-forwarded-for"] as string) ||
         info.connection.remoteAddress
+
     if (
       config.USER_BLOCK_OPTIONS.USE_MODULE &&
       ((config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST && $c.guest) ||
         !config.USER_BLOCK_OPTIONS.BLOCK_IP_ONLY_FOR_GUEST)
     ) {
-      ip_block.findOne(["_id", $c.remoteAddress]).on(function ($body) {
-        if ($body.reasonBlocked) {
-          $c.socket.send(
-            JSON.stringify({
-              type: "error",
-              code: 446,
-              reasonBlocked: !$body.reasonBlocked
-                ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
-                : $body.reasonBlocked,
-              ipBlockedUntil: !$body.ipBlockedUntil
-                ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
-                : $body.ipBlockedUntil,
-            })
-          )
-          $c.socket.close()
-          return
-        }
-      })
+      const ipBlockData = await ip_block
+        .findOne(["_id", $c.remoteAddress])
+        .onAsync<IPBlockData | undefined>()
+
+      if (ipBlockData && ipBlockData.reasonBlocked) {
+        $c.socket.send(
+          JSON.stringify({
+            type: "error",
+            code: 446,
+            reasonBlocked: !ipBlockData.reasonBlocked
+              ? config.USER_BLOCK_OPTIONS.DEFAULT_BLOCKED_TEXT
+              : ipBlockData.reasonBlocked,
+            ipBlockedUntil: !ipBlockData.ipBlockedUntil
+              ? config.USER_BLOCK_OPTIONS.BLOCKED_FOREVER
+              : ipBlockData.ipBlockedUntil,
+          })
+        )
+        $c.socket.close()
+        return
+      }
     }
-    /* Enhanced User Block System [E] */
+
+    // 이미 게임에 접속해 있는 경우
     if (DIC[$c.id]) {
       DIC[$c.id].send("error", { code: 408 })
       DIC[$c.id].socket.close()
     }
+
+    // 서버 점검 중인데 지정된 테스터 유저가 아닌 경우
     if (DEVELOP && !TESTER.includes($c.id)) {
       $c.send("error", { code: 500 })
       $c.socket.close()
       return
     }
-    $c.refresh().then((ref) => {
-      if (ref.result == 200) {
-        DIC[$c.id] = $c
-        DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] = $c.id
 
-        $c.enter(room, reserve.spec, reserve.pass)
-        if ($c.place == room.id) {
-          $c.publish("connRoom", { user: $c.getData() })
-        } else {
-          // 입장 실패
-          $c.socket.close()
-        }
-        logger.info(`Chan @${CHAN} New #${$c.id}`)
-      } else {
-        $c.send("error", {
-          code: ref.result,
-          message: ref.black,
-        })
-        $c._error = ref.result
-        $c.socket.close()
-      }
-    })
+    const ref = await $c.refresh()
+
+    if (ref.result == 200) {
+      DIC[$c.id] = $c
+      DNAME[($c.profile.title || $c.profile.name).replace(/\s/g, "")] = $c.id
+
+      $c.enter(room, reserve.spec, reserve.pass)
+
+      if ($c.place == room.id) $c.publish("connRoom", { user: $c.getData() })
+      // 입장 실패
+      else $c.socket.close()
+
+      logger.info(`Chan @${CHAN} New #${$c.id}`)
+    } else {
+      $c.send("error", {
+        code: ref.result,
+        message: ref.black,
+      })
+      $c._error = ref.result
+      $c.socket.close()
+    }
   })
+
   Server.on("error", (err) => {
     logger.warn("Error on ws: " + err.toString())
   })
@@ -207,38 +217,6 @@ process.on("uncaughtException", (err) => {
   }, 10000)
 })
 
-/*
-game_1   | {
-game_1   |   type: 'room-reserve',
-game_1   |   create: true,
-game_1   |   session: 'rtYxQi__VplLSq_sVKXHY9N9WvPteiRk',
-game_1   |   room: {
-game_1   |     type: 'enter',
-game_1   |     title: '회원님의 방',
-game_1   |     password: '[***]',
-game_1   |     limit: 8,
-game_1   |     mode: 3,
-game_1   |     round: 5,
-game_1   |     time: 60,
-game_1   |     opts: {
-game_1   |       injpick: [],
-game_1   |       manner: false,
-game_1   |       injeong: false,
-game_1   |       mission: false,
-game_1   |       loanword: false,
-game_1   |       proverb: false,
-game_1   |       strict: false,
-game_1   |       sami: false,
-game_1   |       no2: false,
-game_1   |       '': false
-game_1   |     },
-game_1   |     code: false,
-game_1   |     id: 100,
-game_1   |     _create: true
-game_1   |   }
-game_1   | }
- */
-
 // message event
 const inviteErrorSchema = z.object({
   target: z.string(),
@@ -253,16 +231,15 @@ const onInviteError = async (data: z.infer<typeof inviteErrorSchema>) => {
 const roomReserveSchema = z.object({
   session: z.string(),
   create: z.boolean(),
-  room: z.object({ id: z.number() }),
+  room: roomDataSchema,
   profile: z.string().optional(),
   spec: z.string().optional(),
   pass: z.string().optional(),
 })
 
 const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
-  // 이미 입장 요청을 했는데 또 하는 경우
   if (RESERVED[data.session])
-    return logger.warn("이미 입장 요청을 했는데 또 함")
+    return logger.error(`Already reserved from ${data.session} on @${CHAN}`)
 
   RESERVED[data.session] = {
     profile: data.profile,
@@ -330,45 +307,6 @@ process.on("message", async (msg: { type: string }) => {
 
   eventHandler.handler(result.data)
 })
-
-// process.on("message", (msg: any) => {
-//   switch (msg.type) {
-//     case "invite-error":
-//       if (!DIC[msg.target]) break
-//       DIC[msg.target].sendError(msg.code)
-//       break
-//     case "room-reserve":
-//       if (RESERVED[msg.session]) {
-//         // 이미 입장 요청을 했는데 또 하는 경우
-//         break
-//       } else
-//         RESERVED[msg.session] = {
-//           profile: msg.profile,
-//           room: msg.room,
-//           spec: msg.spec,
-//           pass: msg.pass,
-//           _expiration: setTimeout(
-//             function (tg, create) {
-//               process.send({
-//                 type: "room-expired",
-//                 id: msg.room.id,
-//                 create: create,
-//               })
-//               delete RESERVED[tg]
-//             },
-//             10000,
-//             msg.session,
-//             msg.create
-//           ),
-//         }
-//       break
-//     case "room-invalid":
-//       delete ROOM[msg.room.id]
-//       break
-//     default:
-//       logger.warn(`Unhandled IPC message type: ${msg.type}`)
-//   }
-// })
 
 export const onClientMessageOnSlave = ($c: Client, msg) => {
   logger.debug(`Message from #${$c.id} (Slave):`, msg)

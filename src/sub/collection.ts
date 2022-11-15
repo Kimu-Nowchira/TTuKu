@@ -348,7 +348,7 @@ class Pointer {
     @onFail	유효하지 않은 정보일 경우에 대한 콜백 함수
   */
 
-  on(f?: Function, chk: boolean = false, onFail?: (doc: any) => void) {
+  on<T>(f?: Function, chk: boolean = false, onFail?: (doc: T) => void) {
     let sql = ""
     const sq = this.second["$set"]
 
@@ -476,7 +476,7 @@ class Pointer {
   }
 
   // on을 Promise로 처리합니다.
-  async onAsync(check: boolean = false) {
+  async onAsync<T>(check: boolean = false): Promise<T> {
     return new Promise((resolve, reject) => {
       this.on(resolve, check, reject)
     })
