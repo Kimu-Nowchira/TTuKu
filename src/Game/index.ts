@@ -21,39 +21,47 @@ import { logger } from "../sub/jjlog"
 import { MAIN_PORTS } from "../const"
 import { init as masterInit } from "./master"
 import { init as slaveInit } from "./slave"
+import * as os from "os"
 
-const SID = Number(process.argv[2])
-let CPU = Number(process.argv[3]) // os.cpus().length;
+// 첫 번째 인자: 이 프로세스가 담당하는 게임 서버의 ID ( 0: 감자, 1: 나래, 3: 다래 ...)
+// ※ 기본값은 0 (감자 서버)
+const serverId = process.argv[2] ? parseInt(process.argv[2]) : 0
 
-if (isNaN(SID)) {
+// 두 번째 인자: 이 서버가 가질 워커의 수
+// ※ 기본값은 CPU 코어 개수
+let workerSize = process.argv[3] ? parseInt(process.argv[3]) : os.cpus().length
+
+if (isNaN(serverId)) {
   if (process.argv[2] == "test") {
     global.test = true
-    CPU = 1
+    workerSize = 1
   } else {
-    console.log(`Invalid Server ID ${process.argv[2]}`)
+    logger.error(`Invalid Server ID ${process.argv[2]}`)
     process.exit(1)
   }
 }
 
-if (isNaN(CPU)) {
-  console.log(`Invalid CPU Number ${process.argv[3]}`)
+if (isNaN(workerSize)) {
+  logger.error(`Invalid CPU Number ${process.argv[3]}`)
   process.exit(1)
 }
 
+// 마스터 실행 메서드 ( 워커는 slaveInit()을 대신함 )
 const run = async () => {
-  if (!cluster.isPrimary) return slaveInit()
+  logger.info(`Start Master Process (Server ID: ${serverId})`)
 
   const channels: Record<number, ClusterWorker> = {}
   let chan: number
 
-  for (let i = 0; i < CPU; i++) {
+  for (let i = 0; i < workerSize; i++) {
     chan = i + 1
     channels[chan] = cluster.fork({
       SERVER_NO_FORK: true,
-      KKUTU_PORT: MAIN_PORTS[SID] + 416 + i,
+      KKUTU_PORT: MAIN_PORTS[serverId] + 416 + i,
       CHANNEL: chan,
     })
   }
+  logger.info(`Spawned ${workerSize} workers`)
 
   cluster.on("exit", (w) => {
     for (const i in channels) {
@@ -66,14 +74,14 @@ const run = async () => {
     logger.error(`Worker @${chan} ${w.process.pid} died`)
     channels[chan] = cluster.fork({
       SERVER_NO_FORK: true,
-      KKUTU_PORT: MAIN_PORTS[SID] + 416 + (chan - 1),
+      KKUTU_PORT: MAIN_PORTS[serverId] + 416 + (chan - 1),
       CHANNEL: chan,
     })
   })
 
-  process.env["KKUTU_PORT"] = MAIN_PORTS[SID].toString()
-
-  masterInit(SID.toString(), channels).then()
+  process.env["KKUTU_PORT"] = MAIN_PORTS[serverId].toString()
+  masterInit(serverId.toString(), channels).then()
 }
 
-run().then()
+if (cluster.isPrimary) run().then()
+else slaveInit().then()
