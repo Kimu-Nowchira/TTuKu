@@ -16,37 +16,36 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 import { Express } from "express"
+import { kkutu_shop, users } from "../db"
+import { logger } from "../../sub/jjlog"
 
-var MainDB = require("../db")
-var JLog = require("../../sub/jjlog")
-
-export const run = (Server: Express, page) => {
+export const run = (Server: Express, _page) => {
   Server.post("/consume/:id", function (req, res) {
     if (!req.session.profile) return res.json({ error: 400 })
-    var uid = req.session.profile.id
-    var gid = req.params.id
+    const uid = req.session.profile.id
+    const gid = req.params.id
     // 빈 값 => 0
     const isDyn = gid.charAt(0) === "$"
 
-    MainDB.users.findOne(["_id", uid]).on(function ($user) {
+    users.findOne(["_id", uid]).on(function ($user) {
       if (!$user) return res.json({ error: 400 })
       if (!$user.box) return res.json({ error: 400 })
       if (!$user.lastLogin) $user.lastLogin = new Date().getTime()
-      var q = $user.box[gid]
-      var output
+      const q = $user.box[gid]
+      let output
 
       if (!q) return res.json({ error: 430 })
-      MainDB.kkutu_shop
+      kkutu_shop
         .findOne(["_id", isDyn ? gid.slice(0, 4) : gid])
         .limit(["cost", true])
         .on(function ($item) {
           if (!$item) return res.json({ error: 430 })
           consume($user, gid, 1)
           output = useItem($user, $item, gid)
-          MainDB.users
+          users
             .update(["_id", uid])
             .set($user)
-            .on(function ($res) {
+            .on(() => {
               output.result = 200
               output.box = $user.box
               output.data = $user.kkutu
@@ -77,7 +76,7 @@ function useItem($user, $item, gid) {
       $user.kkutu.score += R.exp
       break
     default:
-      JLog.warn(`Unhandled consumption type: ${$item._id}`)
+      logger.warn(`Unhandled consumption type: ${$item._id}`)
   }
 
   function got(key, value, term) {
@@ -92,7 +91,7 @@ function useItem($user, $item, gid) {
   return R
 }
 function consume($user, key, value) {
-  var bd = $user.box[key]
+  const bd = $user.box[key]
 
   if (bd.value) {
     // 기한이 끝날 때까지 box 자체에서 사라지지는 않는다. 기한 만료 여부 확인 시점: 1. 로그인 2. box 조회 3. 게임 결과 반영 직전 4. 해당 항목 사용 직전
