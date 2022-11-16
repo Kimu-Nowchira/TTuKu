@@ -661,9 +661,9 @@ $(document).ready(function(){
 		send($data.typeRoom, {
 			title: $("#room-title").val().trim() || $("#room-title").attr('placeholder').trim(),
 			password: $("#room-pw").val(),
-			limit: $("#room-limit").val(),
-			mode: $("#room-mode").val(),
-			round: $("#room-round").val(),
+			limit: Number($("#room-limit").val()),
+			mode: Number($("#room-mode").val()),
+			round: Number($("#room-round").val()),
 			time: $("#room-time").val(),
 			opts: opts,
 		});
