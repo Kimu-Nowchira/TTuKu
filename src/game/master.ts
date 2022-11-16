@@ -409,7 +409,7 @@ cluster.on("message", (worker, msg) => {
   }
 })
 
-function joinNewUser($c) {
+function joinNewUser($c: Client) {
   $c.send("welcome", {
     id: $c.id,
     guest: $c.guest,
@@ -421,7 +421,8 @@ function joinNewUser($c) {
     friends: $c.friends,
     admin: $c.admin,
     test: global.test,
-    caj: !!$c._checkAjae,
+    // 셧다운제 관련 기능 비활성화
+    // caj: !!$c._checkAjae,
   })
   narrateFriends($c.id, $c.friends, "on")
   publish("conn", { user: $c.getData() })

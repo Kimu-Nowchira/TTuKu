@@ -16,7 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
-import { Tail } from "../../sub/lizard"
 import Room from "../classes/Room"
 import Robot from "../classes/Robot"
 import Client from "../classes/Client"
@@ -30,7 +29,7 @@ export class Game {
   }
 
   async roundReady() {}
-  async turnStart(force) {}
+  async turnStart(force = false) {}
   async turnEnd() {}
   async submit(client: Client, text: string, data?: any) {}
   async readyRobot(robot: Robot) {}
