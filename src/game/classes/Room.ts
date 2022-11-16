@@ -408,7 +408,6 @@ export default class Room {
     // 신기술
     this.loadGame()
     this.gaming = true
-    logger.debug("DEBUG", this.gaming)
     this.game.late = true
     this.game.round = 0
     this.game.turn = 0
@@ -467,7 +466,6 @@ export default class Room {
     this.getTitle().then((title) => {
       this.game.title = title
       this.export()
-      logger.debug("DEBUG3", this.gaming)
 
       // TODO: 임시 Promise (나중에 수정 필요)
       const roundReadyAfter2Sec = async () => {
@@ -476,7 +474,6 @@ export default class Room {
       }
       roundReadyAfter2Sec().then()
     })
-    logger.debug("DEBUG2", this.gaming)
     this.byMaster("starting", { target: this.id })
     delete this._avTeam
     delete this._teams
