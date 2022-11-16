@@ -76,11 +76,13 @@ export const run = async () => {
     })
   }
 
+  logger.debug("프로미스 시작")
   const { socket, info } = await new Promise<{
     socket: WebSocket
     info: IncomingMessage
   }>((res, rej) => {
     Server.on("connection", (socket, info) => {
+      logger.debug("커넥션")
       socket.on("error", (err) => {
         logger.warn("Error on #" + key + " on ws: " + err.toString())
       })
@@ -93,6 +95,7 @@ export const run = async () => {
       rej(err)
     })
   })
+  logger.debug("프로미스 종료", socket, info)
 
   if (!info.url) throw new Error("No URL on IncomingMessage")
   const chunk = info.url.slice(1).split("&")
