@@ -9,12 +9,14 @@ import {
 import process from "node:process"
 import { channelId, DNAME, workerClientData, workerRoomData } from "./index"
 import { z } from "zod"
+import { roomOptionSchema } from "../types"
 
 const eventHandlerData = new Map<
   string,
   {
-    schema?: z.ZodSchema
     handler: (client: Client, data: unknown) => void
+    schema?: z.ZodSchema
+    error?: (client: Client, error: Error) => void
   }
 >()
 
@@ -105,7 +107,58 @@ eventHandlerData.set("talk", {
   handler: onChat,
 })
 
-/* refresh */
+/* setRoom Event */
+const setRoomSchema = z.object({
+  type: z.string(),
+  title: z.string().min(1).max(20),
+  password: z.string().max(20),
+  limit: z.number().gte(2).lte(8),
+  mode: z.number().gte(0).lt(MODE_LENGTH),
+  round: z.number().gte(1).lte(10),
+  time: z.union([
+    z.literal("10"),
+    z.literal("30"),
+    z.literal("60"),
+    z.literal("90"),
+    z.literal("120"),
+    z.literal("150"),
+  ]),
+  opts: roomOptionSchema,
+})
+
+const onSetRoom = async (client: Client, room: z.infer<typeof setRoomSchema>) =>
+  client.setRoom(room)
+
+const onSetRoomError = (client: Client) => {
+  client.sendError(431)
+}
+
+eventHandlerData.set("setRoom", {
+  schema: setRoomSchema,
+  handler: onSetRoom,
+  error: onSetRoomError,
+})
+
+/* enter Event */
+const enterSchema = z.object({
+  // TODO: optional 없애기
+  id: z.number().optional(),
+  spectate: z.boolean().default(false),
+  password: z.string().optional(),
+
+  // legacy
+  _id: z.number().optional(),
+})
+
+const onEnter = async (client: Client, room: z.infer<typeof enterSchema>) =>
+  client.enter(room, room.spectate)
+
+eventHandlerData.set("enter", {
+  schema: enterSchema,
+  handler: onEnter,
+})
+
+/* refresh Event */
 const onRefresh = async (client: Client) => client.refresh().then()
 eventHandlerData.set("refresh", { handler: onRefresh })
 
@@ -125,51 +178,9 @@ export const onClientMessageOnSlave = async ($c: Client, msg) => {
     }
   } else logger.warn(`Use Legacy System: ${msg.type}`)
 
-  let stable = true
   let temp
 
   switch (msg.type) {
-    case "enter":
-    case "setRoom":
-      if (!msg.title) stable = false
-      if (!msg.limit) stable = false
-      if (!msg.round) stable = false
-      if (!msg.time) stable = false
-      if (!msg.opts) stable = false
-
-      msg.code = false
-      msg.limit = Number(msg.limit)
-      msg.mode = Number(msg.mode)
-      msg.round = Number(msg.round)
-      msg.time = Number(msg.time)
-
-      if (isNaN(msg.limit)) stable = false
-      if (isNaN(msg.mode)) stable = false
-      if (isNaN(msg.round)) stable = false
-      if (isNaN(msg.time)) stable = false
-
-      if (stable) {
-        if (msg.title.length > 20) stable = false
-        if (msg.password.length > 20) stable = false
-        if (msg.limit < 2 || msg.limit > 8) {
-          msg.code = 432
-          stable = false
-        }
-        if (msg.mode < 0 || msg.mode >= MODE_LENGTH) stable = false
-        if (msg.round < 1 || msg.round > 10) {
-          msg.code = 433
-          stable = false
-        }
-        if (ENABLE_ROUND_TIME.indexOf(msg.time) == -1) stable = false
-      }
-      if (msg.type == "enter") {
-        if (msg.id || stable) $c.enter(msg, msg.spectate)
-        else $c.sendError(msg.code || 431)
-      } else if (msg.type == "setRoom") {
-        if (stable) $c.setRoom(msg)
-        else $c.sendError(msg.code || 431)
-      }
-      break
     case "leave":
       if (!$c.place) return
       $c.leave()
