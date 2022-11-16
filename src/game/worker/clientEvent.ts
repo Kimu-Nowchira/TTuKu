@@ -8,72 +8,128 @@ import {
 } from "../master"
 import process from "node:process"
 import { channelId, DNAME, workerClientData, workerRoomData } from "./index"
+import { z } from "zod"
 
-export const onClientMessageOnSlave = ($c: Client, msg) => {
+const eventHandlerData = new Map<
+  string,
+  {
+    schema: z.ZodSchema
+    handler: (client: Client, data: unknown) => void
+  }
+>()
+
+/*  yell Event */
+const yellSchema = z.object({
+  value: z.string(),
+})
+
+const onYell = async (
+  client: Client,
+  { value }: z.infer<typeof yellSchema>
+) => {
+  if (!value) return logger.warn("YELL: No value")
+  if (!client.admin) return logger.warn("YELL: Not admin")
+
+  client.publish("yell", { value })
+}
+
+eventHandlerData.set("yell", {
+  schema: yellSchema,
+  handler: onYell,
+})
+
+/* talk Event */
+const chatSchema = z.object({
+  value: z.string(),
+  relay: z.boolean().default(false),
+  whisper: z.string().optional(),
+  data: z.any().optional(),
+})
+
+const onChat = async (
+  client: Client,
+  { value, relay, whisper, data }: z.infer<typeof chatSchema>
+) => {
+  if (!value.trim()) return logger.warn("TALK: No value")
+
+  if (!GUEST_PERMISSION.talk)
+    if (client.guest) {
+      client.send("error", { code: 401 })
+      return
+    }
+
+  value = value.substring(0, 200)
+
+  // 게임 내에서 단어를 잇는 채팅인 경우
+  if (relay) {
+    const gameRoom = client.subPlace
+      ? client.pracRoom
+      : workerRoomData[client.place]
+    if (!gameRoom) return logger.warn("TALK: No place")
+    if (!gameRoom.gaming) return logger.error("TALK(relay): Not gaming")
+
+    // 이미 턴 제한시간이 지난 경우 일반 채팅으로 처리
+    if (gameRoom.game.late) return client.chat(value)
+    if (gameRoom.game.loading) return logger.warn("TALK(relay): Loading")
+
+    return gameRoom.submit(client, value, data)
+  }
+
+  // 관리자가 '#'으로 시작하는 채팅을 입력한 경우
+  if (client.admin && value.charAt(0) === "#")
+    return process.send({ type: "admin", id: client.id, value: value })
+
+  // 귓속말인 경우
+  if (whisper) {
+    process.send({
+      type: "tail-report",
+      id: client.id,
+      chan: channelId,
+      place: client.place,
+      msg: data,
+    })
+
+    for (const v of whisper.split(",")) {
+      const addresseeClient = workerClientData[DNAME[v]]
+      if (!addresseeClient) return client.sendError(424, v)
+
+      addresseeClient.send("chat", {
+        from: client.profile.title || client.profile.name,
+        profile: client.profile,
+        value: data.value,
+      })
+    }
+    return
+  }
+
+  // 일반 채팅 입력
+  client.chat(value)
+}
+
+eventHandlerData.set("talk", {
+  schema: chatSchema,
+  handler: onChat,
+})
+
+export const onClientMessageOnSlave = async ($c: Client, msg) => {
   logger.debug(`Message from #${$c.id} (Slave):`, msg)
+  if (!msg) return
+
+  const eventHandler = eventHandlerData.get(msg.type)
+  if (eventHandler) {
+    const result = await eventHandler.schema.safeParseAsync(msg)
+    // @ts-ignore
+    if (!result.success) return logger.error(result.error)
+    eventHandler.handler($c, result.data)
+    return
+  } else logger.warn(`Use Legacy System: ${msg.type}`)
+
   let stable = true
   let temp
 
-  if (!msg) return
-
   switch (msg.type) {
-    case "yell":
-      if (!msg.value) return
-      if (!$c.admin) return
-
-      $c.publish("yell", { value: msg.value })
-      break
     case "refresh":
       $c.refresh()
-      break
-    case "talk":
-      if (!msg.value) return
-      if (typeof msg.value !== "string") return
-      if (!GUEST_PERMISSION.talk)
-        if ($c.guest) {
-          $c.send("error", { code: 401 })
-          return
-        }
-      msg.value = msg.value.substring(0, 200)
-      if (msg.relay) {
-        if ($c.subPlace) temp = $c.pracRoom
-        else if (!(temp = workerRoomData[$c.place])) return
-        if (!temp.gaming) return
-        if (temp.game.late) {
-          $c.chat(msg.value)
-        } else if (!temp.game.loading) {
-          temp.submit($c, msg.value, msg.data)
-        }
-      } else {
-        if ($c.admin) {
-          if (msg.value.charAt() == "#") {
-            process.send({ type: "admin", id: $c.id, value: msg.value })
-            break
-          }
-        }
-        if (msg.whisper) {
-          process.send({
-            type: "tail-report",
-            id: $c.id,
-            chan: channelId,
-            place: $c.place,
-            msg: msg,
-          })
-          msg.whisper.split(",").forEach((v) => {
-            if ((temp = workerClientData[DNAME[v]])) {
-              temp.send("chat", {
-                from: $c.profile.title || $c.profile.name,
-                profile: $c.profile,
-                value: msg.value,
-              })
-            } else {
-              $c.sendError(424, v)
-            }
-          })
-        } else {
-          $c.chat(msg.value)
-        }
-      }
       break
     case "enter":
     case "setRoom":
