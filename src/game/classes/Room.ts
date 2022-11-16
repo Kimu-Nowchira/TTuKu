@@ -710,7 +710,7 @@ export default class Room {
     this.gameData.turnEnd().then()
   }
 
-  submit(client, text, data) {
+  submit(client: Client, text: string, data) {
     this.gameData.submit(client, text, data).then()
   }
 

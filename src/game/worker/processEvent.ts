@@ -89,6 +89,11 @@ const onRoomReserve = async (data: z.infer<typeof roomReserveSchema>) => {
   }
 }
 
+eventHandlerData.set("room-reserve", {
+  schema: roomReserveSchema,
+  handler: onRoomReserve,
+})
+
 /*  room-invalid Event */
 const roomInvalidSchema = z.object({
   room: z.object({ id: z.string() }),
@@ -104,11 +109,6 @@ eventHandlerData.set("room-invalid", {
 })
 
 process.on("message", async (msg: { type: string }) => {
-  eventHandlerData.set("room-reserve", {
-    schema: roomReserveSchema,
-    handler: onRoomReserve,
-  })
-
   const eventHandler = eventHandlerData.get(msg.type)
   if (!eventHandler)
     return logger.warn(`Unhandled IPC message type: ${msg.type}`)
