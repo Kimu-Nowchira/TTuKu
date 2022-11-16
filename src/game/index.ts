@@ -20,7 +20,7 @@ import cluster, { Worker as ClusterWorker } from "node:cluster"
 import { logger } from "../sub/jjlog"
 import { MAIN_PORTS } from "../const"
 import { init as masterInit } from "./master"
-import { init as slaveInit } from "./worker"
+import { run as slaveInit } from "./worker"
 import * as os from "os"
 
 // 첫 번째 인자: 이 프로세스가 담당하는 게임 서버의 ID ( 0: 감자, 1: 나래, 3: 다래 ...)
