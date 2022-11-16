@@ -632,7 +632,6 @@ async function getAuto(
       .find(...aqs)
       .limit(bool ? 1 : 123)
       .onAsync()) as string[]
-    console.debug("$md", $md)
 
     forManner($md)
     if (this.room.game.chain)
