@@ -13,7 +13,7 @@ import { z } from "zod"
 const eventHandlerData = new Map<
   string,
   {
-    schema: z.ZodSchema
+    schema?: z.ZodSchema
     handler: (client: Client, data: unknown) => void
   }
 >()
@@ -23,10 +23,7 @@ const yellSchema = z.object({
   value: z.string(),
 })
 
-const onYell = async (
-  client: Client,
-  { value }: z.infer<typeof yellSchema>
-) => {
+const onYell = (client: Client, { value }: z.infer<typeof yellSchema>) => {
   if (!value) return logger.warn("YELL: No value")
   if (!client.admin) return logger.warn("YELL: Not admin")
 
@@ -46,19 +43,16 @@ const chatSchema = z.object({
   data: z.any().optional(),
 })
 
-const onChat = async (
+const onChat = (
   client: Client,
   { value, relay, whisper, data }: z.infer<typeof chatSchema>
 ) => {
-  if (!value.trim()) return logger.warn("TALK: No value")
+  value = value.trim().substring(0, 200)
+  if (!value) return logger.warn("TALK: No value")
 
-  if (!GUEST_PERMISSION.talk)
-    if (client.guest) {
-      client.send("error", { code: 401 })
-      return
-    }
-
-  value = value.substring(0, 200)
+  // 게스트 채팅 권한을 꺼 둔 경우
+  if (client.guest && !GUEST_PERMISSION.talk)
+    return client.send("error", { code: 401 })
 
   // 게임 내에서 단어를 잇는 채팅인 경우
   if (relay) {
@@ -111,26 +105,30 @@ eventHandlerData.set("talk", {
   handler: onChat,
 })
 
+/* refresh */
+const onRefresh = async (client: Client) => client.refresh().then()
+eventHandlerData.set("refresh", { handler: onRefresh })
+
 export const onClientMessageOnSlave = async ($c: Client, msg) => {
   logger.debug(`Message from #${$c.id} (Slave):`, msg)
   if (!msg) return
 
   const eventHandler = eventHandlerData.get(msg.type)
   if (eventHandler) {
-    const result = await eventHandler.schema.safeParseAsync(msg)
-    // @ts-ignore
-    if (!result.success) return logger.error(result.error)
-    eventHandler.handler($c, result.data)
-    return
+    if (eventHandler.schema) {
+      const result = await eventHandler.schema.safeParseAsync(msg)
+      // @ts-ignore
+      if (!result.success) return logger.error(result.error)
+      return eventHandler.handler($c, result.data)
+    } else {
+      return eventHandler.handler($c, msg)
+    }
   } else logger.warn(`Use Legacy System: ${msg.type}`)
 
   let stable = true
   let temp
 
   switch (msg.type) {
-    case "refresh":
-      $c.refresh()
-      break
     case "enter":
     case "setRoom":
       if (!msg.title) stable = false
@@ -174,7 +172,6 @@ export const onClientMessageOnSlave = async ($c: Client, msg) => {
       break
     case "leave":
       if (!$c.place) return
-
       $c.leave()
       break
     case "ready":
