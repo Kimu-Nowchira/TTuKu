@@ -135,7 +135,8 @@ export interface GameData {
   // classic
   wordLength?: number
   dic?: any
-  chain?: string[]
+  // 정체를 알 수 없음
+  chain?: Array<string | IWord>
   theme?: any
   conso?: any
   prisoners?: any
