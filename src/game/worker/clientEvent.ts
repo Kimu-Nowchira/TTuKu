@@ -16,7 +16,7 @@ const eventHandlerData = new Map<
   {
     handler: (client: Client, data: unknown) => void
     schema?: z.ZodSchema
-    error?: (client: Client, error: Error) => void
+    errorHandler?: (client: Client, error: Error) => void
   }
 >()
 
@@ -129,14 +129,12 @@ const setRoomSchema = z.object({
 const onSetRoom = async (client: Client, room: z.infer<typeof setRoomSchema>) =>
   client.setRoom(room)
 
-const onSetRoomError = (client: Client) => {
-  client.sendError(431)
-}
+const onSetRoomError = (client: Client) => client.sendError(431)
 
 eventHandlerData.set("setRoom", {
   schema: setRoomSchema,
   handler: onSetRoom,
-  error: onSetRoomError,
+  errorHandler: onSetRoomError,
 })
 
 /* enter Event */
@@ -170,8 +168,13 @@ export const onClientMessageOnSlave = async ($c: Client, msg) => {
   if (eventHandler) {
     if (eventHandler.schema) {
       const result = await eventHandler.schema.safeParseAsync(msg)
-      // @ts-ignore
-      if (!result.success) return logger.error(result.error)
+      if (!result.success) {
+        if (eventHandler.errorHandler)
+          // @ts-ignore
+          return eventHandler.errorHandler($c, result.error)
+        // @ts-ignore
+        return logger.error(result.error)
+      }
       return eventHandler.handler($c, result.data)
     } else {
       return eventHandler.handler($c, msg)
