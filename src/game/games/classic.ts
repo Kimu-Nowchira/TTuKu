@@ -121,14 +121,15 @@ export class Classic extends Game {
         .onAsync<IWord[]>()
 
       if ($md.length) {
-        const onChecked = (v) => {
+        const onChecked = (v: string) => {
           if (v) return v
           else if (list.length) checkTitle(list.shift()._id).then(onChecked)
           else return EXAMPLE
         }
 
         const list = shuffle($md)
-        const r = checkTitle(list.shift()._id)
+        // 원래 없던 await
+        const r = await checkTitle(list.shift()._id)
         return onChecked(r)
       }
 
@@ -313,104 +314,103 @@ export class Classic extends Game {
     const l = this.room.rule.lang
     this.room.game.loading = true
 
-    const onDB = async ($doc: IWord | undefined) => {
-      if (!this.room.game.chain) return
-      const preChar = getChar.call(this.room, text)
-      const preSubChar = getSubChar.call(this.room, preChar)
-      const firstMove = this.room.game.chain.length < 1
+    const $doc = await kkutu[l]
+      .findOne(["_id", text], l == "ko" ? ["type", KOR_GROUP] : ["_id", ENG_ID])
+      .onAsync<IWord | undefined>()
 
-      const preApproved = async () => {
-        const approved = async () => {
-          if (this.room.game.late) return
-          if (!this.room.game.chain) return
-          if (!this.room.game.dic) return
+    if (!$doc) throw new Error("No such word: " + text)
 
+    if (!this.room.game.chain) return
+    const preChar = getChar(this.room.mode, text)
+    const preSubChar = getSubChar.call(this.room, preChar)
+    const firstMove = this.room.game.chain.length < 1
+
+    const preApproved = async () => {
+      const approved = async () => {
+        if (this.room.game.late) return
+        if (!this.room.game.chain) return
+        if (!this.room.game.dic) return
+
+        this.room.game.loading = false
+        this.room.game.late = true
+        clearTimeout(this.room.game.turnTimer)
+        const t = tv - this.room.game.turnAt
+        const score = this.room.getScore(text, t)
+        this.room.game.dic[text] = (this.room.game.dic[text] || 0) + 1
+        this.room.game.chain.push(text)
+        this.room.game.roundTime -= t
+        this.room.game.char = preChar
+        this.room.game.subChar = preSubChar
+        client.game.score += score
+        client.publish(
+          "turnEnd",
+          {
+            ok: true,
+            value: text,
+            mean: $doc.mean,
+            theme: $doc.theme,
+            wc: $doc.type,
+            score: score,
+            bonus:
+              this.room.game.mission === true
+                ? score - this.room.getScore(text, t, true)
+                : 0,
+            // baby: $doc.baby, // 용도를 알 수 없어서 삭제
+          },
+          true
+        )
+        if (this.room.game.mission === true) {
+          this.room.game.mission = getMission(this.room.rule.lang)
+        }
+
+        if (!client.robot) {
+          client.invokeWordPiece(text, 1)
+          kkutu[l]
+            .update(["_id", text])
+            .set(["hit", $doc.hit + 1])
+            .on()
+        }
+
+        await new Promise((res) => setTimeout(res, this.room.game.turnTime / 6))
+        this.room.turnNext()
+      }
+
+      if (firstMove || this.room.opts.manner) {
+        const w = await getAuto<boolean>(this.room, preChar, preSubChar, 1)
+        if (w) approved().then()
+        else {
           this.room.game.loading = false
-          this.room.game.late = true
-          clearTimeout(this.room.game.turnTimer)
-          const t = tv - this.room.game.turnAt
-          const score = this.room.getScore(text, t)
-          this.room.game.dic[text] = (this.room.game.dic[text] || 0) + 1
-          this.room.game.chain.push(text)
-          this.room.game.roundTime -= t
-          this.room.game.char = preChar
-          this.room.game.subChar = preSubChar
-          client.game.score += score
           client.publish(
-            "turnEnd",
-            {
-              ok: true,
-              value: text,
-              mean: $doc.mean,
-              theme: $doc.theme,
-              wc: $doc.type,
-              score: score,
-              bonus:
-                this.room.game.mission === true
-                  ? score - this.room.getScore(text, t, true)
-                  : 0,
-              baby: $doc.baby,
-            },
+            "turnError",
+            { code: firstMove ? 402 : 403, value: text },
             true
           )
-          if (this.room.game.mission === true) {
-            this.room.game.mission = getMission(this.room.rule.lang)
+          if (client.robot) {
+            // TODO: 임시
+            this.room.readyRobot(client as unknown as Robot)
           }
-
-          if (!client.robot) {
-            client.invokeWordPiece(text, 1)
-            kkutu[l]
-              .update(["_id", text])
-              .set(["hit", $doc.hit + 1])
-              .on()
-          }
-
-          await new Promise((res) =>
-            setTimeout(res, this.room.game.turnTime / 6)
-          )
-          this.room.turnNext()
         }
-        if (firstMove || this.room.opts.manner) {
-          const w = await getAuto<boolean>(this.room, preChar, preSubChar, 1)
-          if (w) approved().then()
-          else {
-            this.room.game.loading = false
-            client.publish(
-              "turnError",
-              { code: firstMove ? 402 : 403, value: text },
-              true
-            )
-            if (client.robot) {
-              // TODO: 임시
-              this.room.readyRobot(client as unknown as Robot)
-            }
-          }
-        } else await approved()
-      }
-
-      const denied = (code = 404) => {
-        this.room.game.loading = false
-        client.publish("turnError", { code: code, value: text }, true)
-      }
-
-      if ($doc) {
-        if (!this.room.opts.injeong && $doc.flag & KOR_FLAG.INJEONG) denied()
-        else if (
-          this.room.opts.strict &&
-          (!$doc.type.match(KOR_STRICT) || $doc.flag >= 4)
-        )
-          denied(406)
-        else if (this.room.opts.loanword && $doc.flag & KOR_FLAG.LOANWORD)
-          denied(405)
-        else await preApproved()
-      } else {
-        denied()
-      }
+      } else await approved()
     }
 
-    kkutu[l]
-      .findOne(["_id", text], l == "ko" ? ["type", KOR_GROUP] : ["_id", ENG_ID])
-      .on(onDB)
+    const denied = (code = 404) => {
+      this.room.game.loading = false
+      client.publish("turnError", { code: code, value: text }, true)
+    }
+
+    if ($doc) {
+      if (!this.room.opts.injeong && $doc.flag & KOR_FLAG.INJEONG) denied()
+      else if (
+        this.room.opts.strict &&
+        (!$doc.type.match(KOR_STRICT) || $doc.flag >= 4)
+      )
+        denied(406)
+      else if (this.room.opts.loanword && $doc.flag & KOR_FLAG.LOANWORD)
+        denied(405)
+      else await preApproved()
+    } else {
+      denied()
+    }
   }
 
   getScore(text: string, delay: number, ignoreMission: boolean) {
@@ -667,10 +667,8 @@ function shuffle(arr) {
   return r
 }
 
-function getChar(text: string) {
-  var my = this
-
-  switch (GAME_TYPE[my.mode]) {
+function getChar(mode: number, text: string): string {
+  switch (GAME_TYPE[mode]) {
     case "EKT":
       return text.slice(text.length - 3)
     case "ESH":
@@ -679,6 +677,8 @@ function getChar(text: string) {
       return text.slice(-1)
     case "KAP":
       return text.charAt(0)
+    default:
+      throw new Error("Unknown game type")
   }
 }
 
