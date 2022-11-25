@@ -89,7 +89,7 @@ export class Classic extends Game {
             getAuto<boolean>(
               this.room,
               title[i],
-              getSubChar.call(this.room, title[i]),
+              getSubChar(title[i], this.room.mode),
               1
             )
           )
@@ -147,7 +147,7 @@ export class Classic extends Game {
     this.room.game.roundTime = this.room.time * 1000
     if (this.room.game.round <= this.room.round) {
       this.room.game.char = this.room.game.title[this.room.game.round - 1]
-      this.room.game.subChar = getSubChar.call(this.room, this.room.game.char)
+      this.room.game.subChar = getSubChar(this.room.game.char, this.room.mode)
       this.room.game.chain = []
       if (this.room.opts.mission)
         this.room.game.mission = getMission(this.room.rule.lang)
@@ -323,11 +323,16 @@ export class Classic extends Game {
       .findOne(["_id", text], l == "ko" ? ["type", KOR_GROUP] : ["_id", ENG_ID])
       .onAsync<IWord | undefined>()
 
+    // 존재하지 않는 단어일 경우
     if (!$doc) return denied()
 
-    if (!this.room.game.chain) return
+    if (!this.room.game.chain) throw new Error("No chain")
+
+    // 이어야 하는 글자 (끝말잇기의 경우 맨 뒷글자, 앞말잇기의 경우 맨 앞글자 등)
     const preChar = getChar(this.room.mode, text)
-    const preSubChar = getSubChar.call(this.room, preChar)
+
+    // 이어야 하는 글자 외에도 허용되는 글자 (두음법칙 등...)
+    const preSubChar = getSubChar.call(preChar, this.room.mode)
     const firstMove = this.room.game.chain.length < 1
 
     if (!this.room.opts.injeong && $doc.flag & KOR_FLAG.INJEONG) denied()
@@ -676,15 +681,11 @@ function getChar(mode: number, text: string): string {
   }
 }
 
-function getSubChar(char: string) {
-  var my = this
+function getSubChar(char: string, mode: number): string {
   let r: string | undefined
   // 임시로 0을 붙였습니다
-  const c = char.charCodeAt(0)
-  var k
-  var ca, cb, cc
 
-  switch (GAME_TYPE[my.mode]) {
+  switch (GAME_TYPE[mode]) {
     case "EKT":
       if (char.length > 2) r = char.slice(1)
       break
@@ -697,19 +698,18 @@ function getSubChar(char: string) {
           parseInt(char)
         ]
 
-      k = c - 0xac00
+      const c = char.charCodeAt(0)
+      const k = c - 0xac00
       if (k < 0 || k > 11171) break
-      ca = [Math.floor(k / 28 / 21), Math.floor(k / 28) % 21, k % 28]
-      cb = [ca[0] + 0x1100, ca[1] + 0x1161, ca[2] + 0x11a7]
-      cc = false
+      const ca = [Math.floor(k / 28 / 21), Math.floor(k / 28) % 21, k % 28]
+      const cb = [ca[0] + 0x1100, ca[1] + 0x1161, ca[2] + 0x11a7]
+      let cc = false
       if (cb[0] == 4357) {
-        // ������ ��, ��
         cc = true
         if (RIEUL_TO_NIEUN.includes(cb[1])) cb[0] = 4354
         else if (RIEUL_TO_IEUNG.includes(cb[1])) cb[0] = 4363
         else cc = false
       } else if (cb[0] == 4354) {
-        // ������ ��
         if (NIEUN_TO_IEUNG.indexOf(cb[1]) != -1) {
           cb[0] = 4363
           cc = true
