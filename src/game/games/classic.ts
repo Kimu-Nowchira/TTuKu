@@ -314,18 +314,31 @@ export class Classic extends Game {
     const l = this.room.rule.lang
     this.room.game.loading = true
 
+    const denied = (code = 404) => {
+      this.room.game.loading = false
+      client.publish("turnError", { code: code, value: text }, true)
+    }
+
     const $doc = await kkutu[l]
       .findOne(["_id", text], l == "ko" ? ["type", KOR_GROUP] : ["_id", ENG_ID])
       .onAsync<IWord | undefined>()
 
-    if (!$doc) throw new Error("No such word: " + text)
+    if (!$doc) return denied()
 
     if (!this.room.game.chain) return
     const preChar = getChar(this.room.mode, text)
     const preSubChar = getSubChar.call(this.room, preChar)
     const firstMove = this.room.game.chain.length < 1
 
-    const preApproved = async () => {
+    if (!this.room.opts.injeong && $doc.flag & KOR_FLAG.INJEONG) denied()
+    else if (
+      this.room.opts.strict &&
+      (!$doc.type.match(KOR_STRICT) || $doc.flag >= 4)
+    )
+      denied(406)
+    else if (this.room.opts.loanword && $doc.flag & KOR_FLAG.LOANWORD)
+      denied(405)
+    else {
       const approved = async () => {
         if (this.room.game.late) return
         if (!this.room.game.chain) return
@@ -391,25 +404,6 @@ export class Classic extends Game {
           }
         }
       } else await approved()
-    }
-
-    const denied = (code = 404) => {
-      this.room.game.loading = false
-      client.publish("turnError", { code: code, value: text }, true)
-    }
-
-    if ($doc) {
-      if (!this.room.opts.injeong && $doc.flag & KOR_FLAG.INJEONG) denied()
-      else if (
-        this.room.opts.strict &&
-        (!$doc.type.match(KOR_STRICT) || $doc.flag >= 4)
-      )
-        denied(406)
-      else if (this.room.opts.loanword && $doc.flag & KOR_FLAG.LOANWORD)
-        denied(405)
-      else await preApproved()
-    } else {
-      denied()
     }
   }
 
