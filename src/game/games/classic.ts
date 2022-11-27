@@ -29,12 +29,10 @@ import {
   MISSION_en,
   MISSION_ko,
 } from "../../const"
-import { all, Tail } from "../../sub/lizard"
 import Robot from "../classes/Robot"
 import Client from "../classes/Client"
 import { kkutu, kkutu_manner } from "../../sub/db"
 import { IWord } from "../types"
-import Room from "../classes/Room"
 
 const ROBOT_START_DELAY = [1200, 800, 400, 200, 0]
 const ROBOT_TYPE_COEF = [1250, 750, 500, 250, 0]
@@ -86,11 +84,9 @@ export class Classic extends Game {
         const len = title.length
         for (let i = 0; i < len; i++)
           list.push(
-            getAuto<boolean>(
-              this.room,
+            this.checkWordExisting(
               title[i],
-              getSubChar(title[i], this.room.mode),
-              1
+              getSubChar(title[i], this.room.mode)
             )
           )
 
@@ -240,34 +236,33 @@ export class Classic extends Game {
         score = getPenalty(this.room.game.chain, target.game.score)
         target.game.score += score
       }
-    getAuto<IWord>(
-      this.room,
-      this.room.game.char,
-      this.room.game.subChar,
-      0
-    ).then((w) => {
-      this.room.byMaster(
-        "turnEnd",
-        {
-          ok: false,
-          target: target ? target.id : null,
-          score: score,
-          hint: w,
-        },
-        true
-      )
 
-      // TODO: 임시
-      const roundReadyAfter3Sec = async () => {
-        await new Promise(
-          (resolve) => (this.room.game._rrt = setTimeout(resolve, 3000))
-        )
-        this.room.roundReady()
-      }
-
-      roundReadyAfter3Sec().then()
-    })
     clearTimeout(this.room.game.robotTimer)
+    const word = await this.getRandomWord(
+      this.room.game.char,
+      this.room.game.subChar
+    )
+
+    this.room.byMaster(
+      "turnEnd",
+      {
+        ok: false,
+        target: target ? target.id : null,
+        score: score,
+        hint: word,
+      },
+      true
+    )
+
+    // TODO: 임시
+    const roundReadyAfter3Sec = async () => {
+      await new Promise(
+        (resolve) => (this.room.game._rrt = setTimeout(resolve, 3000))
+      )
+      this.room.roundReady()
+    }
+
+    roundReadyAfter3Sec().then()
   }
 
   async submit(client: Client, text: string) {
@@ -332,7 +327,7 @@ export class Classic extends Game {
     const preChar = getChar(this.room.mode, text)
 
     // 이어야 하는 글자 외에도 허용되는 글자 (두음법칙 등...)
-    const preSubChar = getSubChar.call(preChar, this.room.mode)
+    const preSubChar = getSubChar(preChar, this.room.mode)
     const firstMove = this.room.game.chain.length < 1
 
     if (!this.room.opts.injeong && $doc.flag & KOR_FLAG.INJEONG) denied()
@@ -394,8 +389,8 @@ export class Classic extends Game {
       }
 
       if (firstMove || this.room.opts.manner) {
-        const w = await getAuto<boolean>(this.room, preChar, preSubChar, 1)
-        if (w) approved().then()
+        const word = await this.checkWordExisting(preChar, preSubChar)
+        if (word) approved().then()
         else {
           this.room.game.loading = false
           client.publish(
@@ -413,11 +408,11 @@ export class Classic extends Game {
   }
 
   getScore(text: string, delay: number, ignoreMission: boolean) {
-    var tr = 1 - delay / this.room.game.turnTime
-    var score, arr
+    const tr = 1 - delay / this.room.game.turnTime
+    var arr
 
     if (!text || !this.room.game.chain || !this.room.game.dic) return 0
-    score = getPreScore(text, this.room.game.chain, tr)
+    let score = getPreScore(text, this.room.game.chain, tr)
 
     if (this.room.game.dic[text]) score *= 15 / (this.room.game.dic[text] + 15)
     if (!ignoreMission) {
@@ -431,48 +426,11 @@ export class Classic extends Game {
   }
 
   async readyRobot(robot: Robot) {
-    var level = robot.level
-    var delay = ROBOT_START_DELAY[level]
-    var ended = {}
-    var w
+    const level = robot.level
+    let delay = ROBOT_START_DELAY[level]
+    const isRev = GAME_TYPE[this.room.mode] == "KAP"
     let text: string
-    var isRev = GAME_TYPE[this.room.mode] == "KAP"
-
-    getAuto<IWord[]>(
-      this.room,
-      this.room.game.char,
-      this.room.game.subChar,
-      2
-    ).then((list) => {
-      if (list.length) {
-        list.sort((a, b) => {
-          return b.hit - a.hit
-        })
-        if (ROBOT_HIT_LIMIT[level] > list[0].hit) denied()
-        else {
-          if (level >= 3 && !robot._done.length) {
-            if (Math.random() < 0.5)
-              list.sort(function (a, b) {
-                return b._id.length - a._id.length
-              })
-            if (list[0]._id.length < 8 && this.room.game.turnTime >= 2300) {
-              for (const i in list) {
-                w = list[i]._id.charAt(isRev ? 0 : list[i]._id.length - 1)
-                if (!ended.hasOwnProperty(w)) ended[w] = []
-                ended[w].push(list[i])
-              }
-              getWishList(Object.keys(ended)).then((key: string) => {
-                const v = ended[key]
-                if (!v) denied()
-                else pickList(v)
-              })
-            } else {
-              pickList(list)
-            }
-          } else pickList(list)
-        }
-      } else denied()
-    })
+    let w
 
     const denied = () => {
       text = isRev
@@ -506,38 +464,130 @@ export class Classic extends Game {
       this.room.turnRobot(robot, text)
     }
 
-    const getWishList = (list) => {
-      var R = new Tail()
-      var wz = []
-      var res
+    // 이어지는 단어의 목록
+    const words = await this.getWordList(
+      this.room.game.char,
+      this.room.game.subChar
+    )
 
-      for (const i in list) wz.push(getWish(list[i]))
+    // 마땅한 단어가 없는 경우 항복함
+    if (!words.length) return denied()
 
-      all(wz).then(($res) => {
-        if (!this.room.game.chain) return
-        $res.sort((a, b) => {
-          return a.length - b.length
-        })
+    // 많이 쓰인 순으로 정렬함
+    words.sort((a, b) => {
+      return b.hit - a.hit
+    })
 
-        if (this.room.opts.manner || !this.room.game.chain.length) {
-          while ((res = $res.shift())) if (res.length) break
-        } else res = $res.shift()
-        R.go(res ? res.char : null)
-      })
-      return R
+    // 이을 수 있는 단어 중 가장 사용량이 많은 단어의 사용량이 해당 봇이 요구하는 최소치보다 낮으면 항복함
+    if (ROBOT_HIT_LIMIT[level] > words[0].hit) return denied()
+
+    // ???
+    if (level < 3 || robot._done.length) return pickList(words)
+
+    // 50% 확률로 단어를 긴 순서대로 정렬함
+    if (Math.random() < 0.5) words.sort((a, b) => b._id.length - a._id.length)
+
+    // 첫 번째 후보 단어의 길이가 8보다 길거나 시간이 2.3초 안으로 남으면 바로 선택함
+    if (words[0]._id.length >= 8 || this.room.game.turnTime < 2300)
+      pickList(words)
+
+    const ended: Record<string, IWord[]> = {}
+    for (const i in words) {
+      w = words[i]._id.charAt(isRev ? 0 : words[i]._id.length - 1)
+      if (!ended.hasOwnProperty(w)) ended[w] = []
+      ended[w].push(words[i])
     }
 
-    const getWish = (char: string) => {
-      var R = new Tail()
-
-      kkutu[this.room.rule.lang]
+    const charData: { char: string; length: number }[] = []
+    for (const char of Object.keys(ended)) {
+      const words = await kkutu[this.room.rule.lang]
         .find(["_id", new RegExp(isRev ? `.${char}$` : `^${char}.`)])
         .limit(10)
-        .on(function ($res) {
-          R.go({ char: char, length: $res.length })
-        })
-      return R
+        .onAsync<IWord[]>()
+
+      charData.push({ char: char, length: words.length })
     }
+
+    if (!this.room.game.chain) return
+    charData.sort((a, b) => {
+      return a.length - b.length
+    })
+
+    let res: { char: string; length: number }
+    if (this.room.opts.manner || !this.room.game.chain.length) {
+      while ((res = charData.shift())) if (res.length) break
+    } else res = charData.shift()
+
+    const v = ended[res ? res.char : null]
+    if (!v) denied()
+    else pickList(v)
+  }
+
+  async getRandomWord(char: string, subChar: string): Promise<IWord> {
+    const words = await this.getWordList(char, subChar)
+    return words[Math.floor(Math.random() * words.length)]
+  }
+
+  async checkWordExisting(char: string, subChar: string): Promise<boolean> {
+    const MAN = kkutu_manner[this.room.rule.lang]
+    const gameType = GAME_TYPE[this.room.mode]
+    const key = gameType + "_" + keyByOptions(this.room.opts)
+
+    // 매너 테이블에 정보가 있고 타입이 1이면 그걸 그대로 씀
+    const $mn = await MAN.findOne(["_id", char || "★"]).onAsync<
+      Record<string, boolean> | undefined
+    >()
+    if ($mn && $mn[key] !== null) return $mn[key]
+
+    return !!(await this.getWordList(char, subChar, 1))
+  }
+
+  async getWordList(
+    char: string,
+    subChar: string,
+    findLimit: number = 123
+  ): Promise<IWord[]> {
+    const MAN = kkutu_manner[this.room.rule.lang]
+    const gameType = GAME_TYPE[this.room.mode]
+    const key = gameType + "_" + keyByOptions(this.room.opts)
+
+    // 게임 유형에 따른 정규식
+    const adv = getModeRegex(gameType, char, subChar, this.room.game.wordLength)
+
+    const aqs = [["_id", adv]] as [
+      string,
+      number | RegExp | Record<string, string | number>
+    ][]
+
+    if (!this.room.opts.injeong) aqs.push(["flag", { $nand: KOR_FLAG.INJEONG }])
+    if (this.room.rule.lang === "ko") {
+      if (this.room.opts.loanword)
+        aqs.push(["flag", { $nand: KOR_FLAG.LOANWORD }])
+      if (this.room.opts.strict)
+        aqs.push(["type", KOR_STRICT], ["flag", { $lte: 3 }])
+      else aqs.push(["type", KOR_GROUP])
+    } else {
+      aqs.push(["_id", ENG_ID])
+    }
+
+    const $md = await kkutu[this.room.rule.lang]
+      .find(...aqs)
+      .limit(findLimit ? 1 : 123)
+      .onAsync<IWord[]>()
+
+    const forManner = async (list) => {
+      await MAN.upsert(["_id", char])
+        .set([key, !!list.length])
+        .onAsync()
+        .catch(() => forManner(list))
+      await MAN.createColumn(key, "boolean").onAsync()
+    }
+
+    forManner($md).then()
+
+    return this.room.game.chain
+      ? $md.filter((item) => !this.room.game.chain.includes(item))
+      : $md
   }
 }
 
@@ -548,106 +598,26 @@ function getMission(l) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-async function getAuto<T extends IWord[] | IWord | boolean>(
-  room: Room,
+// TODO: wordLength 안 받도록 수정
+const getModeRegex = (
+  gameType: string,
   char: string,
-  subc: string,
-  type: 0 | 1 | 2
-): Promise<T> {
-  /* type
-    0 무작위 단어 하나
-    1 존재 여부
-    2 단어 목록
-  */
-
-  const gameType = GAME_TYPE[room.mode]
-  const key = gameType + "_" + keyByOptions(room.opts)
-  const MAN = kkutu_manner[room.rule.lang]
-  const bool = type === 1
-
-  // 게임 유형에 따른 정규식
-  let adv: string
-  const adc = char + (subc ? "|" + subc : "")
+  subChar: string,
+  wordLength: number
+) => {
+  const adc = char + (subChar ? "|" + subChar : "")
   switch (gameType) {
     case "EKT":
-      adv = `^(${adc})..`
-      break
+      return new RegExp(`^(${adc})..`)
     case "KSH":
-      adv = `^(${adc}).`
-      break
+      return new RegExp(`^(${adc}).`)
     case "ESH":
-      adv = `^(${adc})...`
-      break
+      return new RegExp(`^(${adc})...`)
     case "KKT":
-      adv = `^(${adc}).{${room.game.wordLength - 1}}$`
-      break
+      return new RegExp(`^(${adc}).{${wordLength - 1}}$`)
     case "KAP":
-      adv = `.(${adc})$`
-      break
+      return new RegExp(`.(${adc})$`)
   }
-
-  if (!char)
-    console.log(`Undefined char detected! key=${key} type=${type} adc=${adc}`)
-
-  const produce = async () => {
-    const aqs = [["_id", new RegExp(adv)]] as [
-      string,
-      string | number | RegExp | Record<string, string | number>
-    ][]
-    var lst
-
-    if (!room.opts.injeong) aqs.push(["flag", { $nand: KOR_FLAG.INJEONG }])
-    if (room.rule.lang === "ko") {
-      if (room.opts.loanword) aqs.push(["flag", { $nand: KOR_FLAG.LOANWORD }])
-      if (room.opts.strict)
-        aqs.push(["type", KOR_STRICT], ["flag", { $lte: 3 }])
-      else aqs.push(["type", KOR_GROUP])
-    } else {
-      aqs.push(["_id", ENG_ID])
-    }
-
-    let aft = (md: IWord[]) => {
-      switch (type) {
-        case 0:
-        default:
-          return $md[Math.floor(Math.random() * $md.length)]
-        case 1:
-          return !!$md.length
-        case 2:
-          return $md
-      }
-    }
-
-    const onFail = () => {
-      MAN.createColumn(key, "boolean").on(function () {
-        forManner(lst)
-      })
-    }
-
-    const forManner = (list) => {
-      lst = list
-      MAN.upsert(["_id", char]).set([key, !!lst.length]).on(null, null, onFail)
-    }
-
-    const $md = await kkutu[room.rule.lang]
-      .find(...aqs)
-      .limit(bool ? 1 : 123)
-      .onAsync<IWord[]>()
-
-    forManner($md)
-    if (room.game.chain)
-      return aft($md.filter((item) => !room.game.chain.includes(item)))
-    else return aft($md)
-  }
-
-  const $mn = await MAN.findOne(["_id", char || "★"]).onAsync<
-    IWord | undefined
-  >()
-
-  if ($mn && bool) {
-    if ($mn[key] === null) return (await produce()) as T
-    else return $mn[key]
-  } else return (await produce()) as T
 }
 
 function keyByOptions(opts) {
@@ -681,14 +651,10 @@ function getChar(mode: number, text: string): string {
   }
 }
 
-function getSubChar(char: string, mode: number): string {
-  let r: string | undefined
-  // 임시로 0을 붙였습니다
-
+function getSubChar(char: string, mode: number): string | undefined {
   switch (GAME_TYPE[mode]) {
     case "EKT":
-      if (char.length > 2) r = char.slice(1)
-      break
+      return char.length > 2 ? char.slice(1) : undefined
     case "KKT":
     case "KSH":
     case "KAP":
@@ -719,12 +685,11 @@ function getSubChar(char: string, mode: number): string {
         cb[0] -= 0x1100
         cb[1] -= 0x1161
         cb[2] -= 0x11a7
-        r = String.fromCharCode((cb[0] * 21 + cb[1]) * 28 + cb[2] + 0xac00)
+        return String.fromCharCode((cb[0] * 21 + cb[1]) * 28 + cb[2] + 0xac00)
       }
       break
     case "ESH":
     default:
       break
   }
-  return r
 }
